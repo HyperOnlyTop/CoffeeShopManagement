@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Đơn hàng | Quản lý quán cà phê</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+  <!-- Google Fonts - Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Shared layout styles -->
+  <link rel="stylesheet" href="/css/doanhthu.css">
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="brand">
+      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo" class="brand-img">
+      <div class="brand-text">
+        <h5>Brew &amp; Co.</h5>
+        <p>Coffee Management</p>
+      </div>
+    </div>
+
+    <div class="user-profile">
+      <img src="https://ui-avatars.com/api/?name=Admin&background=C98D4D&color=fff" alt="User">
+      <div class="user-info">
+        <h6>Admin</h6>
+        <p>admin@cafe.com</p>
+      </div>
+      <div class="online-dot"></div>
+    </div>
+
+    <ul class="nav-menu">
+      <li class="nav-item">
+        <a href="/dashboard" class="nav-link">
+          <i class="bi bi-grid-1x2"></i> Dashboard
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Menu" class="nav-link">
+          <i class="bi bi-cup-hot"></i> Menu
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Order" class="nav-link active">
+          <i class="bi bi-bag"></i> Đơn hàng
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Revenue" class="nav-link">
+          <i class="bi bi-bar-chart-fill"></i> Doanh thu
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Staff" class="nav-link">
+          <i class="bi bi-people"></i> Nhân viên
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Inventory" class="nav-link">
+          <i class="bi bi-box-seam"></i> Kho hàng
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Setting" class="nav-link">
+          <i class="bi bi-gear"></i> Cài đặt
+        </a>
+      </li>
+    </ul>
+
+    <div class="logout-btn">
+      <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="main-content">
+
+    <!-- Header -->
+    <div class="header-row">
+      <div class="page-title">
+        <h2>Quản lý Đơn hàng</h2>
+        <p th:text="${#lists.size(orders)} + ' đơn trong hệ thống'">0 đơn trong hệ thống</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn order-create-btn" type="button">
+          <i class="bi bi-plus-lg"></i> Tạo đơn mới
+        </button>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="order-filters mb-4">
+      <button class="order-filter active" type="button">Tất cả</button>
+      <button class="order-filter" type="button">Chờ xử lý</button>
+      <button class="order-filter" type="button">Đang pha</button>
+      <button class="order-filter" type="button">Hoàn thành</button>
+      <button class="order-filter" type="button">Đã hủy</button>
+    </div>
+
+    <!-- Orders table -->
+    <div class="custom-card">
+      <div class="table-responsive">
+        <table class="table align-middle orders-table">
+          <thead>
+            <tr>
+              <th scope="col">Mã đơn</th>
+              <th scope="col">Khách hàng</th>
+              <th scope="col">Loại</th>
+              <th scope="col">Bàn / Ghi chú</th>
+              <th scope="col">Tổng tiền</th>
+              <th scope="col">Giờ đặt</th>
+              <th scope="col">Trạng thái</th>
+              <th scope="col">Thanh toán</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:if="${#lists.isEmpty(orders)}">
+              <td colspan="8" class="text-center text-muted py-4">Chưa có đơn hàng nào.</td>
+            </tr>
+
+            <tr th:each="order : ${orders}">
+              <td class="order-code" th:text="${order.orderCode != null ? '#' + order.orderCode : '(Mới)'}">#ORD-0000</td>
+              <td>
+                <div class="order-customer-name" th:text="${order.customerName != null ? order.customerName : 'Khách lẻ'}">Tên khách</div>
+                <div class="order-customer-phone" th:text="${order.customerPhone != null ? order.customerPhone : ''}">Số điện thoại</div>
+              </td>
+              <td>
+                <span class="order-type-badge"
+                      th:classappend="${order.type != null and order.type.name() == 'TAKEAWAY'} ? ' order-type-takeaway' : ' order-type-dinein'"
+                      th:text="${order.type != null and order.type.name() == 'TAKEAWAY'} ? 'Mang về' : 'Tại bàn'">Tại bàn</span>
+              </td>
+              <td th:text="${order.tableName != null ? order.tableName : (order.type != null and order.type.name() == 'TAKEAWAY' ? '—' : '')}">Bàn / Ghi chú</td>
+              <td class="orders-amount" th:text="${order.total != null ? order.total + ' đ' : '0 đ'}">0 đ</td>
+              <td th:text="${order.createdAt != null ? #temporals.format(order.createdAt, 'HH:mm') : '--:--'}">--:--</td>
+              <td>
+                <span class="status-badge status-completed"
+                      th:if="${order.status != null and order.status.name() == 'COMPLETED'}">
+                  Hoàn thành
+                </span>
+                <span class="status-badge status-brewing"
+                      th:if="${order.status != null and order.status.name() == 'PREPARING'}">
+                  Đang pha
+                </span>
+                <span class="status-badge status-waiting"
+                      th:if="${order.status != null and order.status.name() == 'PENDING'}">
+                  Chờ xử lý
+                </span>
+                <span class="status-badge status-cancelled"
+                      th:if="${order.status != null and order.status.name() == 'CANCELLED'}">
+                  Đã hủy
+                </span>
+                <span class="status-badge"
+                      th:if="${order.status == null}">
+                  Không rõ
+                </span>
+              </td>
+              <td>
+                <div class="orders-actions">
+                  <button class="icon-circle-btn" type="button" aria-label="Xem chi tiết" title="Xem chi tiết"><i class="bi bi-eye"></i></button>
+                  <button class="icon-circle-btn" type="button" aria-label="Hóa đơn" title="Hóa đơn"><i class="bi bi-receipt"></i></button>
+                  <button class="icon-circle-btn" type="button" aria-label="QR thanh toán" title="QR thanh toán"><i class="bi bi-qr-code"></i></button>
+                </div>
+              </td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal: Tạo đơn hàng mới -->
+  <div class="modal fade" id="createOrderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-header border-0 pb-0 px-4 pt-4">
+          <h5 class="modal-title fw-semibold">Tạo đơn hàng mới</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body px-4 pb-0">
+          <form id="createOrderForm">
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label class="form-label fw-medium">Mã đơn</label>
+                <input type="text" class="form-control" id="orderCode" placeholder="#ORD-xxxx" disabled>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-medium">Giờ đặt</label>
+                <input type="time" class="form-control" id="orderTime">
+                <div class="small text-muted mt-1">Tự động lấy giờ hiện tại khi tạo đơn.</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-medium">Trạng thái</label>
+                <select class="form-select" id="orderStatus">
+                  <option value="PENDING" selected>Chờ xử lý</option>
+                  <option value="PREPARING">Đang pha</option>
+                  <option value="COMPLETED">Hoàn thành</option>
+                  <option value="CANCELLED">Đã hủy</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-medium">Khách hàng</label>
+                <input type="text" class="form-control" id="orderCustomerName" placeholder="VD: Nguyễn Văn An">
+                <div class="small text-muted mt-1">SĐT khách sẽ hiển thị ở dòng thứ 2.</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-medium">Số điện thoại</label>
+                <input type="tel" class="form-control" id="orderCustomerPhone" placeholder="VD: 0901234567">
+              </div>
+            </div>
+
+            <!-- Chọn món từ Menu -->
+            <div class="mb-3">
+              <label class="form-label fw-medium">Chọn món trong menu</label>
+              <div class="row g-2 align-items-end">
+                <div class="col-md-6">
+                  <select class="form-select" id="orderMenuItemSelect">
+                    <option value="" selected disabled>Đang tải danh sách món...</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label fw-medium">Số lượng</label>
+                  <input type="number" class="form-control" id="orderItemQuantity" value="1" min="1">
+                </div>
+                <div class="col-md-3 d-grid">
+                  <button type="button" class="btn btn-outline-primary" id="addOrderItemBtn">
+                    <i class="bi bi-plus-lg"></i> Thêm món
+                  </button>
+                </div>
+              </div>
+              <div class="mt-3">
+                <table class="table table-sm align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Món</th>
+                      <th class="text-center" style="width: 80px;">SL</th>
+                      <th class="text-end" style="width: 120px;">Đơn giá</th>
+                      <th class="text-end" style="width: 120px;">Thành tiền</th>
+                      <th style="width: 40px;"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="orderItemsBody">
+                    <tr class="text-muted" id="orderItemsEmptyRow">
+                      <td colspan="5">Chưa có món nào. Hãy chọn món và bấm "Thêm món".</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label class="form-label fw-medium">Loại</label>
+                <select class="form-select" id="orderType">
+                  <option value="DINE_IN">Tại bàn</option>
+                  <option value="TAKEAWAY">Mang về</option>
+                </select>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label fw-medium">Bàn / Ghi chú</label>
+                <input type="text" class="form-control" id="orderTableNote" placeholder="VD: Bàn 5 · Ít đá, ít ngọt...">
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3 align-items-end">
+              <div class="col-md-6">
+                <label class="form-label fw-medium">Tổng tiền (đ)</label>
+                <input type="number" class="form-control" id="orderTotalAmount" min="0" step="1000" placeholder="Tự tính từ món đã chọn" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-medium">Thanh toán</label>
+                <select class="form-select" id="orderPaymentMethod">
+                  <option value="CASH">Tiền mặt</option>
+                  <option value="BANK_TRANSFER">Chuyển khoản</option>
+                  <option value="MOMO">Momo</option>
+                  <option value="CARD">Thẻ</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- QR thanh toán khi chọn Chuyển khoản hoặc MoMo -->
+            <div class="mb-3" id="orderPaymentQrSection" style="display: none;">
+              <label class="form-label fw-medium">QR thanh toán</label>
+              <div class="d-flex align-items-center">
+                <div class="bg-white rounded-3 border me-3 d-flex align-items-center justify-content-center" style="width: 140px; height: 140px;">
+                  <img id="orderPaymentQrImage" src="" alt="QR thanh toán" class="img-fluid" style="max-width: 128px; max-height: 128px; display: none;">
+                </div>
+                <div class="small text-muted">
+                  <div id="orderPaymentAmountText">Số tiền: 0 đ</div>
+                  <div id="orderPaymentMethodText"></div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-between">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" form="createOrderForm" class="btn btn-warning px-4">Tạo đơn</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: QR thanh toán cho đơn vừa tạo -->
+  <div class="modal fade" id="orderPaymentQrModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-header border-0 pb-0 px-4 pt-4">
+          <h5 class="modal-title fw-semibold">QR thanh toán đơn hàng</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body px-4 pb-0">
+          <p class="small text-muted mb-3" id="qrOrderInfoText">Vui lòng quét QR để thanh toán.</p>
+          <div class="d-flex flex-column align-items-center mb-3">
+            <div class="bg-white rounded-3 border d-flex align-items-center justify-content-center" style="width: 220px; height: 220px;">
+              <img id="qrOrderImage" src="" alt="QR thanh toán đơn hàng" class="img-fluid" style="max-width: 200px; max-height: 200px; display: none;">
+            </div>
+            <div class="mt-3 text-center small text-muted">
+              <div id="qrOrderAmountText">Số tiền: 0 đ</div>
+              <div id="qrOrderMethodText"></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-end">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS + simple logic for Order page -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Admin common JS (logout confirm, etc.) -->
+  <script src="/js/admin-common.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!window.bootstrap) return;
+
+      var createBtn = document.querySelector('.order-create-btn');
+      var createModalEl = document.getElementById('createOrderModal');
+      var orderPaymentQrModalEl = document.getElementById('orderPaymentQrModal');
+
+      if (createBtn && createModalEl) {
+        var createModal = new bootstrap.Modal(createModalEl);
+        var orderPaymentQrModal = orderPaymentQrModalEl ? new bootstrap.Modal(orderPaymentQrModalEl) : null;
+        var createForm = document.getElementById('createOrderForm');
+
+        // Elements for auto time and items
+        var orderTimeInput = document.getElementById('orderTime');
+        var orderStatusSelect = document.getElementById('orderStatus');
+        var orderTotalAmountInput = document.getElementById('orderTotalAmount');
+        var menuSelect = document.getElementById('orderMenuItemSelect');
+        var quantityInput = document.getElementById('orderItemQuantity');
+        var addItemBtn = document.getElementById('addOrderItemBtn');
+        var itemsBody = document.getElementById('orderItemsBody');
+        var itemsEmptyRow = document.getElementById('orderItemsEmptyRow');
+
+        // QR thanh toán
+        var orderPaymentMethodSelect = document.getElementById('orderPaymentMethod');
+        var orderPaymentQrSection = document.getElementById('orderPaymentQrSection');
+        var orderPaymentQrImage = document.getElementById('orderPaymentQrImage');
+        var orderPaymentAmountText = document.getElementById('orderPaymentAmountText');
+        var orderPaymentMethodText = document.getElementById('orderPaymentMethodText');
+        var paymentSettings = null;
+
+        // Elements for QR modal sau khi tạo đơn
+        var qrOrderImage = document.getElementById('qrOrderImage');
+        var qrOrderAmountText = document.getElementById('qrOrderAmountText');
+        var qrOrderMethodText = document.getElementById('qrOrderMethodText');
+        var qrOrderInfoText = document.getElementById('qrOrderInfoText');
+
+        var menuItemsCache = [];
+        var currentOrderItems = []; // {id, name, price, quantity}
+
+        function formatCurrencyVND(amount) {
+          var num = Number(amount || 0);
+          if (!isFinite(num) || num <= 0) {
+            return '0 đ';
+          }
+          return num.toLocaleString('vi-VN') + ' đ';
+        }
+
+        function setCurrentTime() {
+          if (!orderTimeInput) return;
+          var now = new Date();
+          var hours = String(now.getHours()).padStart(2, '0');
+          var minutes = String(now.getMinutes()).padStart(2, '0');
+          orderTimeInput.value = hours + ':' + minutes;
+        }
+
+        function loadPaymentSettingsForOrder() {
+          fetch('/api/settings/payment')
+            .then(function (response) {
+              if (!response.ok) {
+                return null;
+              }
+              return response.json();
+            })
+            .then(function (data) {
+              paymentSettings = data || null;
+              updateOrderPaymentQr();
+            })
+            .catch(function () {
+              paymentSettings = null;
+              updateOrderPaymentQr();
+            });
+        }
+
+        function updateOrderPaymentQr() {
+          if (!orderPaymentQrSection || !orderPaymentAmountText || !orderPaymentMethodSelect || !orderTotalAmountInput) {
+            return;
+          }
+
+          var method = orderPaymentMethodSelect.value;
+          var rawAmount = Number(orderTotalAmountInput.value || 0);
+
+          // Chỉ hiển thị khi có số tiền và phương thức là Chuyển khoản hoặc MoMo
+          if (!rawAmount || rawAmount <= 0 || (method !== 'BANK_TRANSFER' && method !== 'MOMO')) {
+            orderPaymentQrSection.style.display = 'none';
+            if (orderPaymentQrImage) {
+              orderPaymentQrImage.style.display = 'none';
+            }
+            return;
+          }
+
+          if (!paymentSettings) {
+            orderPaymentQrSection.style.display = 'none';
+            return;
+          }
+
+          var amount = Math.round(rawAmount);
+          orderPaymentAmountText.textContent = 'Số tiền: ' + formatCurrencyVND(amount);
+          if (orderPaymentMethodText) {
+            orderPaymentMethodText.textContent = method === 'BANK_TRANSFER'
+              ? 'Phương thức: Chuyển khoản ngân hàng'
+              : 'Phương thức: Ví MoMo';
+          }
+
+          var qrUrl = null;
+
+          if (method === 'BANK_TRANSFER') {
+            var bankCode = paymentSettings.bankCode || null;
+            var bankAccount = paymentSettings.bankAccount || null;
+            var bankOwnerName = paymentSettings.bankOwnerName || null;
+
+            // Nếu backend chưa lưu bankCode, suy ra từ bankName giống trang Cài đặt
+            if (!bankCode && paymentSettings.bankName) {
+              var bankCodeMap = {
+                'Vietcombank (VCB)': 'vietcombank',
+                'ACB': 'acb',
+                'Techcombank': 'techcombank',
+                'VPBank': 'vpbank',
+                'BIDV': 'bidv'
+              };
+              bankCode = bankCodeMap[paymentSettings.bankName] || null;
+            }
+
+            if (!bankCode || !bankAccount || !bankOwnerName || paymentSettings.bankEnabled === false) {
+              orderPaymentQrSection.style.display = 'none';
+              if (orderPaymentQrImage) {
+                orderPaymentQrImage.style.display = 'none';
+              }
+              return;
+            }
+
+            var addInfo = 'Thanh toan don tai quan ca phe';
+            qrUrl = 'https://img.vietqr.io/image/'
+              + bankCode + '-' + encodeURIComponent(bankAccount)
+              + '-compact2.png?amount=' + amount
+              + '&addInfo=' + encodeURIComponent(addInfo)
+              + '&accountName=' + encodeURIComponent(bankOwnerName);
+          } else if (method === 'MOMO') {
+            var momoPhone = paymentSettings.momoPhone || null;
+            var momoName = paymentSettings.momoOwnerName || null;
+
+            if (!momoPhone || !momoName || paymentSettings.momoEnabled === false) {
+              orderPaymentQrSection.style.display = 'none';
+              if (orderPaymentQrImage) {
+                orderPaymentQrImage.style.display = 'none';
+              }
+              return;
+            }
+
+            var momoData = 'Thanh toan MoMo - SDT: ' + momoPhone
+              + ' - Ten: ' + momoName
+              + ' - So tien: ' + amount + ' VND';
+            qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='
+              + encodeURIComponent(momoData);
+          }
+
+          if (!qrUrl || !orderPaymentQrImage) {
+            orderPaymentQrSection.style.display = 'none';
+            return;
+          }
+
+          orderPaymentQrImage.src = qrUrl;
+          orderPaymentQrImage.style.display = 'block';
+          orderPaymentQrSection.style.display = 'block';
+        }
+
+        function buildQrUrlForOrder(order) {
+          if (!order || !paymentSettings) {
+            return null;
+          }
+
+          var total = order.total != null ? Number(order.total) : 0;
+          if (!total || !isFinite(total) || total <= 0) {
+            return null;
+          }
+
+          var method = order.paymentMethod || 'CASH';
+
+          if (method === 'BANK_TRANSFER') {
+            var bankCode = paymentSettings.bankCode || null;
+            var bankAccount = paymentSettings.bankAccount || null;
+            var bankOwnerName = paymentSettings.bankOwnerName || null;
+
+            if (!bankCode && paymentSettings.bankName) {
+              var bankCodeMap = {
+                'Vietcombank (VCB)': 'vietcombank',
+                'ACB': 'acb',
+                'Techcombank': 'techcombank',
+                'VPBank': 'vpbank',
+                'BIDV': 'bidv'
+              };
+              bankCode = bankCodeMap[paymentSettings.bankName] || null;
+            }
+
+            if (!bankCode || !bankAccount || !bankOwnerName || paymentSettings.bankEnabled === false) {
+              return null;
+            }
+
+            var addInfo = 'Thanh toan don ' + (order.orderCode || 'tai quan ca phe');
+            return 'https://img.vietqr.io/image/'
+              + bankCode + '-' + encodeURIComponent(bankAccount)
+              + '-compact2.png?amount=' + Math.round(total)
+              + '&addInfo=' + encodeURIComponent(addInfo)
+              + '&accountName=' + encodeURIComponent(bankOwnerName);
+          }
+
+          if (method === 'MOMO') {
+            var momoPhone = paymentSettings.momoPhone || null;
+            var momoName = paymentSettings.momoOwnerName || null;
+            if (!momoPhone || !momoName || paymentSettings.momoEnabled === false) {
+              return null;
+            }
+
+            var momoData = 'Thanh toan MoMo don ' + (order.orderCode || '')
+              + ' - SDT: ' + momoPhone
+              + ' - Ten: ' + momoName
+              + ' - So tien: ' + Math.round(total) + ' VND';
+            return 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='
+              + encodeURIComponent(momoData);
+          }
+
+          return null;
+        }
+
+        function showQrModalForOrder(order) {
+          if (!orderPaymentQrModal || !qrOrderImage || !qrOrderAmountText) {
+            return;
+          }
+
+          var method = order.paymentMethod || 'CASH';
+          if (method !== 'BANK_TRANSFER' && method !== 'MOMO') {
+            // Đơn thanh toán tiền mặt/thẻ thì chỉ ẩn modal QR
+            return;
+          }
+
+          var qrUrl = buildQrUrlForOrder(order);
+          if (!qrUrl) {
+            return;
+          }
+
+          var amount = order.total != null ? Number(order.total) : 0;
+          qrOrderAmountText.textContent = 'Số tiền: ' + formatCurrencyVND(amount);
+          if (qrOrderMethodText) {
+            qrOrderMethodText.textContent = method === 'BANK_TRANSFER'
+              ? 'Phương thức: Chuyển khoản ngân hàng'
+              : 'Phương thức: Ví MoMo';
+          }
+
+          if (qrOrderInfoText) {
+            qrOrderInfoText.textContent = 'Đơn ' + (order.orderCode || '') + ' - vui lòng quét QR để thanh toán.';
+          }
+
+          qrOrderImage.src = qrUrl;
+          qrOrderImage.style.display = 'block';
+          orderPaymentQrModal.show();
+        }
+
+        function fetchMenuItemsOnce() {
+          if (!menuSelect || menuItemsCache.length > 0) return;
+
+          fetch('/api/menu/items')
+            .then(function (res) { return res.ok ? res.json() : []; })
+            .then(function (data) {
+              if (!Array.isArray(data)) return;
+              menuItemsCache = data;
+
+              // Clear existing options
+              menuSelect.innerHTML = '';
+              var placeholder = document.createElement('option');
+              placeholder.value = '';
+              placeholder.disabled = true;
+              placeholder.selected = true;
+              placeholder.textContent = 'Chọn món trong menu';
+              menuSelect.appendChild(placeholder);
+
+              data.forEach(function (item) {
+                if (item && item.id != null) {
+                  var opt = document.createElement('option');
+                  opt.value = String(item.id);
+                  var price = Number(item.price || 0);
+                  opt.dataset.price = String(price);
+                  opt.textContent = item.name + (price > 0 ? ' - ' + price.toLocaleString('vi-VN') + ' đ' : '');
+                  menuSelect.appendChild(opt);
+                }
+              });
+            })
+            .catch(function () {
+              if (menuSelect) {
+                menuSelect.innerHTML = '';
+                var opt = document.createElement('option');
+                opt.value = '';
+                opt.disabled = true;
+                opt.selected = true;
+                opt.textContent = 'Không tải được danh sách món';
+                menuSelect.appendChild(opt);
+              }
+            });
+        }
+
+        function renderOrderItems() {
+          if (!itemsBody) return;
+
+          // Clear body
+          itemsBody.innerHTML = '';
+
+          if (!currentOrderItems.length) {
+            if (itemsEmptyRow) {
+              itemsBody.appendChild(itemsEmptyRow);
+            }
+            if (orderTotalAmountInput) {
+              orderTotalAmountInput.value = '';
+            }
+            return;
+          }
+
+          var total = 0;
+
+          currentOrderItems.forEach(function (row, index) {
+            var tr = document.createElement('tr');
+
+            var tdName = document.createElement('td');
+            tdName.textContent = row.name;
+
+            var tdQty = document.createElement('td');
+            tdQty.className = 'text-center';
+            tdQty.textContent = row.quantity;
+
+            var tdPrice = document.createElement('td');
+            tdPrice.className = 'text-end';
+            tdPrice.textContent = row.price.toLocaleString('vi-VN') + ' đ';
+
+            var lineTotal = row.price * row.quantity;
+            total += lineTotal;
+
+            var tdLineTotal = document.createElement('td');
+            tdLineTotal.className = 'text-end';
+            tdLineTotal.textContent = lineTotal.toLocaleString('vi-VN') + ' đ';
+
+            var tdRemove = document.createElement('td');
+            var removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn btn-sm btn-link text-danger p-0';
+            removeBtn.innerHTML = '<i class="bi bi-x-circle"></i>';
+            removeBtn.addEventListener('click', function () {
+              currentOrderItems.splice(index, 1);
+              renderOrderItems();
+            });
+            tdRemove.appendChild(removeBtn);
+
+            tr.appendChild(tdName);
+            tr.appendChild(tdQty);
+            tr.appendChild(tdPrice);
+            tr.appendChild(tdLineTotal);
+            tr.appendChild(tdRemove);
+
+            itemsBody.appendChild(tr);
+          });
+
+          if (orderTotalAmountInput) {
+            orderTotalAmountInput.value = total;
+          }
+
+          // Cập nhật QR nếu đang chọn phương thức phù hợp
+          updateOrderPaymentQr();
+        }
+
+        function addSelectedItem() {
+          if (!menuSelect || !quantityInput) return;
+
+          var selectedId = menuSelect.value;
+          if (!selectedId) return;
+
+          var qty = parseInt(quantityInput.value, 10);
+          if (!qty || qty < 1) qty = 1;
+
+          var item = menuItemsCache.find(function (m) { return String(m.id) === String(selectedId); });
+          if (!item) return;
+
+          var price = Number(item.price || 0);
+          if (isNaN(price)) price = 0;
+
+          var existing = currentOrderItems.find(function (row) { return row.id === item.id; });
+          if (existing) {
+            existing.quantity += qty;
+          } else {
+            currentOrderItems.push({
+              id: item.id,
+              name: item.name,
+              price: price,
+              quantity: qty
+            });
+          }
+
+          renderOrderItems();
+        }
+
+        createBtn.addEventListener('click', function () {
+          if (createForm) {
+            createForm.reset();
+          }
+          // Reset items state
+          currentOrderItems = [];
+          renderOrderItems();
+
+          // Auto-set current time and default status
+          setCurrentTime();
+          if (orderStatusSelect) {
+            orderStatusSelect.value = 'PENDING';
+          }
+
+          // Fetch menu items (once) for selector
+          fetchMenuItemsOnce();
+
+          // Tải cấu hình thanh toán (Ngân hàng + MoMo) cho QR
+          loadPaymentSettingsForOrder();
+
+          // Ẩn QR lúc mới mở
+          updateOrderPaymentQr();
+          createModal.show();
+        });
+
+        if (addItemBtn) {
+          addItemBtn.addEventListener('click', function () {
+            addSelectedItem();
+          });
+        }
+
+        // Tự động thêm món vào bảng khi chọn trong dropdown
+        if (menuSelect) {
+          menuSelect.addEventListener('change', function () {
+            addSelectedItem();
+          });
+        }
+
+        if (createForm) {
+          createForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            if (!currentOrderItems.length) {
+              alert('Vui lòng chọn ít nhất 1 món cho đơn hàng.');
+              return;
+            }
+
+            var customerNameInput = document.getElementById('orderCustomerName');
+            var customerPhoneInput = document.getElementById('orderCustomerPhone');
+            var orderTypeSelect = document.getElementById('orderType');
+            var tableNoteInput = document.getElementById('orderTableNote');
+
+            var payload = {
+              customerName: customerNameInput ? customerNameInput.value.trim() : null,
+              customerPhone: customerPhoneInput ? customerPhoneInput.value.trim() : null,
+              type: orderTypeSelect ? orderTypeSelect.value : 'DINE_IN',
+              tableNote: tableNoteInput ? tableNoteInput.value.trim() : null,
+              status: orderStatusSelect ? orderStatusSelect.value : 'PENDING',
+              paymentMethod: orderPaymentMethodSelect ? orderPaymentMethodSelect.value : 'CASH',
+              items: currentOrderItems.map(function (row) {
+                return {
+                  menuItemId: row.id,
+                  quantity: row.quantity
+                };
+              })
+            };
+
+            fetch('/api/orders', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(payload)
+            })
+              .then(function (res) {
+                if (!res.ok) {
+                  throw new Error('Request failed');
+                }
+                return res.json();
+              })
+              .then(function (data) {
+                // Ẩn form tạo đơn
+                createModal.hide();
+
+                // Hiển thị modal QR nếu đơn dùng chuyển khoản hoặc MoMo
+                try {
+                  // Nếu chưa có paymentSettings (lỡ lỗi mạng trước đó) thì load lại rồi hiển thị
+                  if (!paymentSettings) {
+                    loadPaymentSettingsForOrder();
+                    setTimeout(function () {
+                      showQrModalForOrder(data);
+                    }, 400);
+                  } else {
+                    showQrModalForOrder(data);
+                  }
+                } catch (err) {
+                  // Nếu có lỗi hiển thị QR thì vẫn báo thành công bằng alert
+                  alert('Đã lưu đơn hàng thành công với mã: ' + (data.orderCode || '#ORD-MỚI'));
+                }
+              })
+              .catch(function () {
+                alert('Có lỗi xảy ra khi lưu đơn hàng. Vui lòng thử lại.');
+              });
+          });
+        }
+
+        if (orderPaymentMethodSelect) {
+          orderPaymentMethodSelect.addEventListener('change', function () {
+            updateOrderPaymentQr();
+          });
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doanh Thu | Quản lý quán cà phê</title>
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  
+  <!-- Google Fonts - Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/css/doanhthu.css">
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="brand">
+      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo" class="brand-img">
+      <div class="brand-text">
+        <h5>Brew &amp; Co.</h5>
+        <p>Coffee Management</p>
+      </div>
+    </div>
+
+    <div class="user-profile">
+      <img src="https://ui-avatars.com/api/?name=Admin&background=C98D4D&color=fff" alt="User">
+      <div class="user-info">
+        <h6>Admin</h6>
+        <p>admin@cafe.com</p>
+      </div>
+      <div class="online-dot"></div>
+    </div>
+
+    <ul class="nav-menu">
+      <li class="nav-item">
+        <a href="/dashboard" class="nav-link">
+          <i class="bi bi-grid-1x2"></i> Dashboard
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Menu" class="nav-link">
+          <i class="bi bi-cup-hot"></i> Menu
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Order" class="nav-link">
+          <i class="bi bi-bag"></i> Đơn hàng
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Revenue" class="nav-link active">
+          <i class="bi bi-bar-chart-fill"></i> Doanh thu
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Staff" class="nav-link">
+          <i class="bi bi-people"></i> Nhân viên
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Inventory" class="nav-link">
+          <i class="bi bi-box-seam"></i> Kho hàng
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Setting" class="nav-link">
+          <i class="bi bi-gear"></i> Cài đặt
+        </a>
+      </li>
+    </ul>
+
+    <div class="logout-btn">
+      <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    
+    <!-- Header -->
+    <div class="header-row">
+      <div class="page-title">
+        <h2>Doanh Thu</h2>
+        <p>Phân tích tài chính & báo cáo</p>
+      </div>
+      
+      <div class="header-actions">
+        <div class="icon-btn">
+          <i class="bi bi-bell"></i>
+          <span class="notification-dot"></span>
+        </div>
+        <div class="date-picker-btn">
+          <i class="bi bi-calendar4"></i>
+          <span>25 Th3, 2026</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Summary Cards Row -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-3">
+        <div class="custom-card">
+          <div class="card-icon-box bg-light-warning">
+            <i class="bi bi-graph-up-arrow"></i>
+          </div>
+          <div class="metric-value" id="revTotal7">0 đ</div>
+          <div class="metric-title">Doanh Thu 7 Ngày</div>
+          <div class="metric-desc">Tổng doanh thu tuần này</div>
+        </div>
+      </div>
+      
+      <div class="col-md-3">
+        <div class="custom-card">
+          <div class="card-icon-box bg-light-success">
+            <i class="bi bi-receipt"></i>
+          </div>
+          <div class="metric-value" id="revOrders7">0</div>
+          <div class="metric-title">Số Đơn Hàng</div>
+          <div class="metric-desc">Đơn trong 7 ngày</div>
+        </div>
+      </div>
+      
+      <div class="col-md-3">
+        <div class="custom-card">
+          <div class="card-icon-box bg-light-danger">
+            <i class="bi bi-calculator"></i>
+          </div>
+          <div class="metric-value" id="revAvgOrder">0 đ</div>
+          <div class="metric-title">Giá Trị TB/Đơn</div>
+          <div class="metric-desc">Trung bình mỗi đơn</div>
+        </div>
+      </div>
+      
+      <div class="col-md-3">
+        <div class="custom-card">
+          <div class="card-icon-box bg-light-info">
+            <i class="bi bi-trophy"></i>
+          </div>
+          <div class="metric-value" id="revBestDayLabel">--</div>
+          <div class="metric-title">Ngày Bán Tốt Nhất</div>
+          <div class="metric-desc" id="revBestDayRevenue">0 đ</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main Chart Row -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="custom-card">
+          <div class="chart-header">
+            <div>
+              <h3 class="chart-title">Biểu Đồ Doanh Thu</h3>
+              <p class="chart-subtitle">7 ngày gần nhất</p>
+            </div>
+            <div class="btn-group btn-group-toggle">
+              <button class="btn active">Tuần</button>
+              <button class="btn">Tháng</button>
+            </div>
+          </div>
+          <div style="height: 300px;">
+            <canvas id="revenueChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Bottom Row -->
+    <div class="row g-4 mb-4">
+      <!-- Bar Chart -->
+      <div class="col-md-8">
+        <div class="custom-card">
+          <div class="chart-header">
+            <div>
+              <h3 class="chart-title">Số Đơn Hàng Theo Ngày</h3>
+              <p class="chart-subtitle">7 ngày gần nhất</p>
+            </div>
+          </div>
+          <div style="height: 250px;">
+            <canvas id="ordersChart"></canvas>
+          </div>
+        </div>
+      </div>
+      
+      <!-- List Stats -->
+      <div class="col-md-4">
+        <div class="custom-card mb-4">
+          <h3 class="chart-title mb-4">Doanh Thu Theo Danh Mục</h3>
+          
+          <div class="progress-list" id="categoryProgressList">
+            <div class="progress-item">
+              <div class="progress-item-header">
+                <span>Chưa có dữ liệu</span>
+                <span>0%</span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar bg-coffee" style="width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="custom-card">
+          <h3 class="chart-title mb-3">Top Sản Phẩm</h3>
+          
+          <div id="topProductsList">
+            <div class="product-item">
+              <img src="/images/coffee.jpeg" alt="Placeholder" class="product-img" onerror="this.src='https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=100&h=100&fit=crop'">
+              <div class="product-info">
+                <h6>Chưa có dữ liệu</h6>
+                <p>Sản phẩm sẽ hiển thị khi có đơn hàng</p>
+              </div>
+              <div class="product-price">0 lượt</div>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+    
+  </main>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Custom JS -->
+  <script src="/js/doanhthu.js"></script>
+  <!-- Admin common JS (logout confirm, etc.) -->
+  <script src="/js/admin-common.js"></script>
+  
+</body>
+</html>

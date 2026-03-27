@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brew &amp; Co. | Nơi mỗi tách cà phê kể một câu chuyện</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Reuse base style so font & colors khớp hệ thống -->
+    <link rel="stylesheet" href="/css/doanhthu.css">
+
+    <style>
+        body.landing-page {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: #000;
+            display: block !important; /* ghi đè body flex trong doanhthu.css */
+        }
+
+        .landing-wrapper {
+            position: relative;
+            min-height: 100vh;
+            width: 100%;
+            overflow: hidden;
+            color: #fff;
+        }
+
+        .landing-bg {
+            position: absolute;
+            inset: 0;
+            background: url('https://images.pexels.com/photos/6207294/pexels-photo-6207294.jpeg?auto=compress&cs=tinysrgb&w=1600') center/cover no-repeat;
+            transform: scale(1.02);
+        }
+
+        .landing-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, rgba(0, 0, 0, 0.88), rgba(0, 0, 0, 0.2));
+        }
+
+        .landing-content {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .landing-navbar {
+            padding: 20px 48px;
+        }
+
+        .landing-logo {
+            color: #ffffff; /* Brew & Co. trắng */
+        }
+
+        .landing-logo span:first-child {
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            font-size: 18px;
+        }
+
+        .landing-logo span:last-child {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: #ffc56b; /* Coffee Studio vàng như cũ */
+        }
+
+        .landing-menu a {
+            color: #fff;
+            font-size: 14px;
+            text-decoration: none;
+            margin: 0 12px;
+            opacity: 0.9;
+        }
+
+        .landing-menu a:hover {
+            opacity: 1;
+        }
+
+        .btn-outline-light-soft {
+            border-radius: 999px;
+            padding: 7px 18px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .btn-outline-light-soft:hover {
+            background-color: rgba(255, 255, 255, 0.12);
+            color: #fff;
+        }
+
+        .btn-primary-gold {
+            border-radius: 999px;
+            padding: 8px 20px;
+            background-color: #ff9f1a;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            color: #2a1704;
+        }
+
+        .btn-primary-gold:hover {
+            background-color: #ffb341;
+            color: #2a1704;
+        }
+
+        .landing-hero {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 0 24px 40px;
+        }
+
+        .landing-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 14px;
+            border-radius: 999px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 204, 102, 0.7);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: #ffcc66;
+            margin-bottom: 18px;
+        }
+
+        .landing-title-main {
+            font-size: clamp(32px, 4vw, 44px);
+            line-height: 1.2;
+            font-weight: 700;
+        }
+
+        .landing-title-main span.highlight {
+            color: #ffb341;
+        }
+
+        .landing-subtitle {
+            max-width: 640px;
+            margin: 18px auto 32px;
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        .landing-cta .btn {
+            min-width: 150px;
+        }
+
+        .landing-scroll {
+            position: absolute;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Sections dưới hero */
+        .section-wrapper {
+            background-color: #fff7ec;
+        }
+
+        .section-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 64px 16px;
+        }
+
+        /* Section nổi bật (menu, testimonials, booking) lớn hơn một chút */
+        .section-inner.section-large {
+            max-width: 1280px;
+            padding: 90px 32px;
+        }
+
+        .section-title-eyebrow {
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-size: 12px;
+            color: #c38b4b;
+            margin-bottom: 10px;
+        }
+
+        .section-title-main {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2b190a;
+            margin-bottom: 18px;
+        }
+
+        .text-muted-coffee {
+            color: #7b5a3a;
+        }
+
+        .about-card {
+            background-color: #fff;
+            border-radius: 24px;
+            padding: 32px 32px 24px;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.06);
+        }
+
+        .badge-soft-gold {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background-color: #fff4dd;
+            color: #b57615;
+            font-size: 11px;
+        }
+
+        .why-section {
+            background-color: #1a120b;
+            color: #fff;
+        }
+
+        .why-feature-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 204, 102, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 14px;
+            color: #ffcc66;
+        }
+
+        .why-feature-title {
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .menu-card {
+            background-color: #fff;
+            border-radius: 20px;
+            padding: 22px 22px 26px;
+            box-shadow: 0 16px 35px rgba(0, 0, 0, 0.04);
+            height: 100%;
+        }
+
+        .menu-card img {
+            width: 100%;
+            height: 320px;
+            object-fit: cover;
+            border-radius: 16px;
+            margin-bottom: 16px;
+        }
+
+        .menu-tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            background-color: #fff4dd;
+            color: #b57615;
+            font-size: 11px;
+            margin-left: 6px;
+        }
+
+        .price-label {
+            font-weight: 600;
+            color: #c27a1a;
+            margin-top: 8px;
+        }
+
+        .testimonial-card {
+            background-color: #fff;
+            border-radius: 20px;
+            padding: 26px 26px 22px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.04);
+            height: 100%;
+        }
+
+        .booking-left-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #2b190a;
+            margin-bottom: 12px;
+        }
+
+        .booking-card {
+            background-color: #fff7ec;
+            border-radius: 24px;
+            padding: 26px 26px 24px;
+            border: 1px solid #ffe0b5;
+        }
+
+        .footer-map iframe {
+            width: 100%;
+            border: 0;
+            height: 320px;
+        }
+
+        .footer-wrapper {
+            background-color: #fff4e3;
+            border-top: 1px solid #f0d3ad;
+        }
+
+        .footer-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 32px 16px 18px;
+            font-size: 14px;
+            color: #5f4630;
+        }
+
+        .footer-brand-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .footer-links a {
+            display: block;
+            color: #5f4630;
+            text-decoration: none;
+            margin-bottom: 4px;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #f0d3ad;
+            margin-top: 24px;
+            padding-top: 12px;
+            font-size: 12px;
+            color: #9b7a58;
+        }
+
+        @media (max-width: 768px) {
+            .landing-navbar {
+                padding-inline: 18px;
+            }
+
+            .landing-menu {
+                display: none;
+            }
+
+            .landing-hero {
+                padding: 0 16px 32px;
+            }
+
+            .section-inner {
+                padding: 48px 16px;
+            }
+
+            .section-inner.section-large {
+                padding: 56px 16px;
+            }
+
+            .menu-card img {
+                height: 220px;
+            }
+
+            .section-title-main {
+                font-size: 24px;
+            }
+
+            .booking-left-title {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body class="landing-page">
+
+<div class="landing-wrapper">
+    <div class="landing-bg"></div>
+    <div class="landing-overlay"></div>
+
+    <div class="landing-content">
+        <!-- Top navigation -->
+        <header class="landing-navbar d-flex align-items-center justify-content-between">
+            <a th:href="@{/}" class="d-flex align-items-center gap-2 landing-logo text-decoration-none">
+                <span>Brew &amp; Co.</span>
+                <span>Coffee Studio</span>
+            </a>
+
+            <nav class="landing-menu d-flex align-items-center">
+                <a href="#about">Về chúng tôi</a>
+                <a href="#menu">Thực đơn</a>
+                <a href="#why">Dịch vụ</a>
+                <a href="#booking">Đặt bàn</a>
+                <a href="#testimonials">Đánh giá</a>
+            </nav>
+
+            <div class="d-flex align-items-center gap-2">
+                <a th:href="@{/login}" class="btn btn-outline-light-soft">Đăng nhập</a>
+                <a th:href="@{/register}" class="btn btn-primary-gold">Đăng ký</a>
+            </div>
+        </header>
+
+        <!-- Hero -->
+        <section class="landing-hero">
+            <div class="landing-badge">
+                <i class="bi bi-cup-hot"></i>
+                <span>Since 2018 · Hà Nội</span>
+            </div>
+
+            <h1 class="landing-title-main mb-2">
+                Nơi mỗi tách cà phê<br>
+                <span class="highlight">kể một câu chuyện</span>
+            </h1>
+
+            <p class="landing-subtitle">
+                Brew &amp; Co. — không gian cà phê đặc sản giữa lòng thành phố,
+                nơi chất lượng và nghệ thuật giao thoa trong từng khoảnh khắc.
+            </p>
+
+            <div class="landing-cta d-flex flex-wrap justify-content-center gap-3">
+                <a href="#menu" class="btn btn-primary-gold">
+                    <i class="bi bi-book-half me-1"></i>
+                    Xem thực đơn
+                </a>
+                <a href="#booking" class="btn btn-outline-light-soft">
+                    <i class="bi bi-calendar-check me-1"></i>
+                    Đặt bàn ngay
+                </a>
+            </div>
+        </section>
+
+        <div class="landing-scroll text-center">
+            SCROLL
+        </div>
+    </div>
+</div>
+
+<!-- Các section nội dung phía dưới -->
+<div class="section-wrapper">
+    <!-- About -->
+    <section id="about" class="section-inner">
+        <div class="row g-4 align-items-center">
+            <div class="col-lg-6">
+                <img src="https://images.pexels.com/photos/4109744/pexels-photo-4109744.jpeg?auto=compress&cs=tinysrgb&w=1200"
+                     alt="Barista pouring latte"
+                     class="img-fluid rounded-4 shadow-sm">
+            </div>
+            <div class="col-lg-6">
+                <div class="about-card">
+                    <div class="section-title-eyebrow">Về Brew &amp; Co.</div>
+                    <h2 class="section-title-main">Nghệ thuật cà phê được chắt lọc qua năm tháng</h2>
+                    <p class="text-muted-coffee mb-3">
+                        Ra đời năm 2018, Brew &amp; Co. được xây dựng từ niềm đam mê thuần túy
+                        với hạt cà phê Việt Nam. Chúng tôi tin rằng một tách cà phê ngon không chỉ đến từ máy móc
+                        hiện đại, mà từ sự tỉ mỉ trong từng công đoạn — từ lúc chọn hạt, rang xay cho đến thời điểm
+                        ly cà phê đến tay bạn.
+                    </p>
+                    <p class="text-muted-coffee mb-4">
+                        Đội ngũ barista của chúng tôi được đào tạo bởi World Barista Champion và nắm giữ chứng chỉ SCA
+                        quốc tế — đảm bảo mỗi ly đều là tác phẩm nghệ thuật thực sự.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3 small text-muted-coffee">
+                        <div>
+                            <div class="fw-semibold">Giờ mở cửa</div>
+                            <div>07:00 — 22:00</div>
+                        </div>
+                        <div>
+                            <div class="fw-semibold">Địa chỉ</div>
+                            <div>28 Nguyễn Huệ, Q1, TP.HCM</div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <span class="badge-soft-gold">
+                            <i class="bi bi-award"></i>
+                            Chứng nhận SCA • Specialty Coffee
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why us -->
+    <section id="why" class="why-section">
+        <div class="section-inner">
+            <div class="text-center mb-5">
+                <div class="section-title-eyebrow">Tại sao chọn chúng tôi</div>
+                <h2 class="section-title-main text-white mb-2">Trải nghiệm khác biệt hoàn toàn</h2>
+                <p class="text-light mb-0">Không chỉ là cà phê — Brew &amp; Co. là không gian để bạn tìm lại bản thân giữa
+                    nhịp sống hối hả.</p>
+            </div>
+            <div class="row g-4 text-start">
+                <div class="col-md-3">
+                    <div class="why-feature-icon"><i class="bi bi-leaf"></i></div>
+                    <div class="why-feature-title">Nguyên liệu tươi 100%</div>
+                    <p class="small text-light-50">Tất cả nguyên liệu được chọn lọc từ các trang trại uy tín, nhập khẩu trực tiếp.</p>
+                </div>
+                <div class="col-md-3">
+                    <div class="why-feature-icon"><i class="bi bi-heart"></i></div>
+                    <div class="why-feature-title">Tâm huyết từng tách</div>
+                    <p class="small text-light-50">Mỗi ly được pha thủ công bởi barista có chứng chỉ quốc tế với đam mê thực sự.</p>
+                </div>
+                <div class="col-md-3">
+                    <div class="why-feature-icon"><i class="bi bi-wifi"></i></div>
+                    <div class="why-feature-title">Không gian làm việc</div>
+                    <p class="small text-light-50">WiFi tốc độ cao, ổ cắm điện tại mọi bàn, lý tưởng cho cả nghiên cứu và làm việc.</p>
+                </div>
+                <div class="col-md-3">
+                    <div class="why-feature-icon"><i class="bi bi-geo-alt"></i></div>
+                    <div class="why-feature-title">Vị trí trung tâm</div>
+                    <p class="small text-light-50">Ngay trung tâm thành phố, dễ dàng di chuyển bằng mọi phương tiện.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured menu -->
+    <section id="menu" class="section-inner section-large">
+        <div class="text-center mb-5">
+            <div class="section-title-eyebrow">Thực đơn nổi bật</div>
+            <h2 class="section-title-main">Những tuyệt phẩm không thể bỏ lỡ</h2>
+            <p class="text-muted-coffee mb-0">Mỗi món đều là kết quả của sự thử nghiệm và cải tiến không ngừng nghỉ từ đội
+                ngũ barista tâm huyết.</p>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-12" th:if="${menuItems == null or #lists.isEmpty(menuItems)}">
+                <p class="text-center text-muted-coffee">Thực đơn đang được cập nhật. Vui lòng quay lại sau.</p>
+            </div>
+
+            <div class="col-12 col-sm-6 col-lg-3" th:each="item, iter : ${menuItems}" th:if="${iter.index} &lt; 4">
+                <div class="menu-card h-100">
+                    <img th:src="${item.imageUrl != null ? item.imageUrl : 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=600&h=400&fit=crop'}"
+                         class="img-fluid" th:alt="${item.name}" alt="Món">
+                    <h6 class="fw-semibold mb-1" th:text="${item.name}">Tên món</h6>
+                    <p class="small text-muted-coffee mb-1" th:text="${item.description}">Mô tả món</p>
+                    <div class="price-label" th:text="${item.price != null ? #numbers.formatInteger(item.price, 0, 'POINT') + ' đ' : '0 đ'}">0 đ</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-center gap-3">
+            <a href="#" class="btn btn-primary-gold">
+                <i class="bi bi-list-ul me-1"></i>
+                Xem toàn bộ thực đơn
+            </a>
+            <a href="#booking" class="btn btn-outline-black-dark">
+                <i class="bi bi-calendar-event me-1"></i>
+                Đặt bàn ngay
+            </a>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section id="testimonials" class="section-inner section-large">
+        <div class="text-center mb-5">
+            <div class="section-title-eyebrow">Khách hàng nói gì</div>
+            <h2 class="section-title-main">Lời từ trái tim khách hàng</h2>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <div class="text-warning mb-2">★★★★★</div>
+                    <p class="small text-muted-coffee mb-3">"Không gian cực kỳ thoải mái, mình thường ngồi làm việc cả buổi sáng.
+                        Cà phê trứng ở đây là ngon nhất mình từng thử!"</p>
+                    <div class="fw-semibold">Minh Anh</div>
+                    <div class="small text-muted-coffee">Freelancer</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <div class="text-warning mb-2">★★★★★</div>
+                    <p class="small text-muted-coffee mb-3">"Brew &amp; Co là nơi tôi hay dẫn team đến họp.
+                        Đồ uống ngon, không gian yên tĩnh và WiFi cực ổn định."</p>
+                    <div class="fw-semibold">Quốc Hưng</div>
+                    <div class="small text-muted-coffee">Software Engineer</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <div class="text-warning mb-2">★★★★★</div>
+                    <p class="small text-muted-coffee mb-3">"Aesthetic thật sự đỉnh cao. Mỗi góc trong quán đều có thể chụp ảnh đẹp.
+                        Matcha Cloud là must-try!"</p>
+                    <div class="fw-semibold">Thu Trang</div>
+                    <div class="small text-muted-coffee">Designer</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Booking -->
+    <section id="booking" class="section-inner section-large pt-0 pb-5">
+        <div class="row g-4 align-items-start">
+            <div class="col-lg-5">
+                <div class="section-title-eyebrow">Đặt bàn</div>
+                <h2 class="booking-left-title">Giữ chỗ cho khoảnh khắc đặc biệt</h2>
+                <p class="text-muted-coffee mb-4">Dù là buổi hẹn hò, họp nhóm hay chỉ đơn giản là muốn có một góc yên tĩnh,
+                    chúng tôi luôn sẵn sàng chuẩn bị cho bạn.</p>
+                <div class="d-flex flex-column gap-3 small text-muted-coffee">
+                    <div>
+                        <div class="fw-semibold"><i class="bi bi-telephone-outbound me-2"></i>Hotline đặt bàn</div>
+                        <div>0901 234 567</div>
+                    </div>
+                    <div>
+                        <div class="fw-semibold"><i class="bi bi-envelope me-2"></i>Email</div>
+                        <div>hello@brewandco.vn</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="booking-card">
+                    <form class="row g-3 small">
+                        <div class="col-md-6">
+                            <label class="form-label" for="bookingName">Họ tên *</label>
+                            <input id="bookingName" name="name" type="text" class="form-control" placeholder="Nguyễn Văn A" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="bookingPhone">Số điện thoại *</label>
+                            <input id="bookingPhone" name="phone" type="text" class="form-control" placeholder="0901 234 567" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="bookingEmail">Email</label>
+                            <input id="bookingEmail" name="email" type="email" class="form-control" placeholder="email@example.com">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="bookingDate">Ngày *</label>
+                            <input id="bookingDate" name="date" type="text" class="form-control" placeholder="dd/mm/yyyy" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="bookingTime">Giờ *</label>
+                            <select id="bookingTime" name="time" class="form-select" required>
+                                <option>Chọn giờ</option>
+                                <option>09:00</option>
+                                <option>14:00</option>
+                                <option>19:00</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="bookingGuests">Số khách *</label>
+                            <input id="bookingGuests" name="guests" type="number" class="form-control" min="1" value="2" required>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label" for="bookingNote">Ghi chú</label>
+                            <input id="bookingNote" name="note" type="text" class="form-control" placeholder="Yêu cầu đặc biệt (nếu có)">
+                        </div>
+                        <div class="col-12 mt-2">
+                            <button type="button" class="btn btn-primary-gold w-100">
+                                <i class="bi bi-calendar-heart me-1"></i>
+                                Gửi yêu cầu đặt bàn
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Map + Footer -->
+<div class="footer-map">
+    <iframe
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3919.405949373199!2d106.69918047579687!3d10.778746259187436!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752f480c9d7c1d%3A0xa3b3f31c52a4da41!2zTmjDoCBUaMOhbmggVGjhu4sgVGjDrG5nIELDuWkgxJDhuqFp!5e0!3m2!1svi!2svi!4v1700000000000!5m2!1svi!2svi"
+        allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+</div>
+
+<footer class="footer-wrapper">
+    <div class="footer-inner">
+        <div class="row g-4">
+            <div class="col-md-5">
+                <div class="footer-brand-title">Brew &amp; Co.</div>
+                <div class="small text-muted-coffee mb-2">Specialty Coffee Since 2018</div>
+                <p class="small mb-3">Nơi mỗi tách cà phê là một câu chuyện được kể bằng đam mê và sự tỉ mỉ.</p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm rounded-circle" type="button" aria-label="Instagram">
+                        <i class="bi bi-instagram"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm rounded-circle" type="button" aria-label="Facebook">
+                        <i class="bi bi-facebook"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm rounded-circle" type="button" aria-label="TikTok">
+                        <i class="bi bi-tiktok"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <h6 class="mb-2">Liên kết nhanh</h6>
+                <div class="footer-links small">
+                    <a href="#about">Về chúng tôi</a>
+                    <a href="#menu">Thực đơn</a>
+                    <a href="#why">Dịch vụ</a>
+                    <a href="#booking">Đặt bàn</a>
+                    <a href="#testimonials">Menu đầy đủ</a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <h6 class="mb-2">Liên hệ</h6>
+                <div class="small mb-1"><i class="bi bi-geo-alt me-1"></i>28 Nguyễn Huệ, Q1, TP.HCM</div>
+                <div class="small mb-1"><i class="bi bi-telephone me-1"></i>0901 234 567</div>
+                <div class="small mb-3"><i class="bi bi-envelope me-1"></i>hello@brewandco.vn</div>
+            </div>
+        </div>
+        <div class="footer-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span>© 2024 Brew &amp; Co. Tất cả quyền được bảo lưu.</span>
+            <span class="small">
+                <a th:href="@{/login}" class="me-3 text-decoration-none">Đăng nhập</a>
+                <a th:href="@{/register}" class="text-decoration-none">Đăng ký</a>
+            </span>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>
