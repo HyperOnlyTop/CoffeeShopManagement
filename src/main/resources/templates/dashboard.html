@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
      <meta charset="UTF-8">
      <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,29 +18,34 @@
      <!-- Custom CSS for dashboard layout (dùng lại doanhthu.css) -->
      <link rel="stylesheet" href="/css/doanhthu.css">
 </head>
+
 <body>
 
      <!-- Sidebar -->
      <nav class="sidebar">
-          <div class="brand">
-               <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo" class="brand-img">
+          <a th:href="@{/}" class="brand" style="text-decoration: none; color: inherit;">
+               <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo"
+                    class="brand-img">
                <div class="brand-text">
                     <h5>Brew &amp; Co.</h5>
-                    <p>Coffee Management</p>
+                    <p style="color: #d47633;">Coffee Management</p>
                </div>
-          </div>
+          </a>
 
-          <div class="user-profile">
-               <img src="https://ui-avatars.com/api/?name=Admin&background=C98D4D&color=fff" alt="User">
+          <div class="user-profile" th:if="${currentUser != null}">
+               <img th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
+                    alt="User" style="object-fit: cover;">
                <div class="user-info">
-                    <h6>Admin</h6>
-                    <p>admin@cafe.com</p>
+                    <h6
+                         th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
+                         Tên tài khoản</h6>
+                    <p th:text="${currentUser.email}">Email</p>
                </div>
                <div class="online-dot"></div>
           </div>
 
           <ul class="nav-menu">
-               <li class="nav-item">
+               <li class="nav-item" sec:authorize="hasRole('ADMIN')">
                     <a href="/dashboard" class="nav-link active">
                          <i class="bi bi-grid-1x2"></i> Dashboard
                     </a>
@@ -54,7 +60,7 @@
                          <i class="bi bi-bag"></i> Đơn hàng
                     </a>
                </li>
-               <li class="nav-item">
+               <li class="nav-item" sec:authorize="hasRole('ADMIN')">
                     <a href="/Revenue" class="nav-link">
                          <i class="bi bi-bar-chart-fill"></i> Doanh thu
                     </a>
@@ -105,8 +111,12 @@
                               <p class="metric-caption">Doanh thu hôm nay</p>
                               <span class="icon-pill icon-pill-yellow"><i class="bi bi-coin"></i></span>
                          </div>
-                         <div class="metric-value" th:text="${todayRevenue != null} ? ${#numbers.formatInteger(todayRevenue, 0, 'POINT')} + ' đ' : '0 đ'">0 đ</div>
-                         <p class="metric-footer" th:text="'Tháng này: ' + (${monthRevenue != null} ? ${#numbers.formatInteger(monthRevenue, 0, 'POINT')} + ' đ' : '0 đ')">Tháng này: 0 đ</p>
+                         <div class="metric-value"
+                              th:text="${todayRevenue != null} ? ${#numbers.formatInteger(todayRevenue, 0, 'POINT')} + ' đ' : '0 đ'">
+                              0 đ</div>
+                         <p class="metric-footer"
+                              th:text="'Tháng này: ' + (${monthRevenue != null} ? ${#numbers.formatInteger(monthRevenue, 0, 'POINT')} + ' đ' : '0 đ')">
+                              Tháng này: 0 đ</p>
                     </div>
                </div>
 
@@ -117,7 +127,9 @@
                               <span class="icon-pill icon-pill-blue"><i class="bi bi-receipt"></i></span>
                          </div>
                          <div class="metric-value" th:text="${todayOrders != null} ? ${todayOrders} : 0">0</div>
-                         <p class="metric-footer" th:text="'Tổng: ' + (${totalOrders != null} ? ${totalOrders} : 0) + ' đơn'">Tổng: 0 đơn</p>
+                         <p class="metric-footer"
+                              th:text="'Tổng: ' + (${totalOrders != null} ? ${totalOrders} : 0) + ' đơn'">Tổng: 0 đơn
+                         </p>
                     </div>
                </div>
 
@@ -127,8 +139,11 @@
                               <p class="metric-caption">Khách hàng mới</p>
                               <span class="icon-pill icon-pill-pink"><i class="bi bi-person-plus"></i></span>
                          </div>
-                         <div class="metric-value" th:text="${todayNewCustomers != null} ? ${todayNewCustomers} : 0">0</div>
-                         <p class="metric-footer" th:text="'Tổng: ' + (${totalCustomers != null} ? ${totalCustomers} : 0) + ' khách'">Tổng: 0 khách</p>
+                         <div class="metric-value" th:text="${todayNewCustomers != null} ? ${todayNewCustomers} : 0">0
+                         </div>
+                         <p class="metric-footer"
+                              th:text="'Tổng: ' + (${totalCustomers != null} ? ${totalCustomers} : 0) + ' khách'">Tổng:
+                              0 khách</p>
                     </div>
                </div>
 
@@ -138,7 +153,9 @@
                               <p class="metric-caption">Giá trị TB / đơn</p>
                               <span class="icon-pill icon-pill-green"><i class="bi bi-graph-up"></i></span>
                          </div>
-                         <div class="metric-value" th:text="${todayAvgOrderValue != null} ? ${#numbers.formatInteger(todayAvgOrderValue, 0, 'POINT')} + ' đ' : '0 đ'">0 đ</div>
+                         <div class="metric-value"
+                              th:text="${todayAvgOrderValue != null} ? ${#numbers.formatInteger(todayAvgOrderValue, 0, 'POINT')} + ' đ' : '0 đ'">
+                              0 đ</div>
                          <p class="metric-footer">Giá trị trung bình đơn hàng hôm nay</p>
                     </div>
                </div>
@@ -184,7 +201,9 @@
                                         <p class="best-seller-name" th:text="${item.name}">Tên món</p>
                                         <p class="best-seller-meta" th:text="${item.totalQuantity} + ' ly'"></p>
                                    </div>
-                                   <span class="best-seller-value" th:text="${#numbers.formatInteger(item.totalRevenue, 0, 'POINT')} + ' đ'">0 đ</span>
+                                   <span class="best-seller-value"
+                                        th:text="${#numbers.formatInteger(item.totalRevenue, 0, 'POINT')} + ' đ'">0
+                                        đ</span>
                               </div>
                          </div>
                     </div>
@@ -195,8 +214,8 @@
           <div class="custom-card">
                <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3 class="chart-title mb-0">Đơn hàng gần đây</h3>
-                    <a href="#" class="view-all-link">Xem tất cả 
-&#8594;</a>
+                    <a href="#" class="view-all-link">Xem tất cả
+                         &#8594;</a>
                </div>
 
                <div class="table-responsive">
@@ -212,29 +231,40 @@
                               </tr>
                          </thead>
                          <tbody>
-                                   <tr th:if="${#lists.isEmpty(recentOrders)}">
-                                        <td colspan="6" class="text-center text-muted py-4">Chưa có đơn hàng nào gần đây.</td>
-                                   </tr>
+                              <tr th:if="${#lists.isEmpty(recentOrders)}">
+                                   <td colspan="6" class="text-center text-muted py-4">Chưa có đơn hàng nào gần đây.
+                                   </td>
+                              </tr>
 
-                                   <tr th:each="ro : ${recentOrders}">
-                                        <td class="order-code" th:text="${ro.order.orderCode != null ? '#' + ro.order.orderCode : '(Mới)'}">#ORD-0000</td>
-                                        <td th:text="${ro.order.customerName != null ? ro.order.customerName : 'Khách lẻ'}">Tên khách</td>
-                                        <td th:text="${ro.itemsCount} + ' món'">0 món</td>
-                                        <td th:text="${ro.order.total != null ? #numbers.formatInteger(ro.order.total, 0, 'POINT') + ' đ' : '0 đ'}">0 đ</td>
-                                        <td th:text="${ro.order.createdAt != null ? #temporals.format(ro.order.createdAt, 'HH:mm') : '--:--'}">--:--</td>
-                                        <td>
-                                             <span class="status-badge status-completed"
-                                                   th:if="${ro.order.status != null and ro.order.status.name() == 'COMPLETED'}">Hoàn thành</span>
-                                             <span class="status-badge status-pending"
-                                                   th:if="${ro.order.status != null and ro.order.status.name() == 'PENDING'}">Chờ xử lý</span>
-                                             <span class="status-badge status-brewing"
-                                                   th:if="${ro.order.status != null and ro.order.status.name() == 'PREPARING'}">Đang pha</span>
-                                             <span class="status-badge status-cancelled"
-                                                   th:if="${ro.order.status != null and ro.order.status.name() == 'CANCELLED'}">Đã hủy</span>
-                                             <span class="status-badge"
-                                                   th:if="${ro.order.status == null}">Không rõ</span>
-                                        </td>
-                                   </tr>
+                              <tr th:each="ro : ${recentOrders}">
+                                   <td class="order-code"
+                                        th:text="${ro.order.orderCode != null ? '#' + ro.order.orderCode : '(Mới)'}">
+                                        #ORD-0000</td>
+                                   <td th:text="${ro.order.customerName != null ? ro.order.customerName : 'Khách lẻ'}">
+                                        Tên khách</td>
+                                   <td th:text="${ro.itemsCount} + ' món'">0 món</td>
+                                   <td
+                                        th:text="${ro.order.total != null ? #numbers.formatInteger(ro.order.total, 0, 'POINT') + ' đ' : '0 đ'}">
+                                        0 đ</td>
+                                   <td
+                                        th:text="${ro.order.createdAt != null ? #temporals.format(ro.order.createdAt, 'HH:mm') : '--:--'}">
+                                        --:--</td>
+                                   <td>
+                                        <span class="status-badge status-completed"
+                                             th:if="${ro.order.status != null and ro.order.status.name() == 'COMPLETED'}">Hoàn
+                                             thành</span>
+                                        <span class="status-badge status-pending"
+                                             th:if="${ro.order.status != null and ro.order.status.name() == 'PENDING'}">Chờ
+                                             xử lý</span>
+                                        <span class="status-badge status-brewing"
+                                             th:if="${ro.order.status != null and ro.order.status.name() == 'PREPARING'}">Đang
+                                             pha</span>
+                                        <span class="status-badge status-cancelled"
+                                             th:if="${ro.order.status != null and ro.order.status.name() == 'CANCELLED'}">Đã
+                                             hủy</span>
+                                        <span class="status-badge" th:if="${ro.order.status == null}">Không rõ</span>
+                                   </td>
+                              </tr>
                          </tbody>
                     </table>
                </div>
@@ -250,4 +280,5 @@
      <script src="/js/admin-common.js"></script>
 
 </body>
+
 </html>

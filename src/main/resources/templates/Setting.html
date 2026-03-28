@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,29 +27,35 @@
     }
   </style>
 </head>
+
 <body>
 
   <!-- Sidebar -->
   <nav class="sidebar">
-    <div class="brand">
-      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo" class="brand-img">
+    <a th:href="@{/}" class="brand" style="text-decoration: none; color: inherit;">
+      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo"
+        class="brand-img">
       <div class="brand-text">
         <h5>Brew &amp; Co.</h5>
-        <p>Coffee Management</p>
+        <p style="color: #d47633;">Coffee Management</p>
       </div>
-    </div>
+    </a>
 
-    <div class="user-profile">
-      <img src="https://ui-avatars.com/api/?name=Admin&background=C98D4D&color=fff" alt="User">
+    <div class="user-profile" th:if="${currentUser != null}">
+      <img
+        th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
+        alt="User" style="object-fit: cover;">
       <div class="user-info">
-        <h6>Admin</h6>
-        <p>admin@cafe.com</p>
+        <h6
+          th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
+          Tên tài khoản</h6>
+        <p th:text="${currentUser.email}">Email</p>
       </div>
       <div class="online-dot"></div>
     </div>
 
     <ul class="nav-menu">
-      <li class="nav-item">
+      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
         <a href="/dashboard" class="nav-link">
           <i class="bi bi-grid-1x2"></i> Dashboard
         </a>
@@ -63,7 +70,7 @@
           <i class="bi bi-bag"></i> Đơn hàng
         </a>
       </li>
-      <li class="nav-item">
+      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
         <a href="/Revenue" class="nav-link">
           <i class="bi bi-bar-chart-fill"></i> Doanh thu
         </a>
@@ -108,42 +115,54 @@
 
     <!-- Tabs -->
     <div class="settings-tabs mb-4">
-      <button class="settings-tab active" type="button" data-tab="shop">Thông tin quán</button>
-      <button class="settings-tab" type="button" data-tab="activity">Hoạt động</button>
-      <button class="settings-tab" type="button" data-tab="notification">Thông báo</button>
-      <button class="settings-tab" type="button" data-tab="payment">Thanh toán QR</button>
-      <button class="settings-tab" type="button" data-tab="account">Tài khoản</button>
+      <button class="settings-tab" th:classappend="${#authorization.expression('hasRole(''ADMIN'')') ? 'active' : ''}"
+        type="button" data-tab="shop" sec:authorize="hasRole('ADMIN')">Thông tin quán</button>
+      <button class="settings-tab" type="button" data-tab="activity" sec:authorize="hasRole('ADMIN')">Hoạt động</button>
+      <button class="settings-tab" type="button" data-tab="notification" sec:authorize="hasRole('ADMIN')">Thông
+        báo</button>
+      <button class="settings-tab" type="button" data-tab="payment" sec:authorize="hasRole('ADMIN')">Thanh toán
+        QR</button>
+      <button class="settings-tab" th:classappend="${#authorization.expression('hasRole(''STAFF'')') ? 'active' : ''}"
+        type="button" data-tab="account">Tài khoản</button>
     </div>
 
     <!-- Thông tin quán -->
-    <div class="settings-tab-content active" data-tab-content="shop">
+    <div class="settings-tab-content"
+      th:classappend="${#authorization.expression('hasRole(''ADMIN'')') ? 'active' : ''}" data-tab-content="shop"
+      sec:authorize="hasRole('ADMIN')">
       <!-- Basic info -->
       <div class="custom-card mb-4">
         <h6 class="settings-section-title mb-3">Thông tin cơ bản</h6>
         <div class="row g-3">
           <div class="col-md-6">
             <label for="shopName" class="form-label settings-label">Tên quán</label>
-            <input id="shopName" name="shopName" type="text" class="form-control settings-input" value="Brew &amp; Co. Coffee">
+            <input id="shopName" name="shopName" type="text" class="form-control settings-input"
+              value="Brew &amp; Co. Coffee">
           </div>
           <div class="col-md-6">
             <label for="shopPhone" class="form-label settings-label">Số điện thoại</label>
-            <input id="shopPhone" name="shopPhone" type="text" class="form-control settings-input" value="028 3812 4567">
+            <input id="shopPhone" name="shopPhone" type="text" class="form-control settings-input"
+              value="028 3812 4567">
           </div>
           <div class="col-md-6">
             <label for="shopAddress" class="form-label settings-label">Địa chỉ</label>
-            <input id="shopAddress" name="shopAddress" type="text" class="form-control settings-input" value="123 Nguyễn Huệ, Q.1, TP.HCM">
+            <input id="shopAddress" name="shopAddress" type="text" class="form-control settings-input"
+              value="123 Nguyễn Huệ, Q.1, TP.HCM">
           </div>
           <div class="col-md-6">
             <label for="shopEmail" class="form-label settings-label">Email liên hệ</label>
-            <input id="shopEmail" name="shopEmail" type="email" class="form-control settings-input" value="hello@brewandco.vn">
+            <input id="shopEmail" name="shopEmail" type="email" class="form-control settings-input"
+              value="hello@brewandco.vn">
           </div>
           <div class="col-md-6">
             <label for="shopWebsite" class="form-label settings-label">Website</label>
-            <input id="shopWebsite" name="shopWebsite" type="text" class="form-control settings-input" value="www.brewandco.vn">
+            <input id="shopWebsite" name="shopWebsite" type="text" class="form-control settings-input"
+              value="www.brewandco.vn">
           </div>
           <div class="col-md-6">
             <label for="shopTaxCode" class="form-label settings-label">Mã số thuế</label>
-            <input id="shopTaxCode" name="shopTaxCode" type="text" class="form-control settings-input" value="0312456789">
+            <input id="shopTaxCode" name="shopTaxCode" type="text" class="form-control settings-input"
+              value="0312456789">
           </div>
         </div>
       </div>
@@ -155,9 +174,11 @@
           <div class="settings-hours-label">Thứ 2 - Thứ 6</div>
           <div class="settings-hours-inputs">
             <div class="settings-time-input-group">
-              <input id="weekdayOpen" type="text" class="form-control settings-time-input" value="07:00 SA" aria-label="Giờ mở cửa Thứ 2 - Thứ 6">
+              <input id="weekdayOpen" type="text" class="form-control settings-time-input" value="07:00 SA"
+                aria-label="Giờ mở cửa Thứ 2 - Thứ 6">
               <span class="settings-time-separator">-</span>
-              <input id="weekdayClose" type="text" class="form-control settings-time-input" value="10:00 CH" aria-label="Giờ đóng cửa Thứ 2 - Thứ 6">
+              <input id="weekdayClose" type="text" class="form-control settings-time-input" value="10:00 CH"
+                aria-label="Giờ đóng cửa Thứ 2 - Thứ 6">
             </div>
           </div>
         </div>
@@ -165,9 +186,11 @@
           <div class="settings-hours-label">Thứ 7</div>
           <div class="settings-hours-inputs">
             <div class="settings-time-input-group">
-              <input id="saturdayOpen" type="text" class="form-control settings-time-input" value="07:30 SA" aria-label="Giờ mở cửa Thứ 7">
+              <input id="saturdayOpen" type="text" class="form-control settings-time-input" value="07:30 SA"
+                aria-label="Giờ mở cửa Thứ 7">
               <span class="settings-time-separator">-</span>
-              <input id="saturdayClose" type="text" class="form-control settings-time-input" value="10:30 CH" aria-label="Giờ đóng cửa Thứ 7">
+              <input id="saturdayClose" type="text" class="form-control settings-time-input" value="10:30 CH"
+                aria-label="Giờ đóng cửa Thứ 7">
             </div>
           </div>
         </div>
@@ -175,9 +198,11 @@
           <div class="settings-hours-label">Chủ nhật</div>
           <div class="settings-hours-inputs">
             <div class="settings-time-input-group">
-              <input id="sundayOpen" type="text" class="form-control settings-time-input" value="08:00 SA" aria-label="Giờ mở cửa Chủ nhật">
+              <input id="sundayOpen" type="text" class="form-control settings-time-input" value="08:00 SA"
+                aria-label="Giờ mở cửa Chủ nhật">
               <span class="settings-time-separator">-</span>
-              <input id="sundayClose" type="text" class="form-control settings-time-input" value="09:00 CH" aria-label="Giờ đóng cửa Chủ nhật">
+              <input id="sundayClose" type="text" class="form-control settings-time-input" value="09:00 CH"
+                aria-label="Giờ đóng cửa Chủ nhật">
             </div>
           </div>
         </div>
@@ -186,12 +211,13 @@
       <!-- Description -->
       <div class="custom-card mb-4">
         <h6 id="shopDescriptionLabel" class="settings-section-title mb-3">Mô tả quán</h6>
-        <textarea id="shopDescription" class="form-control settings-textarea" rows="4" aria-labelledby="shopDescriptionLabel">Brew &amp; Co. là quán cà phê phong cách tối giản, phục vụ các loại cà phê specialty và đồ uống chất lượng cao. Không gian yên tĩnh, phù hợp để làm việc và thư giãn.</textarea>
+        <textarea id="shopDescription" class="form-control settings-textarea" rows="4"
+          aria-labelledby="shopDescriptionLabel">Brew &amp; Co. là quán cà phê phong cách tối giản, phục vụ các loại cà phê specialty và đồ uống chất lượng cao. Không gian yên tĩnh, phù hợp để làm việc và thư giãn.</textarea>
       </div>
     </div>
 
     <!-- Hoạt động -->
-    <div class="settings-tab-content" data-tab-content="activity">
+    <div class="settings-tab-content" data-tab-content="activity" sec:authorize="hasRole('ADMIN')">
       <div class="custom-card mb-4">
         <h6 class="settings-section-title mb-3">Hoạt động</h6>
         <p class="text-muted mb-0">Phần cài đặt hoạt động sẽ được bổ sung trong phiên bản tiếp theo.</p>
@@ -199,7 +225,7 @@
     </div>
 
     <!-- Thông báo -->
-    <div class="settings-tab-content" data-tab-content="notification">
+    <div class="settings-tab-content" data-tab-content="notification" sec:authorize="hasRole('ADMIN')">
       <div class="custom-card mb-4">
         <h6 class="settings-section-title mb-3">Thông báo</h6>
         <p class="text-muted mb-0">Phần cấu hình thông báo sẽ được bổ sung trong phiên bản tiếp theo.</p>
@@ -207,7 +233,7 @@
     </div>
 
     <!-- Thanh toán QR -->
-    <div class="settings-tab-content" data-tab-content="payment">
+    <div class="settings-tab-content" data-tab-content="payment" sec:authorize="hasRole('ADMIN')">
       <div class="row g-4">
         <!-- Cấu hình bên trái -->
         <div class="col-lg-7">
@@ -266,8 +292,10 @@
             </div>
 
             <div class="text-center mb-3">
-              <div class="bg-white rounded-3 d-inline-flex align-items-center justify-content-center" style="width: 220px; height: 260px;">
-                <img id="qrPreviewImage" src="https://via.placeholder.com/200x220?text=QR" alt="QR preview" class="img-fluid" style="max-width: 200px; max-height: 220px;">
+              <div class="bg-white rounded-3 d-inline-flex align-items-center justify-content-center"
+                style="width: 220px; height: 260px;">
+                <img id="qrPreviewImage" src="https://via.placeholder.com/200x220?text=QR" alt="QR preview"
+                  class="img-fluid" style="max-width: 200px; max-height: 220px;">
               </div>
             </div>
 
@@ -298,14 +326,34 @@
     </div>
 
     <!-- Tài khoản -->
-    <div class="settings-tab-content" data-tab-content="account">
+    <div class="settings-tab-content"
+      th:classappend="${#authorization.expression('hasRole(''STAFF'')') ? 'active' : ''}" data-tab-content="account"
+      th:if="${currentUser != null}">
       <div class="row g-4">
         <div class="col-lg-4">
           <div class="custom-card mb-4">
             <div class="d-flex flex-column align-items-center text-center">
-              <img src="https://ui-avatars.com/api/?name=Admin&background=C98D4D&color=fff&size=120" alt="Avatar" class="rounded-circle mb-3">
-              <h5 class="mb-1">Admin</h5>
-              <p class="text-muted mb-2">Quản trị viên hệ thống</p>
+              <div class="position-relative">
+                <img
+                  th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff&size=120'}"
+                  alt="Avatar" class="rounded-circle mb-3 shadow-sm" id="profileAvatarPreviewLarge"
+                  style="width: 120px; height: 120px; object-fit: cover; border: 4px solid #fff;">
+                <label for="avatarFileInput" class="position-absolute bottom-0 end-0 mb-3 me-1"
+                  style="cursor: pointer;">
+                  <div
+                    class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                    style="width: 32px; height: 32px;">
+                    <i class="bi bi-camera-fill small"></i>
+                  </div>
+                </label>
+                <input type="file" id="avatarFileInput" class="d-none" accept="image/*">
+              </div>
+              <h5 class="mb-1"
+                th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
+                Admin</h5>
+              <p class="text-muted mb-2"
+                th:text="${currentUser.role == 'ADMIN' ? 'Quản trị viên hệ thống' : 'Nhân viên cửa hàng'}">Quản trị viên
+                hệ thống</p>
               <span class="badge bg-success-subtle text-success px-3 py-2">Đang hoạt động</span>
             </div>
             <hr class="my-4">
@@ -319,24 +367,44 @@
         <div class="col-lg-8">
           <div class="custom-card mb-4">
             <h6 class="settings-section-title mb-3">Thông tin tài khoản</h6>
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label settings-label">Họ và tên</label>
-                <input type="text" class="form-control settings-input" value="Admin" disabled>
+            <form id="updateProfileForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label settings-label">Họ và tên</label>
+                  <input type="text" class="form-control settings-input" id="profileFullName"
+                    th:value="${currentUser != null ? currentUser.fullName : ''}">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label settings-label">Email đăng nhập</label>
+                  <input type="email" class="form-control settings-input" id="profileEmail"
+                    th:value="${currentUser != null ? currentUser.email : ''}">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label settings-label">Số điện thoại</label>
+                  <input type="text" class="form-control settings-input" id="profilePhone"
+                    th:value="${currentUser != null ? currentUser.phone : ''}">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label settings-label">Vai trò</label>
+                  <input type="text" class="form-control settings-input"
+                    th:value="${currentUser != null ? currentUser.role : ''}" disabled>
+                </div>
+                <div class="col-12">
+                  <label class="form-label settings-label">Link ảnh đại diện (URL)</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light text-muted small"><i class="bi bi-link-45deg"></i></span>
+                    <input type="text" class="form-control settings-input" id="profileAvatarUrl"
+                      th:value="${currentUser != null ? currentUser.avatarUrl : ''}"
+                      placeholder="Nhập link ảnh (VD: https://example.com/photo.jpg)">
+                  </div>
+                </div>
               </div>
-              <div class="col-md-6">
-                <label class="form-label settings-label">Email đăng nhập</label>
-                <input type="email" class="form-control settings-input" value="admin@cafe.com" disabled>
+              <div class="d-flex justify-content-end mt-4">
+                <button type="submit" class="btn btn-primary px-4">
+                  <i class="bi bi-person-check me-1"></i> Cập nhật thông tin
+                </button>
               </div>
-              <div class="col-md-6">
-                <label class="form-label settings-label">Số điện thoại</label>
-                <input type="text" class="form-control settings-input" value="0901 234 567" disabled>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label settings-label">Vai trò</label>
-                <input type="text" class="form-control settings-input" value="Quản trị viên" disabled>
-              </div>
-            </div>
+            </form>
           </div>
 
           <div class="custom-card">
@@ -348,15 +416,18 @@
               <div class="row g-3">
                 <div class="col-md-4">
                   <label for="currentPassword" class="form-label settings-label">Mật khẩu hiện tại</label>
-                  <input type="password" class="form-control settings-input" id="currentPassword" autocomplete="current-password">
+                  <input type="password" class="form-control settings-input" id="currentPassword"
+                    autocomplete="current-password">
                 </div>
                 <div class="col-md-4">
                   <label for="newPassword" class="form-label settings-label">Mật khẩu mới</label>
-                  <input type="password" class="form-control settings-input" id="newPassword" autocomplete="new-password">
+                  <input type="password" class="form-control settings-input" id="newPassword"
+                    autocomplete="new-password">
                 </div>
                 <div class="col-md-4">
                   <label for="confirmPassword" class="form-label settings-label">Nhập lại mật khẩu mới</label>
-                  <input type="password" class="form-control settings-input" id="confirmPassword" autocomplete="new-password">
+                  <input type="password" class="form-control settings-input" id="confirmPassword"
+                    autocomplete="new-password">
                 </div>
               </div>
               <div class="d-flex justify-content-end mt-4">
@@ -409,34 +480,7 @@
         });
       });
 
-      // Đổi mật khẩu (UI demo)
-      var changePasswordForm = document.getElementById('changePasswordForm');
-      if (changePasswordForm) {
-        changePasswordForm.addEventListener('submit', function (e) {
-          e.preventDefault();
-          var currentPassword = document.getElementById('currentPassword').value.trim();
-          var newPassword = document.getElementById('newPassword').value.trim();
-          var confirmPassword = document.getElementById('confirmPassword').value.trim();
 
-          if (!currentPassword || !newPassword || !confirmPassword) {
-            alert('Vui lòng nhập đầy đủ các trường mật khẩu.');
-            return;
-          }
-
-          if (newPassword.length < 6) {
-            alert('Mật khẩu mới cần ít nhất 6 ký tự.');
-            return;
-          }
-
-          if (newPassword !== confirmPassword) {
-            alert('Mật khẩu mới và xác nhận mật khẩu không khớp.');
-            return;
-          }
-
-          alert('Giao diện đổi mật khẩu đã sẵn sàng. Kết nối xử lý backend sẽ được bổ sung sau.');
-          changePasswordForm.reset();
-        });
-      }
 
       // Thanh toán QR - cập nhật preview
       var bankNameSelect = document.getElementById('bankNameSelect');
@@ -705,9 +749,98 @@
           });
       }
 
+      // Xử lý cập nhật thông tin tài khoản
+      const updateProfileForm = document.getElementById('updateProfileForm');
+      if (updateProfileForm) {
+        updateProfileForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          const fullName = document.getElementById('profileFullName').value;
+          const email = document.getElementById('profileEmail').value;
+          const phone = document.getElementById('profilePhone').value;
+          const avatarUrl = document.getElementById('profileAvatarUrl').value;
+
+          fetch('/api/account/update-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fullName, email, phone, avatarUrl })
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data.message) {
+                alert(data.message);
+                location.reload();
+              } else {
+                alert(data.error || 'Cập nhật thất bại');
+              }
+            })
+            .catch(() => alert('Lỗi kết nối server'));
+        });
+      }
+
+      // Xử lý đổi mật khẩu
+      const changePasswordForm = document.getElementById('changePasswordForm');
+      if (changePasswordForm) {
+        changePasswordForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          const currentPassword = document.getElementById('currentPassword').value;
+          const newPassword = document.getElementById('newPassword').value;
+          const confirmPassword = document.getElementById('confirmPassword').value;
+
+          if (newPassword !== confirmPassword) {
+            alert('Mật khẩu xác nhận không khớp');
+            return;
+          }
+
+          fetch('/api/account/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currentPassword, newPassword, confirmPassword })
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data.message) {
+                alert(data.message);
+                changePasswordForm.reset();
+              } else {
+                alert(data.error || 'Đổi mật khẩu thất bại');
+              }
+            })
+            .catch(() => alert('Lỗi kết nối server'));
+        });
+      }
+
+      // Xử lý tải ảnh đại diện từ máy tính
+      const avatarFileInput = document.getElementById('avatarFileInput');
+      if (avatarFileInput) {
+        avatarFileInput.addEventListener('change', function () {
+          const file = this.files[0];
+          if (!file) return;
+
+          const formData = new FormData();
+          formData.append('file', file);
+
+          fetch('/api/account/upload-avatar', {
+            method: 'POST',
+            body: formData
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data.avatarUrl) {
+                document.getElementById('profileAvatarPreviewLarge').src = data.avatarUrl;
+                document.getElementById('profileAvatarUrl').value = data.avatarUrl;
+                alert('Đã tải ảnh lên thành công. Vui lòng bấm "Cập nhật thông tin" để lưu thay đổi.');
+              } else {
+                alert(data.error || 'Tải ảnh thất bại');
+              }
+            })
+            .catch(() => alert('Lỗi kết nối khi tải ảnh'));
+        });
+      }
+
       loadSettings();
       loadPaymentSettings();
     });
   </script>
 </body>
+
 </html>

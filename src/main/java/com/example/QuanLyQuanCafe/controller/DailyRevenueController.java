@@ -35,8 +35,8 @@ public class DailyRevenueController {
     }
 
     @GetMapping("/daily")
-    public List<DailyRevenue> getAll() {
-        return getLast7DaysRevenue();
+    public List<DailyRevenue> getAll(@org.springframework.web.bind.annotation.RequestParam(value = "days", defaultValue = "7") int days) {
+        return getLastDaysRevenue(days);
     }
 
     @GetMapping("/daily/{date}")
@@ -51,7 +51,7 @@ public class DailyRevenueController {
 
     @GetMapping("/summary-7-days")
     public Summary7DaysResponse getSummary7Days() {
-        List<DailyRevenue> days = getLast7DaysRevenue();
+        List<DailyRevenue> days = getLastDaysRevenue(7);
 
         BigDecimal totalRevenue = BigDecimal.ZERO;
         int totalOrders = 0;
@@ -117,9 +117,9 @@ public class DailyRevenueController {
         return response;
     }
 
-    private List<DailyRevenue> getLast7DaysRevenue() {
+    private List<DailyRevenue> getLastDaysRevenue(int daysCount) {
         LocalDate today = LocalDate.now();
-        LocalDate from = today.minusDays(6);
+        LocalDate from = today.minusDays(daysCount - 1);
 
         List<DailyRevenue> existing = dailyRevenueService.findAll();
         if (!existing.isEmpty()) {
@@ -139,7 +139,7 @@ public class DailyRevenueController {
 
         List<DailyRevenue> generated = new ArrayList<>();
 
-        for (int i = 6; i >= 0; i--) {
+        for (int i = daysCount - 1; i >= 0; i--) {
             LocalDate date = today.minusDays(i);
             LocalDateTime start = date.atStartOfDay();
             LocalDateTime end = date.atTime(LocalTime.MAX);

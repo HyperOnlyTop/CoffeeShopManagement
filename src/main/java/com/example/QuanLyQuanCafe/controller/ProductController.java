@@ -11,6 +11,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.security.Principal;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +23,6 @@ import com.example.QuanLyQuanCafe.model.CafeOrder;
 import com.example.QuanLyQuanCafe.model.DailyRevenue;
 import com.example.QuanLyQuanCafe.model.OrderItem;
 import com.example.QuanLyQuanCafe.model.OrderStatus;
-import com.example.QuanLyQuanCafe.model.Customer;
 import com.example.QuanLyQuanCafe.service.MenuService;
 import com.example.QuanLyQuanCafe.service.OrderService;
 import com.example.QuanLyQuanCafe.service.StaffService;
@@ -50,7 +52,14 @@ public class ProductController {
 	}
 
 	@GetMapping("/dashboard")
-	public String dashboard(Model model) {
+	public String dashboard(Model model, Principal principal) {
+		if (principal != null) {
+			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+			if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_STAFF"))) {
+				return "redirect:/Menu";
+			}
+		}
+
 		LocalDate today = LocalDate.now();
 
 		DailyRevenue todayRevenueRow = dailyRevenueService.findByDate(today);

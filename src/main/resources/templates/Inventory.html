@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,29 +18,35 @@
   <!-- Shared layout styles -->
   <link rel="stylesheet" href="/css/doanhthu.css">
 </head>
+
 <body>
 
   <!-- Sidebar -->
   <nav class="sidebar">
-    <div class="brand">
-      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo" class="brand-img">
+    <a th:href="@{/}" class="brand" style="text-decoration: none; color: inherit;">
+      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo"
+        class="brand-img">
       <div class="brand-text">
         <h5>Brew &amp; Co.</h5>
-        <p>Coffee Management</p>
+        <p style="color: #d47633;">Coffee Management</p>
       </div>
-    </div>
+    </a>
 
-    <div class="user-profile">
-      <img src="https://ui-avatars.com/api/?name=Admin&background=C98D4D&color=fff" alt="User">
+    <div class="user-profile" th:if="${currentUser != null}">
+      <img
+        th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
+        alt="User" style="object-fit: cover;">
       <div class="user-info">
-        <h6>Admin</h6>
-        <p>admin@cafe.com</p>
+        <h6
+          th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
+          Tên tài khoản</h6>
+        <p th:text="${currentUser.email}">Email</p>
       </div>
       <div class="online-dot"></div>
     </div>
 
     <ul class="nav-menu">
-      <li class="nav-item">
+      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
         <a href="/dashboard" class="nav-link">
           <i class="bi bi-grid-1x2"></i> Dashboard
         </a>
@@ -54,7 +61,7 @@
           <i class="bi bi-bag"></i> Đơn hàng
         </a>
       </li>
-      <li class="nav-item">
+      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
         <a href="/Revenue" class="nav-link">
           <i class="bi bi-bar-chart-fill"></i> Doanh thu
         </a>
@@ -332,18 +339,18 @@
             '<td>' + categoryName + '</td>' +
             '<td><strong>' + stock + '</strong> ' + unit + '</td>' +
             '<td>' +
-              '<div class="stock-level">' +
-                '<div class="stock-level-bar ' + levelClass + '" style="width: ' + percent + '%;"></div>' +
-              '</div>' +
-              '<span class="stock-level-text">' + percent + '%</span>' +
+            '<div class="stock-level">' +
+            '<div class="stock-level-bar ' + levelClass + '" style="width: ' + percent + '%;"></div>' +
+            '</div>' +
+            '<span class="stock-level-text">' + percent + '%</span>' +
             '</td>' +
             '<td>' + priceText + '</td>' +
             '<td>' + supplierName + '</td>' +
             '<td><span class="stock-status-badge ' + statusClass + '">' + statusLabel + '</span></td>' +
             '<td>' +
-              '<button class="icon-circle-btn" type="button" aria-label="Chỉnh sửa nguyên liệu" title="Chỉnh sửa nguyên liệu" data-item-id="' + item.id + '">' +
-                '<i class="bi bi-pencil"></i>' +
-              '</button>' +
+            '<button class="icon-circle-btn" type="button" aria-label="Chỉnh sửa nguyên liệu" title="Chỉnh sửa nguyên liệu" data-item-id="' + item.id + '">' +
+            '<i class="bi bi-pencil"></i>' +
+            '</button>' +
             '</td>';
           tableBody.appendChild(row);
         });
@@ -606,4 +613,5 @@
     });
   </script>
 </body>
+
 </html>

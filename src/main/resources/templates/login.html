@@ -59,6 +59,7 @@
 
                 <div th:if="${param.error}" class="alert alert-danger py-2">Sai tài khoản hoặc mật khẩu.</div>
                 <div th:if="${param.logout}" class="alert alert-success py-2">Bạn đã đăng xuất.</div>
+                <div th:if="${param.registered}" class="alert alert-success py-2">Đăng ký thành công! Vui lòng thao tác đăng nhập.</div>
 
                 <form th:action="@{/login}" method="post" class="mb-4">
                     <div class="mb-3">

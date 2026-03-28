@@ -1,45 +1,52 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Doanh Thu | Quản lý quán cà phê</title>
-  
+
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  
+
   <!-- Bootstrap Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-  
+
   <!-- Google Fonts - Inter -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
+
   <!-- Custom CSS -->
   <link rel="stylesheet" href="/css/doanhthu.css">
 </head>
+
 <body>
 
   <!-- Sidebar -->
   <nav class="sidebar">
-    <div class="brand">
-      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo" class="brand-img">
+    <a th:href="@{/}" class="brand" style="text-decoration: none; color: inherit;">
+      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo"
+        class="brand-img">
       <div class="brand-text">
         <h5>Brew &amp; Co.</h5>
-        <p>Coffee Management</p>
+        <p style="color: #d47633;">Coffee Management</p>
       </div>
-    </div>
+    </a>
 
-    <div class="user-profile">
-      <img src="https://ui-avatars.com/api/?name=Admin&background=C98D4D&color=fff" alt="User">
+    <div class="user-profile" th:if="${currentUser != null}">
+      <img
+        th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
+        alt="User" style="object-fit: cover;">
       <div class="user-info">
-        <h6>Admin</h6>
-        <p>admin@cafe.com</p>
+        <h6
+          th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
+          Tên tài khoản</h6>
+        <p th:text="${currentUser.email}">Email</p>
       </div>
       <div class="online-dot"></div>
     </div>
 
     <ul class="nav-menu">
-      <li class="nav-item">
+      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
         <a href="/dashboard" class="nav-link">
           <i class="bi bi-grid-1x2"></i> Dashboard
         </a>
@@ -54,7 +61,7 @@
           <i class="bi bi-bag"></i> Đơn hàng
         </a>
       </li>
-      <li class="nav-item">
+      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
         <a href="/Revenue" class="nav-link active">
           <i class="bi bi-bar-chart-fill"></i> Doanh thu
         </a>
@@ -83,14 +90,14 @@
 
   <!-- Main Content -->
   <main class="main-content">
-    
+
     <!-- Header -->
     <div class="header-row">
       <div class="page-title">
         <h2>Doanh Thu</h2>
         <p>Phân tích tài chính & báo cáo</p>
       </div>
-      
+
       <div class="header-actions">
         <div class="icon-btn">
           <i class="bi bi-bell"></i>
@@ -102,7 +109,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Summary Cards Row -->
     <div class="row g-4 mb-4">
       <div class="col-md-3">
@@ -115,7 +122,7 @@
           <div class="metric-desc">Tổng doanh thu tuần này</div>
         </div>
       </div>
-      
+
       <div class="col-md-3">
         <div class="custom-card">
           <div class="card-icon-box bg-light-success">
@@ -126,7 +133,7 @@
           <div class="metric-desc">Đơn trong 7 ngày</div>
         </div>
       </div>
-      
+
       <div class="col-md-3">
         <div class="custom-card">
           <div class="card-icon-box bg-light-danger">
@@ -137,7 +144,7 @@
           <div class="metric-desc">Trung bình mỗi đơn</div>
         </div>
       </div>
-      
+
       <div class="col-md-3">
         <div class="custom-card">
           <div class="card-icon-box bg-light-info">
@@ -149,7 +156,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Main Chart Row -->
     <div class="row mb-4">
       <div class="col-12">
@@ -159,9 +166,9 @@
               <h3 class="chart-title">Biểu Đồ Doanh Thu</h3>
               <p class="chart-subtitle">7 ngày gần nhất</p>
             </div>
-            <div class="btn-group btn-group-toggle">
-              <button class="btn active">Tuần</button>
-              <button class="btn">Tháng</button>
+            <div class="btn-group btn-group-toggle" id="revenueFilterGroup">
+              <button class="btn active" data-days="7">Tuần</button>
+              <button class="btn" data-days="30">Tháng</button>
             </div>
           </div>
           <div style="height: 300px;">
@@ -170,7 +177,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Bottom Row -->
     <div class="row g-4 mb-4">
       <!-- Bar Chart -->
@@ -187,12 +194,12 @@
           </div>
         </div>
       </div>
-      
+
       <!-- List Stats -->
       <div class="col-md-4">
         <div class="custom-card mb-4">
           <h3 class="chart-title mb-4">Doanh Thu Theo Danh Mục</h3>
-          
+
           <div class="progress-list" id="categoryProgressList">
             <div class="progress-item">
               <div class="progress-item-header">
@@ -205,13 +212,14 @@
             </div>
           </div>
         </div>
-        
+
         <div class="custom-card">
           <h3 class="chart-title mb-3">Top Sản Phẩm</h3>
-          
+
           <div id="topProductsList">
             <div class="product-item">
-              <img src="/images/coffee.jpeg" alt="Placeholder" class="product-img" onerror="this.src='https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=100&h=100&fit=crop'">
+              <img src="/images/coffee.jpeg" alt="Placeholder" class="product-img"
+                onerror="this.src='https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=100&h=100&fit=crop'">
               <div class="product-info">
                 <h6>Chưa có dữ liệu</h6>
                 <p>Sản phẩm sẽ hiển thị khi có đơn hàng</p>
@@ -220,10 +228,10 @@
             </div>
           </div>
         </div>
-        
+
       </div>
     </div>
-    
+
   </main>
 
   <!-- Chart.js -->
@@ -232,6 +240,7 @@
   <script src="/js/doanhthu.js"></script>
   <!-- Admin common JS (logout confirm, etc.) -->
   <script src="/js/admin-common.js"></script>
-  
+
 </body>
+
 </html>

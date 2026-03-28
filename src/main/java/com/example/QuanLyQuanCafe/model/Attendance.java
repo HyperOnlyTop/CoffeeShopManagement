@@ -40,6 +40,9 @@ public class Attendance {
     @Column(length = 20)
     private AttendanceStatus status;
 
+    @Column(name = "work_hours")
+    private Double workHours;
+
     public Long getId() {
         return id;
     }
@@ -86,5 +89,13 @@ public class Attendance {
 
     public void setStatus(AttendanceStatus status) {
         this.status = status;
+    }
+
+    public Double getWorkHours() {
+        return workHours;
+    }
+
+    public void setWorkHours(Double workHours) {
+        this.workHours = workHours;
     }
 }

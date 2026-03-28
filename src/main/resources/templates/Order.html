@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,29 +18,35 @@
   <!-- Shared layout styles -->
   <link rel="stylesheet" href="/css/doanhthu.css">
 </head>
+
 <body>
 
   <!-- Sidebar -->
   <nav class="sidebar">
-    <div class="brand">
-      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo" class="brand-img">
+    <a th:href="@{/}" class="brand" style="text-decoration: none; color: inherit;">
+      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo"
+        class="brand-img">
       <div class="brand-text">
         <h5>Brew &amp; Co.</h5>
-        <p>Coffee Management</p>
+        <p style="color: #d47633">Coffee Management</p>
       </div>
-    </div>
+    </a>
 
-    <div class="user-profile">
-      <img src="https://ui-avatars.com/api/?name=Admin&background=C98D4D&color=fff" alt="User">
+    <div class="user-profile" th:if="${currentUser != null}">
+      <img
+        th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
+        alt="User" style="object-fit: cover;">
       <div class="user-info">
-        <h6>Admin</h6>
-        <p>admin@cafe.com</p>
+        <h6
+          th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
+          Tên tài khoản</h6>
+        <p th:text="${currentUser.email}">Email</p>
       </div>
       <div class="online-dot"></div>
     </div>
 
     <ul class="nav-menu">
-      <li class="nav-item">
+      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
         <a href="/dashboard" class="nav-link">
           <i class="bi bi-grid-1x2"></i> Dashboard
         </a>
@@ -54,7 +61,7 @@
           <i class="bi bi-bag"></i> Đơn hàng
         </a>
       </li>
-      <li class="nav-item">
+      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
         <a href="/Revenue" class="nav-link">
           <i class="bi bi-bar-chart-fill"></i> Doanh thu
         </a>
@@ -120,54 +127,77 @@
               <th scope="col">Giờ đặt</th>
               <th scope="col">Trạng thái</th>
               <th scope="col">Thanh toán</th>
+              <th scope="col">Thao tác</th>
             </tr>
           </thead>
           <tbody>
             <tr th:if="${#lists.isEmpty(orders)}">
-              <td colspan="8" class="text-center text-muted py-4">Chưa có đơn hàng nào.</td>
+              <td colspan="9" class="text-center text-muted py-4">Chưa có đơn hàng nào.</td>
             </tr>
 
             <tr th:each="order : ${orders}">
-              <td class="order-code" th:text="${order.orderCode != null ? '#' + order.orderCode : '(Mới)'}">#ORD-0000</td>
+              <td class="order-code" th:text="${order.orderCode != null ? '#' + order.orderCode : '(Mới)'}">#ORD-0000
+              </td>
               <td>
-                <div class="order-customer-name" th:text="${order.customerName != null ? order.customerName : 'Khách lẻ'}">Tên khách</div>
-                <div class="order-customer-phone" th:text="${order.customerPhone != null ? order.customerPhone : ''}">Số điện thoại</div>
+                <div class="order-customer-name"
+                  th:text="${order.customerName != null ? order.customerName : 'Khách lẻ'}">Tên khách</div>
+                <div class="order-customer-phone" th:text="${order.customerPhone != null ? order.customerPhone : ''}">Số
+                  điện thoại</div>
               </td>
               <td>
                 <span class="order-type-badge"
-                      th:classappend="${order.type != null and order.type.name() == 'TAKEAWAY'} ? ' order-type-takeaway' : ' order-type-dinein'"
-                      th:text="${order.type != null and order.type.name() == 'TAKEAWAY'} ? 'Mang về' : 'Tại bàn'">Tại bàn</span>
+                  th:classappend="${order.type != null and order.type.name() == 'TAKEAWAY'} ? ' order-type-takeaway' : ' order-type-dinein'"
+                  th:text="${order.type != null and order.type.name() == 'TAKEAWAY'} ? 'Mang về' : 'Tại bàn'">Tại
+                  bàn</span>
               </td>
-              <td th:text="${order.tableName != null ? order.tableName : (order.type != null and order.type.name() == 'TAKEAWAY' ? '—' : '')}">Bàn / Ghi chú</td>
+              <td
+                th:text="${order.tableName != null ? order.tableName : (order.type != null and order.type.name() == 'TAKEAWAY' ? '—' : '')}">
+                Bàn / Ghi chú</td>
               <td class="orders-amount" th:text="${order.total != null ? order.total + ' đ' : '0 đ'}">0 đ</td>
-              <td th:text="${order.createdAt != null ? #temporals.format(order.createdAt, 'HH:mm') : '--:--'}">--:--</td>
+              <td th:text="${order.createdAt != null ? #temporals.format(order.createdAt, 'HH:mm') : '--:--'}">--:--
+              </td>
               <td>
                 <span class="status-badge status-completed"
-                      th:if="${order.status != null and order.status.name() == 'COMPLETED'}">
+                  th:if="${order.status != null and order.status.name() == 'COMPLETED'}">
                   Hoàn thành
                 </span>
                 <span class="status-badge status-brewing"
-                      th:if="${order.status != null and order.status.name() == 'PREPARING'}">
+                  th:if="${order.status != null and order.status.name() == 'PREPARING'}">
                   Đang pha
                 </span>
                 <span class="status-badge status-waiting"
-                      th:if="${order.status != null and order.status.name() == 'PENDING'}">
+                  th:if="${order.status != null and order.status.name() == 'PENDING'}">
                   Chờ xử lý
                 </span>
                 <span class="status-badge status-cancelled"
-                      th:if="${order.status != null and order.status.name() == 'CANCELLED'}">
+                  th:if="${order.status != null and order.status.name() == 'CANCELLED'}">
                   Đã hủy
                 </span>
-                <span class="status-badge"
-                      th:if="${order.status == null}">
+                <span class="status-badge" th:if="${order.status == null}">
                   Không rõ
                 </span>
               </td>
               <td>
+                <span th:if="${order.paymentMethod != null and order.paymentMethod.name() == 'CASH'}"
+                  class="badge bg-secondary">Tiền mặt</span>
+                <span th:if="${order.paymentMethod != null and order.paymentMethod.name() == 'BANK_TRANSFER'}"
+                  class="badge bg-primary">Chuyển khoản</span>
+                <span th:if="${order.paymentMethod != null and order.paymentMethod.name() == 'MOMO'}"
+                  class="badge text-white" style="background-color: #a50064;">MoMo</span>
+                <span th:if="${order.paymentMethod != null and order.paymentMethod.name() == 'CARD'}"
+                  class="badge bg-info text-dark">Thẻ</span>
+                <span th:if="${order.paymentMethod == null}" class="badge bg-secondary">Tiền mặt</span>
+              </td>
+              <td>
                 <div class="orders-actions">
-                  <button class="icon-circle-btn" type="button" aria-label="Xem chi tiết" title="Xem chi tiết"><i class="bi bi-eye"></i></button>
-                  <button class="icon-circle-btn" type="button" aria-label="Hóa đơn" title="Hóa đơn"><i class="bi bi-receipt"></i></button>
-                  <button class="icon-circle-btn" type="button" aria-label="QR thanh toán" title="QR thanh toán"><i class="bi bi-qr-code"></i></button>
+                  <button class="icon-circle-btn" type="button" aria-label="Xem chi tiết" title="Xem chi tiết"><i
+                      class="bi bi-eye"></i></button>
+                  <button class="icon-circle-btn edit-order-btn" type="button" aria-label="Sửa đơn" title="Sửa đơn"
+                    th:data-code="${order.orderCode}"><i class="bi bi-pencil"></i></button>
+                  <button class="icon-circle-btn" type="button" aria-label="Hóa đơn" title="Hóa đơn"><i
+                      class="bi bi-receipt"></i></button>
+                  <button class="icon-circle-btn" type="button" aria-label="QR thanh toán" title="QR thanh toán"><i
+                      class="bi bi-qr-code"></i></button>
                 </div>
               </td>
             </tr>
@@ -278,7 +308,8 @@
             <div class="row g-3 mb-3 align-items-end">
               <div class="col-md-6">
                 <label class="form-label fw-medium">Tổng tiền (đ)</label>
-                <input type="number" class="form-control" id="orderTotalAmount" min="0" step="1000" placeholder="Tự tính từ món đã chọn" readonly>
+                <input type="number" class="form-control" id="orderTotalAmount" min="0" step="1000"
+                  placeholder="Tự tính từ món đã chọn" readonly>
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-medium">Thanh toán</label>
@@ -295,8 +326,10 @@
             <div class="mb-3" id="orderPaymentQrSection" style="display: none;">
               <label class="form-label fw-medium">QR thanh toán</label>
               <div class="d-flex align-items-center">
-                <div class="bg-white rounded-3 border me-3 d-flex align-items-center justify-content-center" style="width: 140px; height: 140px;">
-                  <img id="orderPaymentQrImage" src="" alt="QR thanh toán" class="img-fluid" style="max-width: 128px; max-height: 128px; display: none;">
+                <div class="bg-white rounded-3 border me-3 d-flex align-items-center justify-content-center"
+                  style="width: 200px; height: 200px;">
+                  <img id="orderPaymentQrImage" src="" alt="QR thanh toán" class="img-fluid"
+                    style="max-width: 180px; max-height: 180px; display: none;">
                 </div>
                 <div class="small text-muted">
                   <div id="orderPaymentAmountText">Số tiền: 0 đ</div>
@@ -325,8 +358,10 @@
         <div class="modal-body px-4 pb-0">
           <p class="small text-muted mb-3" id="qrOrderInfoText">Vui lòng quét QR để thanh toán.</p>
           <div class="d-flex flex-column align-items-center mb-3">
-            <div class="bg-white rounded-3 border d-flex align-items-center justify-content-center" style="width: 220px; height: 220px;">
-              <img id="qrOrderImage" src="" alt="QR thanh toán đơn hàng" class="img-fluid" style="max-width: 200px; max-height: 200px; display: none;">
+            <div class="bg-white rounded-3 border d-flex align-items-center justify-content-center"
+              style="width: 320px; height: 320px;">
+              <img id="qrOrderImage" src="" alt="QR thanh toán đơn hàng" class="img-fluid"
+                style="max-width: 300px; max-height: 300px; display: none;">
             </div>
             <div class="mt-3 text-center small text-muted">
               <div id="qrOrderAmountText">Số tiền: 0 đ</div>
@@ -381,6 +416,9 @@
         var qrOrderAmountText = document.getElementById('qrOrderAmountText');
         var qrOrderMethodText = document.getElementById('qrOrderMethodText');
         var qrOrderInfoText = document.getElementById('qrOrderInfoText');
+
+        var modalTitle = document.querySelector('#createOrderModal .modal-title');
+        var editingOrderCode = null;
 
         var menuItemsCache = [];
         var currentOrderItems = []; // {id, name, price, quantity}
@@ -497,7 +535,7 @@
             var momoData = 'Thanh toan MoMo - SDT: ' + momoPhone
               + ' - Ten: ' + momoName
               + ' - So tien: ' + amount + ' VND';
-            qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='
+            qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='
               + encodeURIComponent(momoData);
           }
 
@@ -562,7 +600,7 @@
               + ' - SDT: ' + momoPhone
               + ' - Ten: ' + momoName
               + ' - So tien: ' + Math.round(total) + ' VND';
-            return 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='
+            return 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='
               + encodeURIComponent(momoData);
           }
 
@@ -742,6 +780,9 @@
         }
 
         createBtn.addEventListener('click', function () {
+          editingOrderCode = null;
+          if (modalTitle) modalTitle.textContent = 'Tạo đơn hàng mới';
+
           if (createForm) {
             createForm.reset();
           }
@@ -764,6 +805,63 @@
           // Ẩn QR lúc mới mở
           updateOrderPaymentQr();
           createModal.show();
+        });
+
+        // Xử lý nút Sửa đơn
+        var editBtns = document.querySelectorAll('.edit-order-btn');
+        editBtns.forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var code = this.getAttribute('data-code');
+            if (!code) return;
+
+            editingOrderCode = code;
+            if (modalTitle) modalTitle.textContent = 'Cập nhật đơn hàng ' + code;
+
+            if (createForm) createForm.reset();
+            currentOrderItems = [];
+            renderOrderItems();
+
+            fetchMenuItemsOnce();
+            loadPaymentSettingsForOrder();
+
+            // Lấy thông tin đơn hàng
+            fetch('/api/orders/' + code)
+              .then(function (res) { return res.json(); })
+              .then(function (order) {
+                if (document.getElementById('orderCode')) document.getElementById('orderCode').value = order.orderCode || '';
+                if (document.getElementById('orderTime') && order.createdAt) {
+                  var t = new Date(order.createdAt);
+                  document.getElementById('orderTime').value = String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0');
+                }
+                if (document.getElementById('orderStatus')) document.getElementById('orderStatus').value = order.status || 'PENDING';
+                if (document.getElementById('orderCustomerName')) document.getElementById('orderCustomerName').value = order.customerName || '';
+                if (document.getElementById('orderCustomerPhone')) document.getElementById('orderCustomerPhone').value = order.customerPhone || '';
+                if (document.getElementById('orderType')) document.getElementById('orderType').value = order.type || 'DINE_IN';
+                if (document.getElementById('orderTableNote')) document.getElementById('orderTableNote').value = order.tableName || '';
+                if (document.getElementById('orderPaymentMethod')) document.getElementById('orderPaymentMethod').value = order.paymentMethod || 'CASH';
+
+                // Lấy thông tin các món
+                return fetch('/api/orders/' + code + '/items');
+              })
+              .then(function (res) { return res.json(); })
+              .then(function (items) {
+                if (Array.isArray(items)) {
+                  currentOrderItems = items.map(function (item) {
+                    return {
+                      id: item.menuItemId ? String(item.menuItemId) : (item.menuItem ? String(item.menuItem.id) : null),
+                      name: item.itemName,
+                      price: item.itemPrice,
+                      quantity: item.quantity
+                    };
+                  }).filter(function (x) { return x.id != null; });
+                }
+                renderOrderItems();
+                createModal.show();
+              })
+              .catch(function (err) {
+                alert('Có lỗi khi tải thông tin đơn hàng: ' + err);
+              });
+          });
         });
 
         if (addItemBtn) {
@@ -808,8 +906,11 @@
               })
             };
 
-            fetch('/api/orders', {
-              method: 'POST',
+            var fetchUrl = editingOrderCode ? '/api/orders/' + editingOrderCode : '/api/orders';
+            var fetchMethod = editingOrderCode ? 'PUT' : 'POST';
+
+            fetch(fetchUrl, {
+              method: fetchMethod,
               headers: {
                 'Content-Type': 'application/json'
               },
@@ -840,6 +941,25 @@
                   // Nếu có lỗi hiển thị QR thì vẫn báo thành công bằng alert
                   alert('Đã lưu đơn hàng thành công với mã: ' + (data.orderCode || '#ORD-MỚI'));
                 }
+
+                // Tải lại trang sau 1 giây báo thành công (hoặc sau khi họ đóng QR/alert)
+                // Cải thiện UI: Reload sau khi đóng modal để thấy dòng mới cập nhật
+                document.getElementById('createOrderModal').addEventListener('hidden.bs.modal', function () {
+                  if (!orderPaymentQrModalEl || !orderPaymentQrModalEl.classList.contains('show')) {
+                    window.location.reload();
+                  }
+                });
+                if (orderPaymentQrModalEl) {
+                  orderPaymentQrModalEl.addEventListener('hidden.bs.modal', function () {
+                    window.location.reload();
+                  });
+                }
+
+                // Tránh trường hợp không có QR modal nào hiện ra, ta reload trực tiếp nếu là CASH or CARD
+                if (payload.paymentMethod !== 'BANK_TRANSFER' && payload.paymentMethod !== 'MOMO') {
+                  setTimeout(function () { window.location.reload(); }, 300);
+                }
+
               })
               .catch(function () {
                 alert('Có lỗi xảy ra khi lưu đơn hàng. Vui lòng thử lại.');
@@ -852,9 +972,44 @@
             updateOrderPaymentQr();
           });
         }
+
+        // Tab filtering logic
+        var filterBtns = document.querySelectorAll('.order-filter');
+        var tableRows = document.querySelectorAll('.orders-table tbody tr');
+
+        if (filterBtns.length > 0) {
+          filterBtns.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              filterBtns.forEach(function (b) { b.classList.remove('active'); });
+              this.classList.add('active');
+
+              var filterText = this.textContent.trim();
+
+              tableRows.forEach(function (row) {
+                if (row.querySelector('.text-muted.py-4')) return; // empty row
+
+                if (filterText === 'Tất cả') {
+                  row.style.display = '';
+                  return;
+                }
+
+                var statusEl = row.querySelector('.status-badge');
+                if (statusEl) {
+                  var statusText = statusEl.textContent.trim();
+                  if (statusText === filterText) {
+                    row.style.display = '';
+                  } else {
+                    row.style.display = 'none';
+                  }
+                }
+              });
+            });
+          });
+        }
       }
     });
   </script>
 
 </body>
+
 </html>

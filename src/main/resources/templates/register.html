@@ -50,41 +50,41 @@
             <div class="card-body p-4 p-md-5 text-dark text-start">
                 <h3 class="fw-bold mb-3">Đăng ký tài khoản</h3>
 
-                <!-- Lưu ý: Form này mới chỉ là giao diện, chưa xử lý lưu vào database -->
-                <form onsubmit="return false;">
+                <form action="/register" method="POST">
+                    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
                     <div class="mb-3">
                         <label class="form-label fw-medium">Họ và tên</label>
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0"><i class="bi bi-person"></i></span>
-                            <input type="text" class="form-control border-start-0" placeholder="Nhập họ và tên" required>
+                            <input type="text" name="fullName" class="form-control border-start-0" placeholder="Nhập họ và tên" required>
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-medium">Email</label>
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0"><i class="bi bi-envelope"></i></span>
-                            <input type="email" class="form-control border-start-0" placeholder="Nhập email" required>
+                            <input type="email" name="email" class="form-control border-start-0" placeholder="Nhập email" required>
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-medium">Tên đăng nhập</label>
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0"><i class="bi bi-person-badge"></i></span>
-                            <input type="text" class="form-control border-start-0" placeholder="Chọn tên đăng nhập" required>
+                            <input type="text" name="username" class="form-control border-start-0" placeholder="Chọn tên đăng nhập" required>
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-medium">Mật khẩu</label>
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0"><i class="bi bi-lock"></i></span>
-                            <input type="password" class="form-control border-start-0" placeholder="Nhập mật khẩu" required>
+                            <input type="password" name="password" class="form-control border-start-0" placeholder="Nhập mật khẩu" required>
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-medium">Nhập lại mật khẩu</label>
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0"><i class="bi bi-lock-fill"></i></span>
-                            <input type="password" class="form-control border-start-0" placeholder="Nhập lại mật khẩu" required>
+                            <input type="password" name="confirmPassword" class="form-control border-start-0" placeholder="Nhập lại mật khẩu" required>
                         </div>
                     </div>
 

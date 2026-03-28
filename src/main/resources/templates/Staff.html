@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,163 +18,171 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/css/doanhthu.css">
 </head>
+
 <body>
 
-<!-- Sidebar -->
-<nav class="sidebar">
-    <div class="brand">
-        <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo" class="brand-img">
-        <div class="brand-text">
-            <h5>Brew &amp; Co.</h5>
-            <p>Coffee Management</p>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <a th:href="@{/}" class="brand" style="text-decoration: none; color: inherit;">
+            <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo"
+                class="brand-img">
+            <div class="brand-text">
+                <h5>Brew &amp; Co.</h5>
+                <p style="color: #d47633;">Coffee Management</p>
+            </div>
+        </a>
+
+        <div class="user-profile" th:if="${currentUser != null}">
+            <img th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
+                alt="User" style="object-fit: cover;">
+            <div class="user-info">
+                <h6
+                    th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
+                    Tên tài khoản</h6>
+                <p th:text="${currentUser.email}">Email</p>
+            </div>
+            <div class="online-dot"></div>
         </div>
-    </div>
 
-    <div class="user-profile">
-        <img src="https://ui-avatars.com/api/?name=Admin&background=C98D4D&color=fff" alt="User">
-        <div class="user-info">
-            <h6>Admin</h6>
-            <p>admin@cafe.com</p>
+        <ul class="nav-menu">
+            <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+                <a href="/dashboard" class="nav-link">
+                    <i class="bi bi-grid-1x2"></i> Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/Menu" class="nav-link">
+                    <i class="bi bi-cup-hot"></i> Menu
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/Order" class="nav-link">
+                    <i class="bi bi-bag"></i> Đơn hàng
+                </a>
+            </li>
+            <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+                <a href="/Revenue" class="nav-link">
+                    <i class="bi bi-bar-chart-fill"></i> Doanh thu
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/Staff" class="nav-link active">
+                    <i class="bi bi-people"></i> Nhân viên
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/Inventory" class="nav-link">
+                    <i class="bi bi-box-seam"></i> Kho hàng
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/Setting" class="nav-link">
+                    <i class="bi bi-gear"></i> Cài đặt
+                </a>
+            </li>
+        </ul>
+
+        <div class="logout-btn">
+            <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
         </div>
-        <div class="online-dot"></div>
-    </div>
+    </nav>
 
-    <ul class="nav-menu">
-        <li class="nav-item">
-                        <a href="/dashboard" class="nav-link">
-                <i class="bi bi-grid-1x2"></i> Dashboard
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="/Menu" class="nav-link">
-                <i class="bi bi-cup-hot"></i> Menu
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="/Order" class="nav-link">
-                <i class="bi bi-bag"></i> Đơn hàng
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="/Revenue" class="nav-link">
-                <i class="bi bi-bar-chart-fill"></i> Doanh thu
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="/Staff" class="nav-link active">
-                <i class="bi bi-people"></i> Nhân viên
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="/Inventory" class="nav-link">
-                <i class="bi bi-box-seam"></i> Kho hàng
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="/Setting" class="nav-link">
-                <i class="bi bi-gear"></i> Cài đặt
-            </a>
-        </li>
-    </ul>
+    <!-- Main content -->
+    <main class="main-content">
 
-    <div class="logout-btn">
-        <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
-    </div>
-</nav>
-
-<!-- Main content -->
-<main class="main-content">
-
-    <!-- Header -->
-    <div class="header-row">
-        <div class="page-title">
-            <h2>Quản lý Nhân viên</h2>
-            <p>4/6 nhân viên đang làm việc</p>
+        <!-- Header -->
+        <div class="header-row">
+            <div class="page-title">
+                <h2>Quản lý Nhân viên</h2>
+                <p>4/6 nhân viên đang làm việc</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-primary me-2" id="checkinBtn" sec:authorize="hasRole('STAFF')"
+                    style="display: none;" onclick="staffCheckInOut()">
+                    <i class="bi bi-clock"></i> <span id="checkinText">Chấm công</span>
+                </button>
+                <button class="btn staff-add-btn" type="button" sec:authorize="hasRole('ADMIN')">
+                    <i class="bi bi-person-plus"></i> Thêm nhân viên
+                </button>
+            </div>
         </div>
-        <div class="header-actions">
-            <button class="btn staff-add-btn" type="button">
-                <i class="bi bi-person-plus"></i> Thêm nhân viên
-            </button>
-        </div>
-    </div>
 
-    <!-- Summary cards -->
-    <div class="row g-3 mb-4 staff-summary-row">
-        <div class="col-md-3 col-sm-6">
-            <div class="custom-card staff-stat-card">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="staff-stat-icon staff-stat-total">
-                        <i class="bi bi-people"></i>
+        <!-- Summary cards -->
+        <div class="row g-3 mb-4 staff-summary-row">
+            <div class="col-md-3 col-sm-6">
+                <div class="custom-card staff-stat-card">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="staff-stat-icon staff-stat-total">
+                            <i class="bi bi-people"></i>
+                        </div>
+                        <div>
+                            <p class="staff-stat-label mb-1">Tổng nhân viên</p>
+                            <p class="staff-stat-value mb-0" th:text="${staffTotal}">0</p>
+                        </div>
                     </div>
-                    <div>
-                        <p class="staff-stat-label mb-1">Tổng nhân viên</p>
-                        <p class="staff-stat-value mb-0" th:text="${staffTotal}">0</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="custom-card staff-stat-card">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="staff-stat-icon staff-stat-working">
+                            <i class="bi bi-emoji-smile"></i>
+                        </div>
+                        <div>
+                            <p class="staff-stat-label mb-1">Đang làm việc</p>
+                            <p class="staff-stat-value mb-0" th:text="${staffWorking}">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="custom-card staff-stat-card">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="staff-stat-icon staff-stat-leave">
+                            <i class="bi bi-sun"></i>
+                        </div>
+                        <div>
+                            <p class="staff-stat-label mb-1">Nghỉ phép</p>
+                            <p class="staff-stat-value mb-0" th:text="${staffOnLeave}">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="custom-card staff-stat-card">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="staff-stat-icon staff-stat-quit">
+                            <i class="bi bi-person-x"></i>
+                        </div>
+                        <div>
+                            <p class="staff-stat-label mb-1">Đã nghỉ việc</p>
+                            <p class="staff-stat-value mb-0" th:text="${staffInactive}">0</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="custom-card staff-stat-card">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="staff-stat-icon staff-stat-working">
-                        <i class="bi bi-emoji-smile"></i>
-                    </div>
-                    <div>
-                        <p class="staff-stat-label mb-1">Đang làm việc</p>
-                        <p class="staff-stat-value mb-0" th:text="${staffWorking}">0</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="custom-card staff-stat-card">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="staff-stat-icon staff-stat-leave">
-                        <i class="bi bi-sun"></i>
-                    </div>
-                    <div>
-                        <p class="staff-stat-label mb-1">Nghỉ phép</p>
-                        <p class="staff-stat-value mb-0" th:text="${staffOnLeave}">0</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="custom-card staff-stat-card">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="staff-stat-icon staff-stat-quit">
-                        <i class="bi bi-person-x"></i>
-                    </div>
-                    <div>
-                        <p class="staff-stat-label mb-1">Đã nghỉ việc</p>
-                        <p class="staff-stat-value mb-0" th:text="${staffInactive}">0</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Toolbar + Staff cards trong cùng custom card -->
-    <div class="custom-card mb-4">
-        <div class="d-flex flex-wrap gap-3 align-items-center staff-toolbar">
-            <div class="staff-search">
-                <i class="bi bi-search"></i>
-                <input type="text" placeholder="Tìm kiếm nhân viên..." aria-label="Tìm kiếm nhân viên">
+        <!-- Toolbar + Staff cards trong cùng custom card -->
+        <div class="custom-card mb-4">
+            <div class="d-flex flex-wrap gap-3 align-items-center staff-toolbar">
+                <div class="staff-search">
+                    <i class="bi bi-search"></i>
+                    <input type="text" placeholder="Tìm kiếm nhân viên..." aria-label="Tìm kiếm nhân viên">
+                </div>
+                <div class="staff-filters">
+                    <button class="staff-filter active" type="button">Tất cả</button>
+                    <button class="staff-filter" type="button">Quản lý</button>
+                    <button class="staff-filter" type="button">Pha chế</button>
+                    <button class="staff-filter" type="button">Phục vụ</button>
+                    <button class="staff-filter" type="button">Thu ngân</button>
+                    <button class="staff-filter" type="button">Bảo vệ</button>
+                </div>
             </div>
-            <div class="staff-filters">
-                <button class="staff-filter active" type="button">Tất cả</button>
-                <button class="staff-filter" type="button">Quản lý</button>
-                <button class="staff-filter" type="button">Pha chế</button>
-                <button class="staff-filter" type="button">Phục vụ</button>
-                <button class="staff-filter" type="button">Thu ngân</button>
-                <button class="staff-filter" type="button">Bảo vệ</button>
-            </div>
-        </div>
 
-        <div class="row g-3 mt-3">
-            <div class="col-lg-4 col-md-6" th:each="staff : ${staffList}">
-                <div class="staff-card staff-card-clickable"
-                     th:attr="data-id=${staff.id},
+            <div class="row g-3 mt-3">
+                <div class="col-lg-4 col-md-6" th:each="staff : ${staffList}">
+                    <div class="staff-card staff-card-clickable" th:attr="data-id=${staff.id},
                               data-name=${staff.name},
                               data-role=${staff.role},
                               data-status=${staff.status},
@@ -182,511 +191,568 @@
                               data-start-date=${staff.startDate},
                               data-avatar-url=${staff.avatarUrl},
                               data-phone=${staff.phone}">
-                    <div class="d-flex align-items-center">
-                        <img class="staff-avatar" alt="Ảnh nhân viên"
-                             th:src="${staff.avatarUrl != null ? staff.avatarUrl : 'https://ui-avatars.com/api/?name=' + #strings.replace(staff.name, ' ', '+') + '&background=C98D4D&color=fff'}"
-                             th:alt="${staff.name}"
-                             th:title="${staff.name}">
-                        <div class="flex-grow-1 ms-3">
-                            <h5 class="staff-name mb-1" th:text="${staff.name}">Tên nhân viên</h5>
-                            <p class="staff-role mb-1"
-                               th:text="${staff.role != null ? #strings.replace(staff.role.name(), '_', ' ') : 'Chưa thiết lập'}">Vị trí</p>
-                            <span class="staff-status-badge staff-status-active"
-                                  th:if="${staff.status != null and staff.status.name() == 'ACTIVE'}">
-                                Đang làm
-                            </span>
-                            <span class="staff-status-badge staff-status-leave"
-                                  th:if="${staff.status != null and staff.status.name() == 'ON_LEAVE'}">
-                                Nghỉ phép
-                            </span>
-                            <span class="staff-status-badge staff-status-quit"
-                                  th:if="${staff.status != null and staff.status.name() == 'INACTIVE'}">
-                                Đã nghỉ việc
-                            </span>
-                            <span class="staff-status-badge"
-                                  th:if="${staff.status == null}">
-                                Chưa rõ
-                            </span>
-                        </div>
-                    </div>
-                    <div class="staff-contact mt-3">
-                        <p class="mb-1"><i class="bi bi-telephone"></i>
-                            <span class="staff-phone-text"
-                                  th:text="${staff.phone != null ? staff.phone : 'Chưa có số điện thoại'}">0901111111</span>
-                        </p>
-                        <p class="mb-0"><i class="bi bi-clock"></i>
-                            <span class="staff-shift-text"
-                                  th:text="${staff.shift != null ? staff.shift : 'Chưa thiết lập ca làm'}">Ca sáng (06:00 - 14:00)</span>
-                        </p>
-                    </div>
-                    <div class="staff-performance mt-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="staff-performance-label">Chuyên cần</span>
-                            <span class="staff-performance-percent">--</span>
-                        </div>
-                        <div class="staff-progress-track">
-                            <div class="staff-progress-bar" style="width: 0%;"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12" th:if="${#lists.isEmpty(staffList)}">
-                <div class="text-center py-4">
-                    <p class="mb-0">Chưa có nhân viên nào. Hãy bấm "Thêm nhân viên" để tạo mới.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</main>
-
-<!-- Modal: Thêm nhân viên mới -->
-<div class="modal fade" id="createStaffModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-0 pb-0 px-4 pt-4">
-                <h5 class="modal-title fw-semibold">Thêm nhân viên mới</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-            </div>
-            <div class="modal-body px-4 pb-0">
-                <form id="createStaffForm">
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-medium">Họ và tên</label>
-                            <input type="text" class="form-control" id="staffFullName" placeholder="VD: Nguyễn Văn A" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-medium">Số điện thoại</label>
-                            <input type="tel" class="form-control" id="staffPhone" placeholder="VD: 0901234567" required>
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-medium">Vị trí</label>
-                            <select class="form-select" id="staffRole" required>
-                                <option value="" selected disabled>Chọn vị trí</option>
-                                <option value="QUAN_LY">Quản lý</option>
-                                <option value="PHA_CHE">Pha chế</option>
-                                <option value="PHUC_VU">Phục vụ</option>
-                                <option value="THU_NGAN">Thu ngân</option>
-                                <option value="BAO_VE">Bảo vệ</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-medium">Ca làm</label>
-                            <input type="text" class="form-control" id="staffShift" placeholder="VD: Ca sáng (06:00 - 14:00)">
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-medium">Trạng thái</label>
-                            <select class="form-select" id="staffStatus">
-                                <option value="ACTIVE" selected>Đang làm</option>
-                                <option value="ON_LEAVE">Nghỉ phép</option>
-                                <option value="INACTIVE">Đã nghỉ việc</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-medium">Lương cơ bản (đ)</label>
-                            <input type="number" class="form-control" id="staffSalary" min="0" step="100000" placeholder="VD: 6000000">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-medium">Link ảnh (tùy chọn)</label>
-                            <input type="text" class="form-control" id="staffAvatarUrl" placeholder="VD: https://...">
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-medium">Ghi chú</label>
-                        <textarea class="form-control" id="staffNote" rows="2" placeholder="Ghi chú thêm (nếu có)"></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-between">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="submit" form="createStaffForm" class="btn btn-warning px-4">Lưu nhân viên</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal: Thông tin & chỉnh sửa nhân viên -->
-<div class="modal fade" id="staffDetailModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-0 pb-0 px-4 pt-4">
-                <h5 class="modal-title fw-semibold">Thông tin nhân viên</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-            </div>
-            <div class="modal-body px-4 pb-0">
-                <form id="editStaffForm">
-                    <input type="hidden" id="editStaffId">
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6 d-flex align-items-center gap-3">
-                            <img id="editStaffAvatar" src="https://ui-avatars.com/api/?name=NV" alt="Avatar" class="staff-avatar">
-                            <div>
-                                <label class="form-label fw-medium mb-1">Họ và tên</label>
-                                <input type="text" class="form-control" id="editStaffName" required>
+                        <div class="d-flex align-items-center">
+                            <img class="staff-avatar" alt="Ảnh nhân viên"
+                                th:src="${staff.avatarUrl != null ? staff.avatarUrl : 'https://ui-avatars.com/api/?name=' + #strings.replace(staff.name, ' ', '+') + '&background=C98D4D&color=fff'}"
+                                th:alt="${staff.name}" th:title="${staff.name}">
+                            <div class="flex-grow-1 ms-3">
+                                <h5 class="staff-name mb-1" th:text="${staff.name}">Tên nhân viên</h5>
+                                <p class="staff-role mb-1"
+                                    th:text="${staff.role != null ? #strings.replace(staff.role.name(), '_', ' ') : 'Chưa thiết lập'}">
+                                    Vị trí</p>
+                                <span class="staff-status-badge staff-status-active"
+                                    th:if="${staff.status != null and staff.status.name() == 'ACTIVE'}">
+                                    Đang làm
+                                </span>
+                                <span class="staff-status-badge staff-status-leave"
+                                    th:if="${staff.status != null and staff.status.name() == 'ON_LEAVE'}">
+                                    Nghỉ phép
+                                </span>
+                                <span class="staff-status-badge staff-status-quit"
+                                    th:if="${staff.status != null and staff.status.name() == 'INACTIVE'}">
+                                    Đã nghỉ việc
+                                </span>
+                                <span class="staff-status-badge" th:if="${staff.status == null}">
+                                    Chưa rõ
+                                </span>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-medium">Vị trí</label>
-                            <select class="form-select" id="editStaffRole" required>
-                                <option value="QUAN_LY">Quản lý</option>
-                                <option value="PHA_CHE">Pha chế</option>
-                                <option value="PHUC_VU">Phục vụ</option>
-                                <option value="THU_NGAN">Thu ngân</option>
-                                <option value="BAO_VE">Bảo vệ</option>
-                            </select>
+                        <div class="staff-contact mt-3">
+                            <p class="mb-1"><i class="bi bi-telephone"></i>
+                                <span class="staff-phone-text"
+                                    th:text="${staff.phone != null ? staff.phone : 'Chưa có số điện thoại'}">0901111111</span>
+                            </p>
+                            <p class="mb-0"><i class="bi bi-clock"></i>
+                                <span class="staff-shift-text"
+                                    th:text="${staff.shift != null ? staff.shift : 'Chưa thiết lập ca làm'}">Ca sáng
+                                    (06:00 - 14:00)</span>
+                            </p>
+                        </div>
+                        <div class="staff-performance mt-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="staff-performance-label">Chuyên cần</span>
+                                <span class="staff-performance-percent">--</span>
+                            </div>
+                            <div class="staff-progress-track">
+                                <div class="staff-progress-bar" style="width: 0%;"></div>
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label fw-medium">Số điện thoại</label>
-                            <input type="tel" class="form-control" id="editStaffPhone" placeholder="VD: 0901234567">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-medium">Trạng thái</label>
-                            <select class="form-select" id="editStaffStatus">
-                                <option value="ACTIVE">Đang làm</option>
-                                <option value="ON_LEAVE">Nghỉ phép</option>
-                                <option value="INACTIVE">Đã nghỉ việc</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-medium">Ca làm</label>
-                            <input type="text" class="form-control" id="editStaffShift" placeholder="VD: Ca sáng (06:00 - 14:00)">
-                        </div>
+                <div class="col-12" th:if="${#lists.isEmpty(staffList)}">
+                    <div class="text-center py-4">
+                        <p class="mb-0">Chưa có nhân viên nào. Hãy bấm "Thêm nhân viên" để tạo mới.</p>
                     </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-medium">Ngày vào làm</label>
-                            <input type="date" class="form-control" id="editStaffStartDate">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-medium">Lương cơ bản (đ)</label>
-                            <input type="number" class="form-control" id="editStaffSalary" min="0" step="100000">
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-medium">Link ảnh (tùy chọn)</label>
-                            <input type="text" class="form-control" id="editStaffAvatarUrl" placeholder="VD: https://...">
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-12 d-flex align-items-end justify-content-end">
-                            <span id="editStaffStatusBadge" class="staff-status-badge staff-status-active">Đang làm</span>
-                        </div>
-                    </div>
-                </form>
+                </div>
             </div>
-            <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-between">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
-                <button type="submit" form="editStaffForm" class="btn btn-warning px-4">Lưu thay đổi</button>
+        </div>
+    </main>
+
+    <!-- Modal: Thêm nhân viên mới -->
+    <div class="modal fade" id="createStaffModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <h5 class="modal-title fw-semibold">Thêm nhân viên mới</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body px-4 pb-0">
+                    <form id="createStaffForm">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Họ và tên</label>
+                                <input type="text" class="form-control" id="staffFullName"
+                                    placeholder="VD: Nguyễn Văn A" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Số điện thoại</label>
+                                <input type="tel" class="form-control" id="staffPhone" placeholder="VD: 0901234567"
+                                    required>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Vị trí</label>
+                                <select class="form-select" id="staffRole" required>
+                                    <option value="" selected disabled>Chọn vị trí</option>
+                                    <option value="QUAN_LY">Quản lý</option>
+                                    <option value="PHA_CHE">Pha chế</option>
+                                    <option value="PHUC_VU">Phục vụ</option>
+                                    <option value="THU_NGAN">Thu ngân</option>
+                                    <option value="BAO_VE">Bảo vệ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Ca làm</label>
+                                <input type="text" class="form-control" id="staffShift"
+                                    placeholder="VD: Ca sáng (06:00 - 14:00)">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Trạng thái</label>
+                                <select class="form-select" id="staffStatus">
+                                    <option value="ACTIVE" selected>Đang làm</option>
+                                    <option value="ON_LEAVE">Nghỉ phép</option>
+                                    <option value="INACTIVE">Đã nghỉ việc</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Lương cơ bản (đ)</label>
+                                <input type="number" class="form-control" id="staffSalary" min="0" step="100000"
+                                    placeholder="VD: 6000000">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Link ảnh (tùy chọn)</label>
+                                <input type="text" class="form-control" id="staffAvatarUrl"
+                                    placeholder="VD: https://...">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Ghi chú</label>
+                            <textarea class="form-control" id="staffNote" rows="2"
+                                placeholder="Ghi chú thêm (nếu có)"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" form="createStaffForm" class="btn btn-warning px-4">Lưu nhân viên</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Bootstrap JS + simple logic for Staff page -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<!-- Admin common JS (logout confirm, etc.) -->
-<script src="/js/admin-common.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        if (!window.bootstrap) return;
+    <!-- Modal: Thông tin & chỉnh sửa nhân viên -->
+    <div class="modal fade" id="staffDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <h5 class="modal-title fw-semibold">Thông tin nhân viên</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body px-4 pb-0">
+                    <form id="editStaffForm">
+                        <input type="hidden" id="editStaffId">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6 d-flex align-items-center gap-3">
+                                <img id="editStaffAvatar" src="https://ui-avatars.com/api/?name=NV" alt="Avatar"
+                                    class="staff-avatar">
+                                <div>
+                                    <label class="form-label fw-medium mb-1">Họ và tên</label>
+                                    <input type="text" class="form-control" id="editStaffName" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Vị trí</label>
+                                <select class="form-select" id="editStaffRole" required>
+                                    <option value="QUAN_LY">Quản lý</option>
+                                    <option value="PHA_CHE">Pha chế</option>
+                                    <option value="PHUC_VU">Phục vụ</option>
+                                    <option value="THU_NGAN">Thu ngân</option>
+                                    <option value="BAO_VE">Bảo vệ</option>
+                                </select>
+                            </div>
+                        </div>
 
-        var addBtn = document.querySelector('.staff-add-btn');
-        var modalEl = document.getElementById('createStaffModal');
-        var detailModalEl = document.getElementById('staffDetailModal');
-        var searchInput = document.querySelector('.staff-search input');
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-medium">Số điện thoại</label>
+                                <input type="tel" class="form-control" id="editStaffPhone" placeholder="VD: 0901234567">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-medium">Trạng thái</label>
+                                <select class="form-select" id="editStaffStatus">
+                                    <option value="ACTIVE">Đang làm</option>
+                                    <option value="ON_LEAVE">Nghỉ phép</option>
+                                    <option value="INACTIVE">Đã nghỉ việc</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-medium">Ca làm</label>
+                                <input type="text" class="form-control" id="editStaffShift"
+                                    placeholder="VD: Ca sáng (06:00 - 14:00)">
+                            </div>
+                        </div>
 
-        if (addBtn && modalEl) {
-            var modal = new bootstrap.Modal(modalEl);
-            var form = document.getElementById('createStaffForm');
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Ngày vào làm</label>
+                                <input type="date" class="form-control" id="editStaffStartDate">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Lương cơ bản (đ)</label>
+                                <input type="number" class="form-control" id="editStaffSalary" min="0" step="100000">
+                            </div>
+                        </div>
 
-            addBtn.addEventListener('click', function () {
-                if (form) {
-                    form.reset();
-                }
-                modal.show();
-            });
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Link ảnh (tùy chọn)</label>
+                                <input type="text" class="form-control" id="editStaffAvatarUrl"
+                                    placeholder="VD: https://...">
+                            </div>
+                        </div>
 
-            if (form) {
-                form.addEventListener('submit', function (e) {
-                    e.preventDefault();
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-12 d-flex align-items-end justify-content-end">
+                                <span id="editStaffStatusBadge" class="staff-status-badge staff-status-active">Đang
+                                    làm</span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" form="editStaffForm" class="btn btn-warning px-4">Lưu thay đổi</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                    var name = document.getElementById('staffFullName')?.value.trim();
-                    var phone = document.getElementById('staffPhone')?.value.trim();
-                    var role = document.getElementById('staffRole')?.value;
-                    var status = document.getElementById('staffStatus')?.value;
-                    var shift = document.getElementById('staffShift')?.value.trim();
-                    var salaryValue = document.getElementById('staffSalary')?.value;
-                    var avatarUrl = document.getElementById('staffAvatarUrl')?.value.trim();
-
-                    if (!name) {
-                        alert('Vui lòng nhập họ và tên nhân viên.');
-                        return;
-                    }
-
-                    if (!phone) {
-                        alert('Vui lòng nhập số điện thoại.');
-                        return;
-                    }
-
-                    if (!role) {
-                        alert('Vui lòng chọn vị trí.');
-                        return;
-                    }
-
-                    var payload = {
-                        name: name,
-                        phone: phone,
-                        role: role,
-                        status: status || 'ACTIVE',
-                        shift: shift || null,
-                        salary: salaryValue ? Number(salaryValue) : null,
-                        avatarUrl: avatarUrl || null,
-                        startDate: null
-                    };
-
-                    fetch('/api/staff', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    }).then(function (res) {
-                        if (!res.ok) {
-                            throw new Error('Lỗi tạo nhân viên');
+    <!-- Bootstrap JS + simple logic for Staff page -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Admin common JS (logout confirm, etc.) -->
+    <script src="/js/admin-common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            let attendanceStatus = 'NOT_CHECKED_IN';
+            var checkinBtn = document.getElementById('checkinBtn');
+            if (checkinBtn) {
+                fetch('/api/attendance/today')
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        attendanceStatus = data.status || 'NOT_CHECKED_IN';
+                        var textSpan = document.getElementById('checkinText');
+                        if (attendanceStatus === 'NOT_CHECKED_IN') {
+                            textSpan.textContent = 'Chấm công (Giờ vào)';
+                            checkinBtn.classList.add('btn-primary');
+                            checkinBtn.style.display = 'inline-block';
+                        } else if (attendanceStatus === 'CHECKED_IN') {
+                            textSpan.textContent = 'Chấm công ra (Giờ ra)';
+                            checkinBtn.classList.remove('btn-primary');
+                            checkinBtn.classList.add('btn-warning');
+                            checkinBtn.style.display = 'inline-block';
+                        } else if (attendanceStatus === 'COMPLETED') {
+                            textSpan.textContent = 'Đã hoàn thành (' + data.workHours + ' giờ)';
+                            checkinBtn.classList.remove('btn-primary', 'btn-warning');
+                            checkinBtn.classList.add('btn-success');
+                            checkinBtn.disabled = true;
+                            checkinBtn.style.display = 'inline-block';
                         }
-                        return res.json();
-                    }).then(function () {
-                        alert('Đã thêm nhân viên mới thành công.');
-                        modal.hide();
-                        window.location.reload();
-                    }).catch(function (err) {
-                        console.error(err);
-                        alert('Có lỗi xảy ra khi thêm nhân viên mới.');
-                    });
-                });
+                    })
+                    .catch(function (err) { console.error(err); });
             }
-        }
 
-        // Tìm kiếm nhân viên theo tên/vị trí
-        if (searchInput) {
-            searchInput.addEventListener('input', function () {
-                var keyword = searchInput.value.trim().toLowerCase();
-                var cards = document.querySelectorAll('.staff-card-clickable');
-                cards.forEach(function (card) {
-                    var nameEl = card.querySelector('.staff-name');
-                    var roleEl = card.querySelector('.staff-role');
-                    var text = '';
-                    if (nameEl) text += nameEl.textContent.toLowerCase();
-                    if (roleEl) text += ' ' + roleEl.textContent.toLowerCase();
-                    if (!keyword || text.indexOf(keyword) !== -1) {
-                        card.parentElement.style.display = '';
-                    } else {
-                        card.parentElement.style.display = 'none';
-                    }
-                });
-            });
-        }
-
-        // Mở modal chi tiết/chỉnh sửa khi bấm vào thẻ nhân viên
-        if (detailModalEl) {
-            var detailModal = new bootstrap.Modal(detailModalEl);
-            var cards = document.querySelectorAll('.staff-card-clickable');
-            var editForm = document.getElementById('editStaffForm');
-
-            cards.forEach(function (card) {
-                card.addEventListener('click', function () {
-                    var id = card.getAttribute('data-id');
-                    var name = card.getAttribute('data-name') || '';
-                    var role = card.getAttribute('data-role') || '';
-                    var status = card.getAttribute('data-status') || 'ACTIVE';
-                    var shift = card.getAttribute('data-shift') || '';
-                    var salary = card.getAttribute('data-salary') || '';
-                    var startDate = card.getAttribute('data-start-date') || '';
-                    var avatarUrl = card.getAttribute('data-avatar-url') || '';
-                    var phone = card.getAttribute('data-phone') || '';
-
-                    document.getElementById('editStaffId').value = id;
-                    document.getElementById('editStaffName').value = name;
-                    document.getElementById('editStaffRole').value = role;
-                    document.getElementById('editStaffStatus').value = status;
-                    document.getElementById('editStaffShift').value = shift;
-                    document.getElementById('editStaffSalary').value = salary || '';
-                    document.getElementById('editStaffStartDate').value = startDate || '';
-                    document.getElementById('editStaffAvatarUrl').value = avatarUrl || '';
-
-                    var phoneInput = document.getElementById('editStaffPhone');
-                    if (phoneInput) {
-                        phoneInput.value = phone || '';
-                    }
-
-                    // Avatar & badge trong modal
-                    var avatarEl = document.getElementById('editStaffAvatar');
-                    if (avatarEl) {
-                        var url = avatarUrl || card.querySelector('.staff-avatar')?.getAttribute('src') || '';
-                        if (url) {
-                            avatarEl.src = url;
-                        }
-                    }
-
-                    var badge = document.getElementById('editStaffStatusBadge');
-                    if (badge) {
-                        badge.classList.remove('staff-status-active', 'staff-status-leave', 'staff-status-quit');
-                        if (status === 'ACTIVE') {
-                            badge.classList.add('staff-status-active');
-                            badge.textContent = 'Đang làm';
-                        } else if (status === 'ON_LEAVE') {
-                            badge.classList.add('staff-status-leave');
-                            badge.textContent = 'Nghỉ phép';
-                        } else if (status === 'INACTIVE') {
-                            badge.classList.add('staff-status-quit');
-                            badge.textContent = 'Đã nghỉ việc';
+            window.staffCheckInOut = function () {
+                var url = attendanceStatus === 'NOT_CHECKED_IN' ? '/api/attendance/check-in' : '/api/attendance/check-out';
+                fetch(url, { method: 'POST' })
+                    .then(async res => {
+                        const msg = await res.text();
+                        if (!res.ok) {
+                            alert('Lỗi: ' + msg);
                         } else {
-                            badge.textContent = 'Chưa rõ';
+                            alert('Thành công: ' + msg);
+                            window.location.reload();
                         }
-                    }
+                    })
+                    .catch(err => {
+                        alert('Lỗi kết nối khi chấm công!');
+                    });
+            };
 
-                    detailModal.show();
+            if (!window.bootstrap) return;
+
+            var addBtn = document.querySelector('.staff-add-btn');
+            var modalEl = document.getElementById('createStaffModal');
+            var detailModalEl = document.getElementById('staffDetailModal');
+            var searchInput = document.querySelector('.staff-search input');
+
+            if (addBtn && modalEl) {
+                var modal = new bootstrap.Modal(modalEl);
+                var form = document.getElementById('createStaffForm');
+
+                addBtn.addEventListener('click', function () {
+                    if (form) {
+                        form.reset();
+                    }
+                    modal.show();
                 });
-            });
 
-            if (editForm) {
-                editForm.addEventListener('submit', function (e) {
-                    e.preventDefault();
+                if (form) {
+                    form.addEventListener('submit', function (e) {
+                        e.preventDefault();
 
-                    var id = document.getElementById('editStaffId').value;
-                    var name = document.getElementById('editStaffName').value.trim();
-                    var role = document.getElementById('editStaffRole').value;
-                    var status = document.getElementById('editStaffStatus').value;
-                    var shift = document.getElementById('editStaffShift').value.trim();
-                    var salaryValue = document.getElementById('editStaffSalary').value;
-                    var startDate = document.getElementById('editStaffStartDate').value;
-                    var avatarUrl = document.getElementById('editStaffAvatarUrl').value.trim();
-                    var phone = document.getElementById('editStaffPhone') ? document.getElementById('editStaffPhone').value.trim() : '';
+                        var name = document.getElementById('staffFullName')?.value.trim();
+                        var phone = document.getElementById('staffPhone')?.value.trim();
+                        var role = document.getElementById('staffRole')?.value;
+                        var status = document.getElementById('staffStatus')?.value;
+                        var shift = document.getElementById('staffShift')?.value.trim();
+                        var salaryValue = document.getElementById('staffSalary')?.value;
+                        var avatarUrl = document.getElementById('staffAvatarUrl')?.value.trim();
 
-                    if (!id || !name) {
-                        alert('Vui lòng nhập đầy đủ thông tin bắt buộc.');
-                        return;
-                    }
-
-                    var payload = {
-                        id: Number(id),
-                        name: name,
-                        phone: phone || null,
-                        role: role,
-                        status: status,
-                        shift: shift || null,
-                        salary: salaryValue ? Number(salaryValue) : null,
-                        avatarUrl: avatarUrl || null,
-                        startDate: startDate || null
-                    };
-
-                    fetch('/api/staff/update', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    }).then(function (res) {
-                        if (!res.ok) {
-                            throw new Error('Lỗi cập nhật nhân viên');
-                        }
-                        return res.json();
-                    }).then(function (updated) {
-                        // Cập nhật lại thẻ nhân viên tương ứng trên giao diện
-                        var card = document.querySelector('.staff-card-clickable[data-id="' + updated.id + '"]');
-                        if (card) {
-                            card.setAttribute('data-name', updated.name || '');
-                            card.setAttribute('data-phone', updated.phone || '');
-                            card.setAttribute('data-role', updated.role || '');
-                            card.setAttribute('data-status', updated.status || '');
-                            card.setAttribute('data-shift', updated.shift || '');
-                            card.setAttribute('data-salary', updated.salary || '');
-                            card.setAttribute('data-start-date', updated.startDate || '');
-                            card.setAttribute('data-avatar-url', updated.avatarUrl || '');
-
-                            var nameEl = card.querySelector('.staff-name');
-                            if (nameEl) {
-                                nameEl.textContent = updated.name || '';
-                            }
-
-                            var phoneEl = card.querySelector('.staff-phone-text');
-                            if (phoneEl) {
-                                phoneEl.textContent = updated.phone || 'Chưa có số điện thoại';
-                            }
-
-                            var roleEl = card.querySelector('.staff-role');
-                            if (roleEl && updated.role) {
-                                roleEl.textContent = updated.role.replace(/_/g, ' ');
-                            }
-
-                            // Cập nhật lại các badge trạng thái (ẩn/hiện đúng span)
-                            var activeBadge = card.querySelector('.staff-status-badge.staff-status-active');
-                            var leaveBadge = card.querySelector('.staff-status-badge.staff-status-leave');
-                            var quitBadge = card.querySelector('.staff-status-badge.staff-status-quit');
-                            var unknownBadge = card.querySelector('.staff-status-badge:not(.staff-status-active):not(.staff-status-leave):not(.staff-status-quit)');
-
-                            function setBadgeVisibility(el, visible) {
-                                if (!el) return;
-                                el.style.display = visible ? '' : 'none';
-                            }
-
-                            if (updated.status === 'ACTIVE') {
-                                setBadgeVisibility(activeBadge, true);
-                                setBadgeVisibility(leaveBadge, false);
-                                setBadgeVisibility(quitBadge, false);
-                                setBadgeVisibility(unknownBadge, false);
-                            } else if (updated.status === 'ON_LEAVE') {
-                                setBadgeVisibility(activeBadge, false);
-                                setBadgeVisibility(leaveBadge, true);
-                                setBadgeVisibility(quitBadge, false);
-                                setBadgeVisibility(unknownBadge, false);
-                            } else if (updated.status === 'INACTIVE') {
-                                setBadgeVisibility(activeBadge, false);
-                                setBadgeVisibility(leaveBadge, false);
-                                setBadgeVisibility(quitBadge, true);
-                                setBadgeVisibility(unknownBadge, false);
-                            } else {
-                                setBadgeVisibility(activeBadge, false);
-                                setBadgeVisibility(leaveBadge, false);
-                                setBadgeVisibility(quitBadge, false);
-                                setBadgeVisibility(unknownBadge, true);
-                            }
-
-                            var shiftEl = card.querySelector('.staff-shift-text');
-                            if (shiftEl) {
-                                shiftEl.textContent = updated.shift || 'Chưa thiết lập ca làm';
-                            }
-
-                            // Cập nhật ảnh đại diện nếu có link mới
-                            var avatarImg = card.querySelector('.staff-avatar');
-                            if (avatarImg && updated.avatarUrl) {
-                                avatarImg.src = updated.avatarUrl;
-                            }
+                        if (!name) {
+                            alert('Vui lòng nhập họ và tên nhân viên.');
+                            return;
                         }
 
-                        alert('Đã cập nhật thông tin nhân viên thành công.');
-                        detailModal.hide();
-                    }).catch(function (err) {
-                        console.error(err);
-                        alert('Có lỗi xảy ra khi cập nhật nhân viên.');
+                        if (!phone) {
+                            alert('Vui lòng nhập số điện thoại.');
+                            return;
+                        }
+
+                        if (!role) {
+                            alert('Vui lòng chọn vị trí.');
+                            return;
+                        }
+
+                        var payload = {
+                            name: name,
+                            phone: phone,
+                            role: role,
+                            status: status || 'ACTIVE',
+                            shift: shift || null,
+                            salary: salaryValue ? Number(salaryValue) : null,
+                            avatarUrl: avatarUrl || null,
+                            startDate: null
+                        };
+
+                        fetch('/api/staff', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        }).then(function (res) {
+                            if (!res.ok) {
+                                throw new Error('Lỗi tạo nhân viên');
+                            }
+                            return res.json();
+                        }).then(function () {
+                            alert('Đã thêm nhân viên mới thành công.');
+                            modal.hide();
+                            window.location.reload();
+                        }).catch(function (err) {
+                            console.error(err);
+                            alert('Có lỗi xảy ra khi thêm nhân viên mới.');
+                        });
+                    });
+                }
+            }
+
+            // Tìm kiếm nhân viên theo tên/vị trí
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    var keyword = searchInput.value.trim().toLowerCase();
+                    var cards = document.querySelectorAll('.staff-card-clickable');
+                    cards.forEach(function (card) {
+                        var nameEl = card.querySelector('.staff-name');
+                        var roleEl = card.querySelector('.staff-role');
+                        var text = '';
+                        if (nameEl) text += nameEl.textContent.toLowerCase();
+                        if (roleEl) text += ' ' + roleEl.textContent.toLowerCase();
+                        if (!keyword || text.indexOf(keyword) !== -1) {
+                            card.parentElement.style.display = '';
+                        } else {
+                            card.parentElement.style.display = 'none';
+                        }
                     });
                 });
             }
-        }
-    });
-</script>
+
+            // Mở modal chi tiết/chỉnh sửa khi bấm vào thẻ nhân viên
+            if (detailModalEl) {
+                var detailModal = new bootstrap.Modal(detailModalEl);
+                var cards = document.querySelectorAll('.staff-card-clickable');
+                var editForm = document.getElementById('editStaffForm');
+
+                cards.forEach(function (card) {
+                    card.addEventListener('click', function () {
+                        var id = card.getAttribute('data-id');
+                        var name = card.getAttribute('data-name') || '';
+                        var role = card.getAttribute('data-role') || '';
+                        var status = card.getAttribute('data-status') || 'ACTIVE';
+                        var shift = card.getAttribute('data-shift') || '';
+                        var salary = card.getAttribute('data-salary') || '';
+                        var startDate = card.getAttribute('data-start-date') || '';
+                        var avatarUrl = card.getAttribute('data-avatar-url') || '';
+                        var phone = card.getAttribute('data-phone') || '';
+
+                        document.getElementById('editStaffId').value = id;
+                        document.getElementById('editStaffName').value = name;
+                        document.getElementById('editStaffRole').value = role;
+                        document.getElementById('editStaffStatus').value = status;
+                        document.getElementById('editStaffShift').value = shift;
+                        document.getElementById('editStaffSalary').value = salary || '';
+                        document.getElementById('editStaffStartDate').value = startDate || '';
+                        document.getElementById('editStaffAvatarUrl').value = avatarUrl || '';
+
+                        var phoneInput = document.getElementById('editStaffPhone');
+                        if (phoneInput) {
+                            phoneInput.value = phone || '';
+                        }
+
+                        // Avatar & badge trong modal
+                        var avatarEl = document.getElementById('editStaffAvatar');
+                        if (avatarEl) {
+                            var url = avatarUrl || card.querySelector('.staff-avatar')?.getAttribute('src') || '';
+                            if (url) {
+                                avatarEl.src = url;
+                            }
+                        }
+
+                        var badge = document.getElementById('editStaffStatusBadge');
+                        if (badge) {
+                            badge.classList.remove('staff-status-active', 'staff-status-leave', 'staff-status-quit');
+                            if (status === 'ACTIVE') {
+                                badge.classList.add('staff-status-active');
+                                badge.textContent = 'Đang làm';
+                            } else if (status === 'ON_LEAVE') {
+                                badge.classList.add('staff-status-leave');
+                                badge.textContent = 'Nghỉ phép';
+                            } else if (status === 'INACTIVE') {
+                                badge.classList.add('staff-status-quit');
+                                badge.textContent = 'Đã nghỉ việc';
+                            } else {
+                                badge.textContent = 'Chưa rõ';
+                            }
+                        }
+
+                        detailModal.show();
+                    });
+                });
+
+                if (editForm) {
+                    editForm.addEventListener('submit', function (e) {
+                        e.preventDefault();
+
+                        var id = document.getElementById('editStaffId').value;
+                        var name = document.getElementById('editStaffName').value.trim();
+                        var role = document.getElementById('editStaffRole').value;
+                        var status = document.getElementById('editStaffStatus').value;
+                        var shift = document.getElementById('editStaffShift').value.trim();
+                        var salaryValue = document.getElementById('editStaffSalary').value;
+                        var startDate = document.getElementById('editStaffStartDate').value;
+                        var avatarUrl = document.getElementById('editStaffAvatarUrl').value.trim();
+                        var phone = document.getElementById('editStaffPhone') ? document.getElementById('editStaffPhone').value.trim() : '';
+
+                        if (!id || !name) {
+                            alert('Vui lòng nhập đầy đủ thông tin bắt buộc.');
+                            return;
+                        }
+
+                        var payload = {
+                            id: Number(id),
+                            name: name,
+                            phone: phone || null,
+                            role: role,
+                            status: status,
+                            shift: shift || null,
+                            salary: salaryValue ? Number(salaryValue) : null,
+                            avatarUrl: avatarUrl || null,
+                            startDate: startDate || null
+                        };
+
+                        fetch('/api/staff/update', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        }).then(function (res) {
+                            if (!res.ok) {
+                                throw new Error('Lỗi cập nhật nhân viên');
+                            }
+                            return res.json();
+                        }).then(function (updated) {
+                            // Cập nhật lại thẻ nhân viên tương ứng trên giao diện
+                            var card = document.querySelector('.staff-card-clickable[data-id="' + updated.id + '"]');
+                            if (card) {
+                                card.setAttribute('data-name', updated.name || '');
+                                card.setAttribute('data-phone', updated.phone || '');
+                                card.setAttribute('data-role', updated.role || '');
+                                card.setAttribute('data-status', updated.status || '');
+                                card.setAttribute('data-shift', updated.shift || '');
+                                card.setAttribute('data-salary', updated.salary || '');
+                                card.setAttribute('data-start-date', updated.startDate || '');
+                                card.setAttribute('data-avatar-url', updated.avatarUrl || '');
+
+                                var nameEl = card.querySelector('.staff-name');
+                                if (nameEl) {
+                                    nameEl.textContent = updated.name || '';
+                                }
+
+                                var phoneEl = card.querySelector('.staff-phone-text');
+                                if (phoneEl) {
+                                    phoneEl.textContent = updated.phone || 'Chưa có số điện thoại';
+                                }
+
+                                var roleEl = card.querySelector('.staff-role');
+                                if (roleEl && updated.role) {
+                                    roleEl.textContent = updated.role.replace(/_/g, ' ');
+                                }
+
+                                // Cập nhật lại các badge trạng thái (ẩn/hiện đúng span)
+                                var activeBadge = card.querySelector('.staff-status-badge.staff-status-active');
+                                var leaveBadge = card.querySelector('.staff-status-badge.staff-status-leave');
+                                var quitBadge = card.querySelector('.staff-status-badge.staff-status-quit');
+                                var unknownBadge = card.querySelector('.staff-status-badge:not(.staff-status-active):not(.staff-status-leave):not(.staff-status-quit)');
+
+                                function setBadgeVisibility(el, visible) {
+                                    if (!el) return;
+                                    el.style.display = visible ? '' : 'none';
+                                }
+
+                                if (updated.status === 'ACTIVE') {
+                                    setBadgeVisibility(activeBadge, true);
+                                    setBadgeVisibility(leaveBadge, false);
+                                    setBadgeVisibility(quitBadge, false);
+                                    setBadgeVisibility(unknownBadge, false);
+                                } else if (updated.status === 'ON_LEAVE') {
+                                    setBadgeVisibility(activeBadge, false);
+                                    setBadgeVisibility(leaveBadge, true);
+                                    setBadgeVisibility(quitBadge, false);
+                                    setBadgeVisibility(unknownBadge, false);
+                                } else if (updated.status === 'INACTIVE') {
+                                    setBadgeVisibility(activeBadge, false);
+                                    setBadgeVisibility(leaveBadge, false);
+                                    setBadgeVisibility(quitBadge, true);
+                                    setBadgeVisibility(unknownBadge, false);
+                                } else {
+                                    setBadgeVisibility(activeBadge, false);
+                                    setBadgeVisibility(leaveBadge, false);
+                                    setBadgeVisibility(quitBadge, false);
+                                    setBadgeVisibility(unknownBadge, true);
+                                }
+
+                                var shiftEl = card.querySelector('.staff-shift-text');
+                                if (shiftEl) {
+                                    shiftEl.textContent = updated.shift || 'Chưa thiết lập ca làm';
+                                }
+
+                                // Cập nhật ảnh đại diện nếu có link mới
+                                var avatarImg = card.querySelector('.staff-avatar');
+                                if (avatarImg && updated.avatarUrl) {
+                                    avatarImg.src = updated.avatarUrl;
+                                }
+                            }
+
+                            alert('Đã cập nhật thông tin nhân viên thành công.');
+                            detailModal.hide();
+                        }).catch(function (err) {
+                            console.error(err);
+                            alert('Có lỗi xảy ra khi cập nhật nhân viên.');
+                        });
+                    });
+                }
+            }
+        });
+
+    </script>
 </body>
+
 </html>

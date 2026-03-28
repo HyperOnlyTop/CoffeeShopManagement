@@ -38,9 +38,19 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(function () { });
 
-  // Load daily revenue & orders for charts
-  if (revenueCanvas && ordersCanvas && window.Chart) {
-    fetch('/api/revenue/daily')
+  var revenueChartInstance = null;
+  var ordersChartInstance = null;
+
+  function loadChartData(days) {
+    if (!revenueCanvas || !ordersCanvas || !window.Chart) return;
+
+    // Update subtitle
+    var chartSubtitle = document.querySelector('.chart-subtitle');
+    if (chartSubtitle) {
+      chartSubtitle.textContent = days + ' gần nhất';
+    }
+
+    fetch('/api/revenue/daily?days=' + days)
       .then(function (res) { return res.ok ? res.json() : []; })
       .then(function (data) {
         if (!Array.isArray(data) || !data.length) return;
@@ -53,9 +63,14 @@ document.addEventListener('DOMContentLoaded', function() {
         var labels = data.map(function (item) {
           if (!item.revenueDate) return '';
           var d = new Date(item.revenueDate);
-          var day = d.getDay();
-          var map = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-          return map[day];
+          if (days > 14) {
+            // For month view, show date number
+            return d.getDate() + '/' + (d.getMonth() + 1);
+          } else {
+            // For week view, show day name
+            var map = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+            return map[d.getDay()];
+          }
         });
 
         var revenueValues = data.map(function (item) {
@@ -66,12 +81,15 @@ document.addEventListener('DOMContentLoaded', function() {
           return Number(item.totalOrders || 0);
         });
 
+        // Revenue Line Chart
         var ctxRevenue = revenueCanvas.getContext('2d');
+        if (revenueChartInstance) revenueChartInstance.destroy();
+        
         var gradient = ctxRevenue.createLinearGradient(0, 0, 0, 400);
         gradient.addColorStop(0, 'rgba(201, 141, 77, 0.2)');
         gradient.addColorStop(1, 'rgba(201, 141, 77, 0)');
 
-        new Chart(ctxRevenue, {
+        revenueChartInstance = new Chart(ctxRevenue, {
           type: 'line',
           data: {
             labels: labels,
@@ -86,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
               pointBackgroundColor: '#FFF',
               pointBorderColor: '#C98D4D',
               pointBorderWidth: 2,
-              pointRadius: 3,
+              pointRadius: days > 14 ? 1 : 3,
               pointHoverRadius: 6
             }]
           },
@@ -113,7 +131,13 @@ document.addEventListener('DOMContentLoaded', function() {
             scales: {
               x: {
                 grid: { display: false, drawBorder: false },
-                ticks: { color: '#8F9198', font: { family: 'Inter', size: 12 } }
+                ticks: { 
+                    color: '#8F9198', 
+                    font: { family: 'Inter', size: 11 },
+                    maxRotation: 0,
+                    autoSkip: true,
+                    maxTicksLimit: days > 14 ? 10 : 7
+                }
               },
               y: {
                 border: { display: false },
@@ -131,8 +155,11 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         });
 
+        // Orders Bar Chart
         var ctxOrders = ordersCanvas.getContext('2d');
-        new Chart(ctxOrders, {
+        if (ordersChartInstance) ordersChartInstance.destroy();
+
+        ordersChartInstance = new Chart(ctxOrders, {
           type: 'bar',
           data: {
             labels: labels,
@@ -142,7 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
               backgroundColor: '#C98D4D',
               borderRadius: 4,
               borderSkipped: false,
-              barThickness: 32
+              barThickness: days > 14 ? 'flex' : 32
             }]
           },
           options: {
@@ -162,7 +189,13 @@ document.addEventListener('DOMContentLoaded', function() {
             scales: {
               x: {
                 grid: { display: false, drawBorder: false },
-                ticks: { color: '#8F9198', font: { family: 'Inter', size: 12 } }
+                ticks: { 
+                    color: '#8F9198', 
+                    font: { family: 'Inter', size: 11 },
+                    maxRotation: 0,
+                    autoSkip: true,
+                    maxTicksLimit: days > 14 ? 10 : 7
+                }
               },
               y: {
                 border: { display: false },
@@ -180,5 +213,21 @@ document.addEventListener('DOMContentLoaded', function() {
       .catch(function () { });
   }
 
+  // Handle filter buttons
+  var filterGroup = document.getElementById('revenueFilterGroup');
+  if (filterGroup) {
+    var buttons = filterGroup.querySelectorAll('.btn');
+    buttons.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        buttons.forEach(function(b) { b.classList.remove('active'); });
+        this.classList.add('active');
+        var days = parseInt(this.getAttribute('data-days'));
+        loadChartData(days);
+      });
+    });
+  }
+
+  // Initial load
+  loadChartData(7);
   // Load category revenue and top products could be added here later
 });

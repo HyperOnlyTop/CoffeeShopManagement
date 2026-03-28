@@ -403,9 +403,18 @@
                 <a href="#testimonials">Đánh giá</a>
             </nav>
 
-            <div class="d-flex align-items-center gap-2">
-                <a th:href="@{/login}" class="btn btn-outline-light-soft">Đăng nhập</a>
-                <a th:href="@{/register}" class="btn btn-primary-gold">Đăng ký</a>
+            <div class="d-flex align-items-center gap-3">
+                <div th:if="${currentUser != null}" class="d-flex align-items-center gap-2">
+                    <span class="text-white small">Xin chào, <strong th:text="${currentUser.fullName}">Tên</strong>!</span>
+                    <a th:href="@{/dashboard}" class="btn btn-primary-gold btn-sm">Quản lý</a>
+                    <form th:action="@{/logout}" method="post" class="m-0">
+                        <button type="submit" class="btn btn-outline-light-soft btn-sm">Đăng xuất</button>
+                    </form>
+                </div>
+                <div th:unless="${currentUser != null}" class="d-flex align-items-center gap-2">
+                    <a th:href="@{/login}" class="btn btn-outline-light-soft">Đăng nhập</a>
+                    <a th:href="@{/register}" class="btn btn-primary-gold">Đăng ký</a>
+                </div>
             </div>
         </header>
 
