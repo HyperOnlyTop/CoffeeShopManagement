@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="${booking.id} != null ? 'Chỉnh sửa đặt bàn' : 'Thêm đặt bàn'">Đặt bàn</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <!-- Google Fonts - Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Shared layout styles -->
+  <link rel="stylesheet" href="/css/doanhthu.css">
+</head>
+
+<body>
+  <nav class="sidebar">
+    <a th:href="@{/}" class="brand">
+      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo" class="brand-img">
+      <div class="brand-text">
+        <h5>Brew &amp; Co.</h5>
+        <p>Coffee Management</p>
+      </div>
+    </a>
+
+    <div class="user-profile" th:if="${currentUser != null}">
+      <img
+        th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
+        alt="User" class="object-fit-cover">
+      <div class="user-info">
+        <h6
+          th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
+          Tên tài khoản</h6>
+        <p th:text="${currentUser.email}">Email</p>
+      </div>
+      <div class="online-dot"></div>
+    </div>
+
+    <ul class="nav-menu">
+      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+        <a href="/dashboard" class="nav-link">
+          <i class="bi bi-grid-1x2"></i> Dashboard
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Menu" class="nav-link">
+          <i class="bi bi-cup-hot"></i> Menu
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Order" class="nav-link">
+          <i class="bi bi-bag"></i> Đơn hàng
+        </a>
+      </li>
+      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+        <a href="/Revenue" class="nav-link">
+          <i class="bi bi-bar-chart-fill"></i> Doanh thu
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Staff" class="nav-link">
+          <i class="bi bi-people"></i> Nhân viên
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Inventory" class="nav-link">
+          <i class="bi bi-box-seam"></i> Kho hàng
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Booking" class="nav-link active">
+          <i class="bi bi-calendar-event"></i> Đặt bàn
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Setting" class="nav-link">
+          <i class="bi bi-gear"></i> Cài đặt
+        </a>
+      </li>
+    </ul>
+
+    <div class="logout-btn">
+      <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="header-row mb-3">
+      <div class="page-title">
+        <h2 th:text="${booking.id} != null ? 'Chỉnh sửa đặt bàn' : 'Thêm đặt bàn'">Đặt bàn</h2>
+        <p class="text-muted" th:if="${booking.id} != null">ID: <span th:text="${booking.id}"></span></p>
+      </div>
+    </div>
+
+    <div class="custom-card">
+      <form th:action="@{/Booking/save}" th:object="${booking}" method="post" class="row g-3 small">
+        <input type="hidden" th:field="*{id}">
+
+        <div class="col-md-6">
+             <label class="form-label" for="bookingNameAdmin">Họ tên *</label>
+             <input id="bookingNameAdmin" type="text" class="form-control" th:field="*{name}" required
+               placeholder="Nguyễn Văn A" title="Họ tên khách hàng">
+        </div>
+        <div class="col-md-6">
+             <label class="form-label" for="bookingPhoneAdmin">Số điện thoại *</label>
+             <input id="bookingPhoneAdmin" type="text" class="form-control" th:field="*{phone}" required
+               placeholder="0901 234 567" title="Số điện thoại liên hệ">
+        </div>
+        <div class="col-md-6">
+             <label class="form-label" for="bookingEmailAdmin">Email</label>
+             <input id="bookingEmailAdmin" type="email" class="form-control" th:field="*{email}"
+               placeholder="email@example.com" title="Email khách hàng (không bắt buộc)">
+        </div>
+        <div class="col-md-6">
+             <label class="form-label" for="bookingTimeAdmin">Thời gian đặt *</label>
+             <input id="bookingTimeAdmin" type="datetime-local" class="form-control" th:field="*{bookingTime}" required
+               title="Chọn ngày và giờ khách đặt bàn">
+        </div>
+        <div class="col-md-4">
+             <label class="form-label" for="bookingGuestsAdmin">Số khách *</label>
+             <input id="bookingGuestsAdmin" type="number" min="1" class="form-control" th:field="*{guests}" required
+               placeholder="2" title="Số lượng khách dự kiến">
+        </div>
+        <div class="col-md-8">
+             <label class="form-label" for="bookingNoteAdmin">Ghi chú</label>
+             <input id="bookingNoteAdmin" type="text" class="form-control" th:field="*{note}"
+               placeholder="Yêu cầu đặc biệt (nếu có)" title="Ghi chú thêm cho đặt bàn">
+        </div>
+
+        <div class="col-12 d-flex justify-content-between mt-3">
+          <a href="/Booking" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Quay lại danh sách
+          </a>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save me-1"></i>
+            <span th:text="${booking.id} != null ? 'Lưu thay đổi' : 'Tạo mới'">Lưu</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

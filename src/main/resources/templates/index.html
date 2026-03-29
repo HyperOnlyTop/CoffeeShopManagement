@@ -501,8 +501,6 @@
         }
 
         @media (max-width: 768px) {
-
-        @media (max-width: 768px) {
             .landing-navbar {
                 padding-inline: 18px;
             }
@@ -738,36 +736,104 @@
 
     <!-- Testimonials -->
     <section id="testimonials" class="section-inner section-large">
-        <div class="text-center mb-5">
+        <div class="text-center mb-3">
             <div class="section-title-eyebrow">Khách hàng nói gì</div>
             <h2 class="section-title-main">Lời từ trái tim khách hàng</h2>
+            <p class="text-muted-coffee mb-2">Chia sẻ cảm nhận của bạn về Brew &amp; Co. để chúng tôi phục vụ tốt hơn.</p>
+            <button type="button" class="btn btn-primary-gold mt-1" id="openReviewFormBtn">
+                <i class="bi bi-chat-heart me-1"></i>
+                Gửi đánh giá
+            </button>
         </div>
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="testimonial-card">
-                    <div class="text-warning mb-2">★★★★★</div>
-                    <p class="small text-muted-coffee mb-3">"Không gian cực kỳ thoải mái, mình thường ngồi làm việc cả buổi sáng.
-                        Cà phê trứng ở đây là ngon nhất mình từng thử!"</p>
-                    <div class="fw-semibold">Minh Anh</div>
-                    <div class="small text-muted-coffee">Freelancer</div>
+
+        <div class="row justify-content-center mb-3" th:if="${param.reviewSuccess}">
+            <div class="col-md-8">
+                <div class="alert alert-success py-2 mb-0" role="alert">
+                    Cảm ơn bạn! Đánh giá của bạn đã được ghi nhận.
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="testimonial-card">
-                    <div class="text-warning mb-2">★★★★★</div>
-                    <p class="small text-muted-coffee mb-3">"Brew &amp; Co là nơi tôi hay dẫn team đến họp.
-                        Đồ uống ngon, không gian yên tĩnh và WiFi cực ổn định."</p>
-                    <div class="fw-semibold">Quốc Hưng</div>
-                    <div class="small text-muted-coffee">Software Engineer</div>
+        </div>
+        <div class="row justify-content-center mb-3" th:if="${param.reviewError}">
+            <div class="col-md-8">
+                <div class="alert alert-danger py-2 mb-0" role="alert">
+                    Vui lòng nhập đầy đủ họ tên và số điện thoại trước khi gửi đánh giá.
                 </div>
             </div>
-            <div class="col-md-4">
+        </div>
+
+        <div class="row g-4 mb-4" th:if="${customerReviews != null and !#lists.isEmpty(customerReviews)}">
+            <div class="col-md-4" th:each="review : ${customerReviews}">
                 <div class="testimonial-card">
-                    <div class="text-warning mb-2">★★★★★</div>
-                    <p class="small text-muted-coffee mb-3">"Aesthetic thật sự đỉnh cao. Mỗi góc trong quán đều có thể chụp ảnh đẹp.
-                        Matcha Cloud là must-try!"</p>
-                    <div class="fw-semibold">Thu Trang</div>
-                    <div class="small text-muted-coffee">Designer</div>
+                    <div class="text-warning mb-2">
+                        <span th:each="i : ${#numbers.sequence(1, review.rating)}">★</span>
+                    </div>
+                    <p class="small text-muted-coffee mb-3" th:text="${review.comment}">Nội dung đánh giá</p>
+                    <div class="fw-semibold" th:text="${review.customerName}">Tên khách</div>
+                    <div class="small text-muted-coffee" th:text="${review.customerRole}">Vai trò</div>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-5" th:if="${customerReviews == null or #lists.isEmpty(customerReviews)}">
+            <div class="col-12">
+                <p class="text-center text-muted-coffee mb-0">Hiện chưa có đánh giá nào. Hãy là người đầu tiên để lại cảm nhận về Brew &amp; Co.</p>
+            </div>
+        </div>
+
+        <!-- Form gửi đánh giá -->
+        <div class="row g-4 align-items-start d-none" id="reviewFormSection">
+            <div class="col-lg-6">
+                <h3 class="booking-left-title mb-3">Gửi đánh giá của bạn</h3>
+                <p class="text-muted-coffee small mb-3">Chúng tôi rất trân trọng mọi góp ý từ bạn. Đánh giá của bạn sẽ giúp Brew &amp; Co. hoàn thiện trải nghiệm tốt hơn.</p>
+                <p class="text-muted-coffee small mb-0">Một số đánh giá nổi bật sẽ được hiển thị công khai tại đây.</p>
+            </div>
+            <div class="col-lg-6">
+                <div class="booking-card">
+                    <form th:action="@{/reviews}" method="post" class="row g-3 small">
+                        <!-- Nếu đã đăng nhập thì không cần nhập tên/sđt, tự động lấy từ tài khoản -->
+                        <div class="col-12" th:if="${currentUser != null}">
+                            <p class="small text-muted-coffee mb-2">
+                                Đang gửi đánh giá với tài khoản:
+                                <strong th:text="${currentUser.fullName}">Tên khách</strong>
+                                <span th:if="${currentUser.phone != null}"> - SĐT: <span th:text="${currentUser.phone}">SĐT</span></span>
+                            </p>
+                            <input type="hidden" name="name" th:value="${currentUser.fullName}">
+                            <input type="hidden" name="phone" th:value="${currentUser.phone}">
+                        </div>
+
+                        <!-- Nếu chưa đăng nhập thì bắt buộc nhập tên và số điện thoại -->
+                        <div class="col-md-6" th:if="${currentUser == null}">
+                            <label class="form-label" for="reviewName">Họ tên *</label>
+                            <input id="reviewName" name="name" type="text" class="form-control" placeholder="Nguyễn Văn A" required>
+                        </div>
+                        <div class="col-md-6" th:if="${currentUser == null}">
+                            <label class="form-label" for="reviewPhone">Số điện thoại *</label>
+                            <input id="reviewPhone" name="phone" type="text" class="form-control" placeholder="0901 234 567" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="reviewRole">Bạn là</label>
+                            <input id="reviewRole" name="role" type="text" class="form-control" placeholder="Sinh viên, Freelancer, ...">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="reviewRating">Số sao *</label>
+                            <select id="reviewRating" name="rating" class="form-select" required>
+                                <option value="5" selected>5 ★ - Tuyệt vời</option>
+                                <option value="4">4 ★ - Rất tốt</option>
+                                <option value="3">3 ★ - Bình thường</option>
+                                <option value="2">2 ★ - Tạm ổn</option>
+                                <option value="1">1 ★ - Chưa hài lòng</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label" for="reviewComment">Cảm nhận của bạn *</label>
+                            <textarea id="reviewComment" name="comment" class="form-control" rows="3" placeholder="Hãy chia sẻ đôi điều về đồ uống, không gian, nhân viên..." required></textarea>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <button type="submit" class="btn btn-primary-gold w-100">
+                                <i class="bi bi-chat-heart me-1"></i>
+                                Gửi đánh giá
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -781,6 +847,16 @@
                 <h2 class="booking-left-title">Giữ chỗ cho khoảnh khắc đặc biệt</h2>
                 <p class="text-muted-coffee mb-4">Dù là buổi hẹn hò, họp nhóm hay chỉ đơn giản là muốn có một góc yên tĩnh,
                     chúng tôi luôn sẵn sàng chuẩn bị cho bạn.</p>
+                <div th:if="${param.bookingSuccess}" class="alert alert-success py-2 small" role="alert">
+                    Yêu cầu đặt bàn của bạn đã được gửi. Chúng tôi sẽ liên hệ xác nhận trong thời gian sớm nhất.
+                </div>
+                <div th:if="${param.bookingError}" class="alert alert-danger py-2 small" role="alert">
+                    <span th:switch="${param.bookingError}">
+                        <span th:case="'invalidTime'">Thời gian đặt bàn không hợp lệ. Vui lòng chọn ngày phù hợp.</span>
+                        <span th:case="'conflict'">Khung giờ này đã có khách đặt. Vui lòng chọn thời gian khác.</span>
+                        <span th:case="*">Có lỗi khi đặt bàn. Vui lòng thử lại.</span>
+                    </span>
+                </div>
                 <div class="d-flex flex-column gap-3 small text-muted-coffee">
                     <div>
                         <div class="fw-semibold"><i class="bi bi-telephone-outbound me-2"></i>Hotline đặt bàn</div>
@@ -794,12 +870,26 @@
             </div>
             <div class="col-lg-7">
                 <div class="booking-card">
-                    <form class="row g-3 small">
-                        <div class="col-md-6">
+                    <form class="row g-3 small" th:action="@{/booking}" method="post">
+                        <!-- Nếu đã đăng nhập thì dùng luôn thông tin tài khoản -->
+                        <div class="col-12" th:if="${currentUser != null}">
+                            <p class="small text-muted-coffee mb-2">
+                                Đặt bàn với tài khoản:
+                                <strong th:text="${currentUser.fullName}">Tên khách</strong>
+                                <span th:if="${currentUser.phone != null}">
+                                    - SĐT: <span th:text="${currentUser.phone}">SĐT</span>
+                                </span>
+                            </p>
+                            <input type="hidden" name="name" th:value="${currentUser.fullName}">
+                            <input type="hidden" name="phone" th:value="${currentUser.phone}">
+                        </div>
+
+                        <!-- Nếu chưa đăng nhập thì bắt buộc nhập họ tên và SĐT -->
+                        <div class="col-md-6" th:if="${currentUser == null}">
                             <label class="form-label" for="bookingName">Họ tên *</label>
                             <input id="bookingName" name="name" type="text" class="form-control" placeholder="Nguyễn Văn A" required>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6" th:if="${currentUser == null}">
                             <label class="form-label" for="bookingPhone">Số điện thoại *</label>
                             <input id="bookingPhone" name="phone" type="text" class="form-control" placeholder="0901 234 567" required>
                         </div>
@@ -809,7 +899,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label" for="bookingDate">Ngày *</label>
-                            <input id="bookingDate" name="date" type="text" class="form-control" placeholder="dd/mm/yyyy" required>
+                            <input id="bookingDate" name="date" type="date" class="form-control" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label" for="bookingTime">Giờ *</label>
@@ -829,7 +919,7 @@
                             <input id="bookingNote" name="note" type="text" class="form-control" placeholder="Yêu cầu đặc biệt (nếu có)">
                         </div>
                         <div class="col-12 mt-2">
-                            <button type="button" class="btn btn-primary-gold w-100">
+                            <button type="submit" class="btn btn-primary-gold w-100">
                                 <i class="bi bi-calendar-heart me-1"></i>
                                 Gửi yêu cầu đặt bàn
                             </button>
@@ -845,7 +935,7 @@
 <div class="footer-map">
     <iframe
         src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3919.405949373199!2d106.69918047579687!3d10.778746259187436!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752f480c9d7c1d%3A0xa3b3f31c52a4da41!2zTmjDoCBUaMOhbmggVGjhu4sgVGjDrG5nIELDuWkgxJDhuqFp!5e0!3m2!1svi!2svi!4v1700000000000!5m2!1svi!2svi"
-        allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        allowfullscreen title="Bản đồ vị trí Brew &amp; Co."></iframe>
 </div>
 
 <footer class="footer-wrapper">
@@ -932,6 +1022,10 @@
         var messagesEl = document.getElementById('chatMessages');
         var inputEl = document.getElementById('chatInput');
         var sendBtn = document.getElementById('chatSendBtn');
+
+        // Review form toggle
+        var openReviewFormBtn = document.getElementById('openReviewFormBtn');
+        var reviewFormSection = document.getElementById('reviewFormSection');
 
         if (!toggleBtn || !panel || !closeBtn || !modeStaffBtn || !modeAiBtn || !messagesEl || !inputEl || !sendBtn) {
             return;
@@ -1041,6 +1135,13 @@
                 handleUserMessage();
             }
         });
+
+        if (openReviewFormBtn && reviewFormSection) {
+            openReviewFormBtn.addEventListener('click', function () {
+                reviewFormSection.classList.remove('d-none');
+                reviewFormSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
     });
 </script>
 

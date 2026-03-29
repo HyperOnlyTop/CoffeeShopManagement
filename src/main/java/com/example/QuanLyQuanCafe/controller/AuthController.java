@@ -1,6 +1,7 @@
 package com.example.QuanLyQuanCafe.controller;
 
 import java.math.BigDecimal;
+import java.security.Principal;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -14,9 +15,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.example.QuanLyQuanCafe.model.AppUser;
 import com.example.QuanLyQuanCafe.model.Customer;
+import com.example.QuanLyQuanCafe.model.CustomerReview;
 import com.example.QuanLyQuanCafe.model.MenuItem;
 import com.example.QuanLyQuanCafe.repository.AppUserRepository;
 import com.example.QuanLyQuanCafe.repository.CustomerRepository;
+import com.example.QuanLyQuanCafe.repository.CustomerReviewRepository;
 import com.example.QuanLyQuanCafe.service.MenuService;
 
 @Controller
@@ -26,18 +29,26 @@ public class AuthController {
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final CustomerRepository customerRepository;
+    private final CustomerReviewRepository customerReviewRepository;
 
-    public AuthController(MenuService menuService, AppUserRepository userRepository, PasswordEncoder passwordEncoder, CustomerRepository customerRepository) {
+    public AuthController(MenuService menuService,
+                          AppUserRepository userRepository,
+                          PasswordEncoder passwordEncoder,
+                          CustomerRepository customerRepository,
+                          CustomerReviewRepository customerReviewRepository) {
         this.menuService = menuService;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.customerRepository = customerRepository;
+        this.customerReviewRepository = customerReviewRepository;
     }
 
     @GetMapping("/")
     public String landingPage(Model model) {
         List<MenuItem> menuItems = menuService.getAllItems();
         model.addAttribute("menuItems", menuItems);
+        List<CustomerReview> customerReviews = customerReviewRepository.findTop3ByOrderByCreatedAtDesc();
+        model.addAttribute("customerReviews", customerReviews);
         return "index"; // trang giới thiệu công khai
     }
 
@@ -113,5 +124,54 @@ public class AuthController {
         customerRepository.save(customer);
         
         return "redirect:/login?registered";
+    }
+
+    @PostMapping("/reviews")
+    public String submitReview(@RequestParam(value = "name", required = false) String name,
+                               @RequestParam(value = "role", required = false) String role,
+                               @RequestParam(value = "phone", required = false) String phone,
+                               @RequestParam("rating") int rating,
+                               @RequestParam("comment") String comment,
+                               Principal principal) {
+
+        AppUser current = null;
+        if (principal != null) {
+            current = userRepository.findByUsername(principal.getName());
+        }
+
+        boolean loggedIn = (current != null);
+
+        if (!loggedIn) {
+            if (name == null || name.isBlank() || phone == null || phone.isBlank()) {
+                return "redirect:/?reviewError=missingInfo#testimonials";
+            }
+        }
+
+        if (loggedIn) {
+            name = (current.getFullName() != null && !current.getFullName().isBlank())
+                    ? current.getFullName()
+                    : (name != null ? name.trim() : "Khách hàng");
+            if (current.getPhone() != null && !current.getPhone().isBlank()) {
+                phone = current.getPhone();
+            }
+        }
+
+        if (rating < 1) {
+            rating = 1;
+        } else if (rating > 5) {
+            rating = 5;
+        }
+
+        CustomerReview review = new CustomerReview();
+        review.setCustomerName(name != null ? name.trim() : "Khách hàng");
+        review.setCustomerRole((role == null || role.isBlank()) ? "Khách hàng" : role.trim());
+        review.setRating(rating);
+        review.setComment(comment.trim());
+        if (phone != null && !phone.isBlank()) {
+            review.setPhone(phone.trim());
+        }
+        customerReviewRepository.save(review);
+
+        return "redirect:/?reviewSuccess=1#testimonials";
     }
 }

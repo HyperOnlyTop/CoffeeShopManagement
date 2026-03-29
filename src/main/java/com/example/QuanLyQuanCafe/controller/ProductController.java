@@ -26,6 +26,7 @@ import com.example.QuanLyQuanCafe.model.DailyRevenue;
 import com.example.QuanLyQuanCafe.model.OrderItem;
 import com.example.QuanLyQuanCafe.model.OrderStatus;
 import com.example.QuanLyQuanCafe.model.AppUser;
+import com.example.QuanLyQuanCafe.model.TableBooking;
 import com.example.QuanLyQuanCafe.service.MenuService;
 import com.example.QuanLyQuanCafe.service.OrderService;
 import com.example.QuanLyQuanCafe.service.StaffService;
@@ -33,6 +34,7 @@ import com.example.QuanLyQuanCafe.service.DailyRevenueService;
 import com.example.QuanLyQuanCafe.repository.CustomerRepository;
 import com.example.QuanLyQuanCafe.repository.StaffRepository;
 import com.example.QuanLyQuanCafe.repository.AppUserRepository;
+import com.example.QuanLyQuanCafe.repository.TableBookingRepository;
 
 @Controller
 public class ProductController {
@@ -44,6 +46,7 @@ public class ProductController {
 	private final CustomerRepository customerRepository;
 	private final StaffRepository staffRepository;
 	private final AppUserRepository appUserRepository;
+    private final TableBookingRepository tableBookingRepository;
 
 	public ProductController(
 			MenuService menuService,
@@ -52,7 +55,8 @@ public class ProductController {
 			DailyRevenueService dailyRevenueService,
 			CustomerRepository customerRepository,
 			StaffRepository staffRepository,
-			AppUserRepository appUserRepository) {
+			AppUserRepository appUserRepository,
+			TableBookingRepository tableBookingRepository) {
 		this.menuService = menuService;
 		this.orderService = orderService;
         this.staffService = staffService;
@@ -60,6 +64,7 @@ public class ProductController {
 		this.customerRepository = customerRepository;
 		this.staffRepository = staffRepository;
 		this.appUserRepository = appUserRepository;
+		this.tableBookingRepository = tableBookingRepository;
 	}
 
 	@GetMapping("/dashboard")
@@ -179,6 +184,17 @@ public class ProductController {
 	public String order(Model model) {
 		model.addAttribute("orders", orderService.findAll());
 		return "Order";
+	}
+
+	@GetMapping("/Booking")
+	public String bookingList(Model model) {
+		List<TableBooking> bookings = tableBookingRepository.findAll();
+		bookings.sort(Comparator.comparing(
+			TableBooking::getBookingTime,
+			Comparator.nullsLast(Comparator.naturalOrder())
+		).reversed());
+		model.addAttribute("bookings", bookings);
+		return "Booking";
 	}
 
 	@GetMapping("/Revenue")
