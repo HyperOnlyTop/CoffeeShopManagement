@@ -393,7 +393,7 @@
         var orderPaymentQrModal = orderPaymentQrModalEl ? new bootstrap.Modal(orderPaymentQrModalEl) : null;
         var createForm = document.getElementById('createOrderForm');
 
-        // Elements for auto time and items
+        // Elements for auto time, customer and items
         var orderTimeInput = document.getElementById('orderTime');
         var orderStatusSelect = document.getElementById('orderStatus');
         var orderTotalAmountInput = document.getElementById('orderTotalAmount');
@@ -402,6 +402,8 @@
         var addItemBtn = document.getElementById('addOrderItemBtn');
         var itemsBody = document.getElementById('orderItemsBody');
         var itemsEmptyRow = document.getElementById('orderItemsEmptyRow');
+        var customerNameInput = document.getElementById('orderCustomerName');
+        var customerPhoneInput = document.getElementById('orderCustomerPhone');
 
         // QR thanh toán
         var orderPaymentMethodSelect = document.getElementById('orderPaymentMethod');
@@ -422,6 +424,31 @@
 
         var menuItemsCache = [];
         var currentOrderItems = []; // {id, name, price, quantity}
+
+        function lookupCustomerByPhone() {
+          if (!customerPhoneInput || !customerNameInput) return;
+          var rawPhone = customerPhoneInput.value.trim();
+          if (!rawPhone) return;
+
+          fetch('/api/customers/phone/' + encodeURIComponent(rawPhone))
+            .then(function (res) {
+              if (!res.ok) {
+                return null;
+              }
+              return res.json();
+            })
+            .then(function (customer) {
+              if (customer && customer.name && !customerNameInput.value.trim()) {
+                customerNameInput.value = customer.name;
+              }
+            })
+            .catch(function () { /* bỏ qua lỗi tra cứu */ });
+        }
+
+        if (customerPhoneInput) {
+          customerPhoneInput.addEventListener('blur', lookupCustomerByPhone);
+          customerPhoneInput.addEventListener('change', lookupCustomerByPhone);
+        }
 
         function formatCurrencyVND(amount) {
           var num = Number(amount || 0);
@@ -886,8 +913,7 @@
               return;
             }
 
-            var customerNameInput = document.getElementById('orderCustomerName');
-            var customerPhoneInput = document.getElementById('orderCustomerPhone');
+            // customerNameInput & customerPhoneInput đã được khai báo phía trên
             var orderTypeSelect = document.getElementById('orderType');
             var tableNoteInput = document.getElementById('orderTableNote');
 

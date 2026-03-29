@@ -1,7 +1,6 @@
 package com.example.QuanLyQuanCafe.controller;
 
 import java.security.Principal;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
@@ -19,7 +18,9 @@ import java.nio.file.Paths;
 import java.util.UUID;
 
 import com.example.QuanLyQuanCafe.model.AppUser;
+import com.example.QuanLyQuanCafe.model.Staff;
 import com.example.QuanLyQuanCafe.repository.AppUserRepository;
+import com.example.QuanLyQuanCafe.repository.StaffRepository;
 
 @RestController
 @RequestMapping("/api/account")
@@ -27,10 +28,42 @@ public class AccountController {
 
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final StaffRepository staffRepository;
 
-    public AccountController(AppUserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AccountController(AppUserRepository userRepository,
+                             PasswordEncoder passwordEncoder,
+                             StaffRepository staffRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.staffRepository = staffRepository;
+    }
+
+    private void syncStaffAvatar(AppUser user) {
+        if (user == null || user.getAvatarUrl() == null || user.getAvatarUrl().isBlank()) {
+            return;
+        }
+
+        Staff staff = null;
+
+        // Ưu tiên ghép theo số điện thoại nếu có
+        if (user.getPhone() != null && !user.getPhone().isBlank()) {
+            staff = staffRepository.findByPhone(user.getPhone());
+        }
+
+        // Nếu không có hoặc không tìm được theo phone thì thử theo tên đầy đủ
+        if (staff == null && user.getFullName() != null && !user.getFullName().isBlank()) {
+            staff = staffRepository.findByName(user.getFullName());
+        }
+
+        // Cuối cùng fallback theo username (trường hợp tên trùng username)
+        if (staff == null) {
+            staff = staffRepository.findByName(user.getUsername());
+        }
+
+        if (staff != null) {
+            staff.setAvatarUrl(user.getAvatarUrl());
+            staffRepository.save(staff);
+        }
     }
 
     @PostMapping("/update-profile")
@@ -47,6 +80,7 @@ public class AccountController {
             user.setAvatarUrl(request.get("avatarUrl"));
         }
         userRepository.save(user);
+        syncStaffAvatar(user);
 
         return ResponseEntity.ok(Map.of("message", "Cập nhật thông tin thành công"));
     }
@@ -105,6 +139,7 @@ public class AccountController {
             if (user != null) {
                 user.setAvatarUrl(avatarUrl);
                 userRepository.save(user);
+                syncStaffAvatar(user);
             }
 
             response = ResponseEntity.ok(Map.of("avatarUrl", avatarUrl, "message", "Tải ảnh lên thành công"));

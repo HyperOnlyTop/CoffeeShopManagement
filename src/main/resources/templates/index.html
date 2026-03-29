@@ -346,6 +346,162 @@
             color: #9b7a58;
         }
 
+        /* Chat widget */
+        .chat-widget-toggle {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            width: 64px;
+            height: 64px;
+            border-radius: 999px;
+            background: #ff9f1a;
+            color: #2a1704;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+            cursor: pointer;
+            z-index: 1050;
+        }
+
+        .chat-widget-toggle i {
+            font-size: 26px;
+        }
+
+        .chat-widget-panel {
+            position: fixed;
+            right: 24px;
+            bottom: 100px;
+            width: 420px;
+            max-height: 620px;
+            background: #ffffff;
+            border-radius: 18px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1050;
+        }
+
+        .chat-widget-header {
+            padding: 12px 14px;
+            background: linear-gradient(135deg, #2b190a, #5b3416);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-widget-header-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .chat-widget-header-sub {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+
+        .chat-widget-close {
+            border: none;
+            background: transparent;
+            color: #fff;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .chat-widget-mode-switch {
+            display: flex;
+            padding: 8px 10px 6px;
+            background: #f8f2ea;
+            gap: 6px;
+        }
+
+        .chat-widget-mode-btn {
+            flex: 1;
+            border-radius: 999px;
+            border: none;
+            padding: 6px 4px;
+            font-size: 12px;
+            cursor: pointer;
+            background: transparent;
+            color: #7b5a3a;
+        }
+
+        .chat-widget-mode-btn.active {
+            background: #ffead1;
+            color: #2b190a;
+            font-weight: 600;
+        }
+
+        .chat-widget-messages {
+            flex: 1;
+            padding: 12px 14px;
+            overflow-y: auto;
+            background: #fffdf8;
+            font-size: 14px;
+        }
+
+        .chat-msg-row {
+            margin-bottom: 8px;
+            display: flex;
+        }
+
+        .chat-msg-row.me {
+            justify-content: flex-end;
+        }
+
+        .chat-msg-bubble {
+            max-width: 78%;
+            border-radius: 14px;
+            padding: 7px 10px;
+            line-height: 1.4;
+        }
+
+        .chat-msg-bubble.bot {
+            background: #f2e4d2;
+            color: #2b190a;
+        }
+
+        .chat-msg-bubble.me {
+            background: #ffb341;
+            color: #2b190a;
+        }
+
+        .chat-widget-input {
+            border-top: 1px solid #f0d3ad;
+            padding: 8px 10px;
+            background: #fffaf3;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chat-widget-input input[type="text"] {
+            flex: 1;
+            border-radius: 999px;
+            border: 1px solid #e0c9a5;
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+
+        .chat-widget-input button {
+            border-radius: 999px;
+            border: none;
+            background: #2b190a;
+            color: #fff;
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+
         @media (max-width: 768px) {
             .landing-navbar {
                 padding-inline: 18px;
@@ -377,6 +533,17 @@
 
             .booking-left-title {
                 font-size: 22px;
+            }
+
+            .chat-widget-panel {
+                right: 12px;
+                left: 12px;
+                width: auto;
+            }
+
+            .chat-widget-toggle {
+                right: 16px;
+                bottom: 16px;
             }
         }
     </style>
@@ -726,6 +893,156 @@
         </div>
     </div>
 </footer>
+
+<!-- Chat widget -->
+<button type="button" class="chat-widget-toggle" id="chatWidgetToggle" aria-label="Chat">
+        <i class="bi bi-chat-dots"></i>
+    </button>
+
+<div class="chat-widget-panel" id="chatWidget">
+        <div class="chat-widget-header">
+                <div>
+                        <div class="chat-widget-header-title">Trợ lý Brew &amp; Co.</div>
+                        <div class="chat-widget-header-sub">Chọn chat với nhân viên hoặc AI</div>
+                </div>
+                <button type="button" class="chat-widget-close" id="chatWidgetClose" aria-label="Đóng">×</button>
+        </div>
+        <div class="chat-widget-mode-switch">
+                <button type="button" class="chat-widget-mode-btn active" data-mode="staff" id="chatModeStaff">
+                        <i class="bi bi-person-video3 me-1"></i> Nhân viên
+                </button>
+                <button type="button" class="chat-widget-mode-btn" data-mode="ai" id="chatModeAi">
+                        <i class="bi bi-robot me-1"></i> AI
+                </button>
+        </div>
+        <div class="chat-widget-messages" id="chatMessages"></div>
+        <div class="chat-widget-input">
+                <input type="text" id="chatInput" placeholder="Nhập tin nhắn của bạn..." autocomplete="off">
+                <button type="button" id="chatSendBtn"><i class="bi bi-send"></i></button>
+        </div>
+    </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var toggleBtn = document.getElementById('chatWidgetToggle');
+        var panel = document.getElementById('chatWidget');
+        var closeBtn = document.getElementById('chatWidgetClose');
+        var modeStaffBtn = document.getElementById('chatModeStaff');
+        var modeAiBtn = document.getElementById('chatModeAi');
+        var messagesEl = document.getElementById('chatMessages');
+        var inputEl = document.getElementById('chatInput');
+        var sendBtn = document.getElementById('chatSendBtn');
+
+        if (!toggleBtn || !panel || !closeBtn || !modeStaffBtn || !modeAiBtn || !messagesEl || !inputEl || !sendBtn) {
+            return;
+        }
+
+        var currentMode = 'staff';
+
+        function togglePanel() {
+            if (panel.style.display === 'flex') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'flex';
+                inputEl.focus();
+                if (!messagesEl.dataset.initialized) {
+                    switchMode('staff');
+                }
+            }
+        }
+
+        function clearMessages() {
+            messagesEl.innerHTML = '';
+        }
+
+        function addMessage(text, author) {
+            var row = document.createElement('div');
+            row.className = 'chat-msg-row' + (author === 'me' ? ' me' : '');
+            var bubble = document.createElement('div');
+            bubble.className = 'chat-msg-bubble ' + (author === 'me' ? 'me' : 'bot');
+            bubble.textContent = text;
+            row.appendChild(bubble);
+            messagesEl.appendChild(row);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function switchMode(mode) {
+            currentMode = mode === 'ai' ? 'ai' : 'staff';
+            modeStaffBtn.classList.toggle('active', currentMode === 'staff');
+            modeAiBtn.classList.toggle('active', currentMode === 'ai');
+            clearMessages();
+
+            if (currentMode === 'staff') {
+                addMessage('Xin chào! Hãy để lại câu hỏi, chúng tôi sẽ phản hồi trong thời gian sớm nhất.', 'bot');
+            } else {
+                addMessage('Xin chào, tôi là trợ lý AI Brew & Co. đang dùng Gemini thật. Bạn có thể hỏi bất cứ điều gì về quán, menu, giờ mở cửa, gợi ý đồ uống...', 'bot');
+            }
+
+            messagesEl.dataset.initialized = '1';
+        }
+
+        function handleUserMessage() {
+            var text = inputEl.value.trim();
+            if (!text) return;
+            addMessage(text, 'me');
+            inputEl.value = '';
+
+            if (currentMode === 'staff') {
+                setTimeout(function () {
+                    addMessage('Cảm ơn bạn! Nhân viên sẽ liên hệ hoặc phản hồi trong thời gian sớm nhất. (Demo)', 'bot');
+                }, 600);
+            } else {
+                addMessage('Đang gửi câu hỏi đến AI, vui lòng chờ...', 'bot');
+
+                fetch('/api/chat/ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                })
+                    .then(function (res) {
+                        return res.json()
+                            .then(function (data) { return { ok: res.ok, data: data }; })
+                            .catch(function () { return { ok: res.ok, data: null }; });
+                    })
+                    .then(function (result) {
+                        var ok = result.ok;
+                        var data = result.data;
+                        if (!ok) {
+                            var errorMsg = data && data.error
+                                ? data.error
+                                : 'AI hiện không trả lời được. Vui lòng thử lại sau.';
+                            addMessage(errorMsg, 'bot');
+                            return;
+                        }
+
+                        var reply = data && data.reply
+                            ? data.reply
+                            : 'AI hiện không trả lời được. Vui lòng thử lại sau.';
+                        addMessage(reply, 'bot');
+                    })
+                    .catch(function () {
+                        addMessage('Có lỗi khi gọi dịch vụ AI. Vui lòng thử lại sau.', 'bot');
+                    });
+            }
+        }
+
+        toggleBtn.addEventListener('click', togglePanel);
+        closeBtn.addEventListener('click', function () {
+            panel.style.display = 'none';
+        });
+
+        modeStaffBtn.addEventListener('click', function () { switchMode('staff'); });
+        modeAiBtn.addEventListener('click', function () { switchMode('ai'); });
+
+        sendBtn.addEventListener('click', handleUserMessage);
+        inputEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleUserMessage();
+            }
+        });
+    });
+</script>
 
 </body>
 </html>

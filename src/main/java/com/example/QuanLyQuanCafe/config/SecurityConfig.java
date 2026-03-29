@@ -22,16 +22,29 @@ public class SecurityConfig {
                 "/js/**",
                 "/images/**",
                 "/static/**",
+                "/upload/**",
                 "/",
                 "/login",
                 "/register",
                 "/error"
             ).permitAll()
+            .requestMatchers("/api/chat/**").permitAll()
+            .requestMatchers("/dashboard/**", "/Menu/**", "/Order/**", "/Revenue/**", "/Inventory/**", "/Setting/**").hasAnyRole("ADMIN", "STAFF")
+            .requestMatchers("/Staff/**").hasAnyRole("ADMIN", "STAFF")
+            .requestMatchers("/api/staff/me").hasRole("STAFF")
             .anyRequest().authenticated()
         )
         .formLogin(form -> form
             .loginPage("/login")
-            .defaultSuccessUrl("/dashboard", true)
+            .successHandler((request, response, authentication) -> {
+                boolean isAdminOrStaff = authentication.getAuthorities().stream()
+                        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_STAFF"));
+                if (isAdminOrStaff) {
+                    response.sendRedirect("/dashboard");
+                } else {
+                    response.sendRedirect("/");
+                }
+            })
             .permitAll()
         )
         .logout(logout -> logout

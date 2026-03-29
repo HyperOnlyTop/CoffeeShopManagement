@@ -237,6 +237,14 @@
                                 <div class="staff-progress-bar" style="width: 0%;"></div>
                             </div>
                         </div>
+                        <div class="staff-salary-summary mt-3">
+                            <p class="mb-1"><i class="bi bi-clock-history"></i>
+                                <span class="staff-hours-month-text">Giờ làm tháng này: --</span>
+                            </p>
+                            <p class="mb-0"><i class="bi bi-cash-coin"></i>
+                                <span class="staff-salary-month-text">Lương tạm tính: --</span>
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -385,8 +393,19 @@
                                 <input type="date" class="form-control" id="editStaffStartDate">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-medium">Lương cơ bản (đ)</label>
+                                <label class="form-label fw-medium">Lương theo giờ (đ)</label>
                                 <input type="number" class="form-control" id="editStaffSalary" min="0" step="100000">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Tổng giờ làm (tháng này)</label>
+                                <input type="text" class="form-control" id="editStaffTotalHours" disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Lương tạm tính (đ)</label>
+                                <input type="text" class="form-control" id="editStaffCalculatedSalary" disabled>
                             </div>
                         </div>
 
@@ -622,6 +641,55 @@
                             }
                         }
 
+                        // Tính tổng giờ làm và lương tạm tính
+                        var totalHoursInput = document.getElementById('editStaffTotalHours');
+                        var calculatedSalaryInput = document.getElementById('editStaffCalculatedSalary');
+                        var salaryInputEl = document.getElementById('editStaffSalary');
+                        var currentTotalHours = 0;
+
+                        function updateCalculatedSalary() {
+                            if (!calculatedSalaryInput || !salaryInputEl) return;
+                            var hourly = Number(salaryInputEl.value || 0);
+                            var total = currentTotalHours * hourly;
+                            calculatedSalaryInput.value = total > 0
+                                ? total.toLocaleString('vi-VN') + ' đ'
+                                : '0 đ';
+                        }
+
+                        if (totalHoursInput && calculatedSalaryInput && id) {
+                            totalHoursInput.value = 'Đang tính...';
+                            calculatedSalaryInput.value = '';
+
+                            fetch('/api/staff/' + id + '/salary')
+                                .then(function (res) { return res.ok ? res.json() : null; })
+                                .then(function (data) {
+                                    if (!data) {
+                                        currentTotalHours = 0;
+                                        totalHoursInput.value = '0 giờ';
+                                        updateCalculatedSalary();
+                                        return;
+                                    }
+
+                                    currentTotalHours = Number(data.totalHours || 0);
+                                    totalHoursInput.value = currentTotalHours.toFixed(2) + ' giờ';
+
+                                    if (salaryInputEl && !salaryInputEl.value && data.hourlyRate != null) {
+                                        salaryInputEl.value = data.hourlyRate;
+                                    }
+
+                                    updateCalculatedSalary();
+                                })
+                                .catch(function () {
+                                    currentTotalHours = 0;
+                                    totalHoursInput.value = '0 giờ';
+                                    updateCalculatedSalary();
+                                });
+                        }
+
+                        if (salaryInputEl) {
+                            salaryInputEl.addEventListener('input', updateCalculatedSalary);
+                        }
+
                         detailModal.show();
                     });
                 });
@@ -750,6 +818,61 @@
                     });
                 }
             }
+
+            // Hiển thị lương và tổng giờ làm cho nhân viên đang đăng nhập (chỉ xem)
+            (function loadMySalarySummary() {
+                var cards = document.querySelectorAll('.staff-card-clickable');
+                if (!cards.length) return;
+
+                // Với tài khoản nhân viên, trang Staff chỉ hiển thị đúng 1 thẻ
+                var card = cards.length === 1 ? cards[0] : null;
+                if (!card) return;
+
+                var hoursSpan = card.querySelector('.staff-hours-month-text');
+                var salarySpan = card.querySelector('.staff-salary-month-text');
+                if (!hoursSpan || !salarySpan) return;
+
+                fetch('/api/staff/me/salary')
+                    .then(function (res) { return res.ok ? res.json() : null; })
+                    .then(function (data) {
+                        if (!data) return;
+
+                        var totalHours = Number(data.totalHours || 0);
+                        var totalSalary = Number(data.totalSalary || 0);
+
+                        hoursSpan.textContent = 'Giờ làm tháng này: ' + totalHours.toFixed(2) + ' giờ';
+                        salarySpan.textContent = 'Lương tạm tính: ' + totalSalary.toLocaleString('vi-VN') + ' đ';
+                    })
+                    .catch(function () { });
+            })();
+
+            // Hiển thị lương & giờ làm cho tất cả nhân viên khi admin xem danh sách
+            (function loadAllSalarySummaryForAdmin() {
+                var cards = document.querySelectorAll('.staff-card-clickable');
+                if (!cards.length || cards.length === 1) return; // 1 thẻ thường là nhân viên tự xem
+
+                cards.forEach(function (card) {
+                    var id = card.getAttribute('data-id');
+                    if (!id) return;
+
+                    var hoursSpan = card.querySelector('.staff-hours-month-text');
+                    var salarySpan = card.querySelector('.staff-salary-month-text');
+                    if (!hoursSpan || !salarySpan) return;
+
+                    fetch('/api/staff/' + id + '/salary')
+                        .then(function (res) { return res.ok ? res.json() : null; })
+                        .then(function (data) {
+                            if (!data) return;
+
+                            var totalHours = Number(data.totalHours || 0);
+                            var totalSalary = Number(data.totalSalary || 0);
+
+                            hoursSpan.textContent = 'Giờ làm tháng này: ' + totalHours.toFixed(2) + ' giờ';
+                            salarySpan.textContent = 'Lương tạm tính: ' + totalSalary.toLocaleString('vi-VN') + ' đ';
+                        })
+                        .catch(function () { });
+                });
+            })();
         });
 
     </script>

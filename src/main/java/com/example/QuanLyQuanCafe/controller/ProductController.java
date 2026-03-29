@@ -10,6 +10,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 
 import java.security.Principal;
 import org.springframework.security.core.Authentication;
@@ -18,16 +19,20 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import com.example.QuanLyQuanCafe.model.Staff;
 import com.example.QuanLyQuanCafe.model.StaffStatus;
 import com.example.QuanLyQuanCafe.model.CafeOrder;
 import com.example.QuanLyQuanCafe.model.DailyRevenue;
 import com.example.QuanLyQuanCafe.model.OrderItem;
 import com.example.QuanLyQuanCafe.model.OrderStatus;
+import com.example.QuanLyQuanCafe.model.AppUser;
 import com.example.QuanLyQuanCafe.service.MenuService;
 import com.example.QuanLyQuanCafe.service.OrderService;
 import com.example.QuanLyQuanCafe.service.StaffService;
 import com.example.QuanLyQuanCafe.service.DailyRevenueService;
 import com.example.QuanLyQuanCafe.repository.CustomerRepository;
+import com.example.QuanLyQuanCafe.repository.StaffRepository;
+import com.example.QuanLyQuanCafe.repository.AppUserRepository;
 
 @Controller
 public class ProductController {
@@ -37,18 +42,24 @@ public class ProductController {
     private final StaffService staffService;
 	private final DailyRevenueService dailyRevenueService;
 	private final CustomerRepository customerRepository;
+	private final StaffRepository staffRepository;
+	private final AppUserRepository appUserRepository;
 
 	public ProductController(
 			MenuService menuService,
 			OrderService orderService,
 			StaffService staffService,
 			DailyRevenueService dailyRevenueService,
-			CustomerRepository customerRepository) {
+			CustomerRepository customerRepository,
+			StaffRepository staffRepository,
+			AppUserRepository appUserRepository) {
 		this.menuService = menuService;
 		this.orderService = orderService;
         this.staffService = staffService;
 		this.dailyRevenueService = dailyRevenueService;
 		this.customerRepository = customerRepository;
+		this.staffRepository = staffRepository;
+		this.appUserRepository = appUserRepository;
 	}
 
 	@GetMapping("/dashboard")
@@ -176,19 +187,49 @@ public class ProductController {
 	}
 
 	@GetMapping("/Staff")
-	public String nhanVien(Model model) {
-		var allStaff = staffService.findAll();
-		model.addAttribute("staffList", allStaff);
-		int total = allStaff.size();
-		int working = (int) allStaff.stream()
+	public String nhanVien(Model model, Principal principal) {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		boolean isAdmin = auth != null && auth.getAuthorities().stream()
+			.anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+		List<Staff> staffList;
+		if (isAdmin) {
+			staffList = staffService.findAll();
+		} else {
+			staffList = Collections.emptyList();
+			if (principal != null) {
+				AppUser appUser = appUserRepository.findByUsername(principal.getName());
+				if (appUser != null) {
+					Staff staff = null;
+					if (appUser.getFullName() != null && !appUser.getFullName().isBlank()) {
+						staff = staffRepository.findByName(appUser.getFullName());
+					}
+					if (staff == null) {
+						staff = new Staff();
+						staff.setName(appUser.getFullName() != null && !appUser.getFullName().isBlank()
+								? appUser.getFullName()
+								: appUser.getUsername());
+						staff.setPhone(appUser.getPhone());
+					}
+					// Đồng bộ avatar từ tài khoản đăng nhập cho view nhân viên tự xem
+					staff.setAvatarUrl(appUser.getAvatarUrl());
+					staffList = Collections.singletonList(staff);
+				}
+			}
+		}
+
+		int total = staffList.size();
+		int working = (int) staffList.stream()
 			.filter(s -> s.getStatus() == StaffStatus.ACTIVE)
 			.count();
-		int onLeave = (int) allStaff.stream()
+		int onLeave = (int) staffList.stream()
 			.filter(s -> s.getStatus() == StaffStatus.ON_LEAVE)
 			.count();
-		int inactive = (int) allStaff.stream()
+		int inactive = (int) staffList.stream()
 			.filter(s -> s.getStatus() == StaffStatus.INACTIVE)
 			.count();
+
+		model.addAttribute("staffList", staffList);
 		model.addAttribute("staffTotal", total);
 		model.addAttribute("staffWorking", working);
 		model.addAttribute("staffOnLeave", onLeave);
