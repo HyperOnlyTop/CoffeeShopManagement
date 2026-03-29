@@ -1,8 +1,10 @@
 package com.example.QuanLyQuanCafe.controller;
 
-import java.util.List;
 import java.math.BigDecimal;
+import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,6 +39,24 @@ public class AuthController {
         List<MenuItem> menuItems = menuService.getAllItems();
         model.addAttribute("menuItems", menuItems);
         return "index"; // trang giới thiệu công khai
+    }
+
+    @GetMapping("/menu")
+    public String publicMenu(Model model,
+                             @RequestParam(name = "page", defaultValue = "0") int page) {
+        int pageSize = 8;
+        if (page < 0) {
+            page = 0;
+        }
+
+        Page<MenuItem> menuPage = menuService.getItemsPage(PageRequest.of(page, pageSize));
+
+        model.addAttribute("menuPage", menuPage);
+        model.addAttribute("menuItems", menuPage.getContent()); // giữ lại để tương thích nếu cần
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", menuPage.getTotalPages());
+
+        return "public-menu"; // trang xem toàn bộ thực đơn cho khách
     }
 
     @GetMapping("/login")

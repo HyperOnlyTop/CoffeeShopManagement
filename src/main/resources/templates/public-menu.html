@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thực đơn | Brew &amp; Co.</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Dùng chung màu sắc / font với landing -->
+    <link rel="stylesheet" href="/css/doanhthu.css">
+
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: radial-gradient(circle at top, #fffaf0 0, #ffeedd 35%, #f7e1c4 70%, #f4d9b2 100%);
+            color: #2d1b0f;
+        }
+
+        .menu-page-wrapper {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .menu-navbar {
+            padding: 18px 32px;
+        }
+
+        .menu-brand {
+            text-decoration: none;
+            color: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .menu-brand-logo {
+            width: 36px;
+            height: 36px;
+            border-radius: 999px;
+            background: #111;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffc56b;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .menu-brand-text span:first-child {
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            font-size: 15px;
+        }
+
+        .menu-brand-text span:last-child {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: #c38b4b;
+        }
+
+        .menu-navbar-actions a {
+            font-size: 14px;
+            text-decoration: none;
+            color: #3b2818;
+            margin-left: 16px;
+        }
+
+        .menu-navbar-actions a.btn-primary-gold {
+            color: #2a1704;
+        }
+
+        .btn-primary-gold {
+            border-radius: 999px;
+            padding: 8px 20px;
+            background-color: #ff9f1a;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            color: #2a1704;
+        }
+
+        .btn-primary-gold:hover {
+            background-color: #ffb341;
+            color: #2a1704;
+        }
+
+        .btn-outline-brown {
+            border-radius: 999px;
+            padding: 7px 18px;
+            border: 1px solid rgba(55, 36, 22, 0.25);
+            color: #3b2818;
+            font-size: 14px;
+        }
+
+        .btn-outline-brown:hover {
+            background-color: rgba(55, 36, 22, 0.03);
+            color: #3b2818;
+        }
+
+        .menu-main {
+            flex: 1;
+            padding: 16px 32px 40px;
+        }
+
+        .menu-header {
+            max-width: 900px;
+            margin: 0 auto 32px;
+            text-align: center;
+        }
+
+        .menu-eyebrow {
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-size: 12px;
+            color: #c38b4b;
+            margin-bottom: 10px;
+        }
+
+        .menu-title {
+            font-size: clamp(28px, 3vw, 36px);
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .menu-subtitle {
+            font-size: 15px;
+            color: #7a5b3a;
+            max-width: 620px;
+            margin: 0 auto;
+        }
+
+        .menu-grid-wrapper {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .menu-grid-wrapper .row {
+            justify-content: center;
+        }
+
+        .menu-filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .menu-filter-chip {
+            border-radius: 999px;
+            padding: 6px 14px;
+            border: 1px solid rgba(108, 75, 47, 0.18);
+            font-size: 13px;
+            background: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+        }
+
+        .menu-filter-chip.active {
+            background: #2d1b0f;
+            border-color: #2d1b0f;
+            color: #ffe1b0;
+        }
+
+        .menu-card {
+            border-radius: 20px;
+            background: #fff;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .menu-card img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+        }
+
+        .menu-card-body {
+            padding: 16px 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .menu-card-title {
+            font-weight: 600;
+            margin-bottom: 0;
+            text-align: center;
+        }
+
+        .menu-card-desc {
+            font-size: 13px;
+            color: #7a5b3a;
+            text-align: center;
+        }
+
+        .menu-card-footer {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            margin-top: 6px;
+        }
+
+        .menu-card-price {
+            font-weight: 700;
+            color: #c1782b;
+        }
+
+        .menu-card-pill {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: #fff7e6;
+            color: #b26f21;
+        }
+
+        .menu-empty {
+            text-align: center;
+            padding: 40px 0 20px;
+            color: #7a5b3a;
+        }
+
+        .menu-footer-note {
+            text-align: center;
+            font-size: 12px;
+            color: #87654a;
+            margin-top: 24px;
+        }
+
+        .menu-pagination {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 28px;
+            font-size: 14px;
+        }
+
+        .menu-pagination a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            height: 34px;
+            padding: 0 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(108, 75, 47, 0.25);
+            color: #3b2818;
+            text-decoration: none;
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        .menu-pagination a.active {
+            background: #2d1b0f;
+            color: #ffe1b0;
+            border-color: #2d1b0f;
+        }
+
+        .menu-pagination a.disabled {
+            opacity: 0.4;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        @media (max-width: 576px) {
+            .menu-navbar {
+                padding-inline: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="menu-page-wrapper">
+    <!-- Top navbar (không cần đăng nhập) -->
+    <header class="menu-navbar d-flex justify-content-between align-items-center">
+        <a th:href="@{/}" class="menu-brand">
+            <div class="menu-brand-logo">B</div>
+            <div class="menu-brand-text">
+                <span>Brew &amp; Co.</span><br>
+                <span>Coffee Studio</span>
+            </div>
+        </a>
+        <div class="menu-navbar-actions">
+            <a th:href="@{/#menu}" class="btn-outline-brown d-none d-md-inline-block">Về trang giới thiệu</a>
+
+            <!-- Nếu chưa đăng nhập thì hiện nút đăng nhập -->
+            <a sec:authorize="!isAuthenticated()" th:href="@{/login}" class="btn-primary-gold ms-2">
+                <i class="bi bi-person-circle me-1"></i>
+                Đăng nhập quản lý
+            </a>
+
+            <!-- Nếu đã đăng nhập thì cho đi thẳng vào dashboard / khu quản lý -->
+            <a sec:authorize="isAuthenticated()" th:href="@{/dashboard}" class="btn-primary-gold ms-2">
+                <i class="bi bi-speedometer2 me-1"></i>
+                Vào trang quản lý
+            </a>
+        </div>
+    </header>
+
+    <main class="menu-main">
+        <section class="menu-header">
+            <div class="menu-eyebrow">Thực đơn hôm nay</div>
+            <h1 class="menu-title">Chọn món bạn thích, phần pha chế còn lại để chúng tôi lo</h1>
+            <p class="menu-subtitle">Toàn bộ thức uống và món ăn trong ngày đều được hiển thị tại đây. Giá đã bao gồm thuế, không phụ thu khi gọi tại quán.</p>
+        </section>
+
+        <section class="menu-grid-wrapper">
+            <div class="menu-filter-bar" th:if="${menuItems != null and !#lists.isEmpty(menuItems)}">
+                <button type="button" class="menu-filter-chip active" data-category="ALL">Tất cả</button>
+                <button type="button" class="menu-filter-chip" data-category="Cà phê">Cà phê</button>
+                <button type="button" class="menu-filter-chip" data-category="Trà">Trà</button>
+                <button type="button" class="menu-filter-chip" data-category="Sinh tố">Sinh tố</button>
+                <button type="button" class="menu-filter-chip" data-category="Bánh ngọt">Bánh ngọt</button>
+                <button type="button" class="menu-filter-chip" data-category="Đồ ăn nhẹ">Đồ ăn nhẹ</button>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-12" th:if="${menuPage == null or #lists.isEmpty(menuPage.content)}">
+                    <p class="menu-empty">Thực đơn đang được cập nhật. Vui lòng quay lại sau.</p>
+                </div>
+
+                <div class="col-12 col-sm-6 col-lg-3" th:each="item : ${menuPage.content}"
+                     th:attr="data-category=${item.category != null ? item.category.name : 'Khác'}">
+                    <div class="menu-card h-100">
+                        <img th:src="${item.imageUrl != null ? item.imageUrl : 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=600&h=400&fit=crop'}"
+                             th:alt="${item.name}" alt="Món">
+                        <div class="menu-card-body">
+                            <h6 class="menu-card-title" th:text="${item.name}">Tên món</h6>
+                            <p class="menu-card-desc" th:text="${item.description}">Mô tả món</p>
+                            <div class="menu-card-footer">
+                                <div class="menu-card-price" th:text="${item.price != null ? #numbers.formatInteger(item.price, 0, 'POINT') + ' đ' : '0 đ'}">0 đ</div>
+                                <span class="menu-card-pill" th:text="${item.category != null ? item.category.name : 'Món khác'}">Món khác</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="menu-footer-note">* Hình ảnh mang tính minh họa. Vui lòng hỏi nhân viên nếu bạn có yêu cầu đặc biệt về khẩu vị hoặc dị ứng nguyên liệu.</p>
+
+            <div class="menu-pagination" th:if="${totalPages != null and totalPages > 1}">
+                <a th:classappend="${currentPage == 0} ? ' disabled'"
+                   th:href="@{/menu(page=${currentPage - 1})}">
+                    ‹
+                </a>
+
+                <a th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                   th:text="${i + 1}"
+                   th:href="@{/menu(page=${i})}"
+                   th:classappend="${i} == ${currentPage} ? ' active'">
+                </a>
+
+                <a th:classappend="${currentPage + 1 >= totalPages} ? ' disabled'"
+                   th:href="@{/menu(page=${currentPage + 1})}">
+                    ›
+                </a>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var chips = document.querySelectorAll('.menu-filter-chip');
+        var cards = document.querySelectorAll('.menu-grid-wrapper .col-12.col-sm-6.col-lg-3');
+
+        function normalize(t) {
+            return t ? t.toString().toLowerCase().trim() : '';
+        }
+
+        chips.forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                chips.forEach(function (c) { c.classList.remove('active'); });
+                this.classList.add('active');
+
+                var cat = this.getAttribute('data-category') || 'ALL';
+                var normCat = normalize(cat);
+
+                cards.forEach(function (col) {
+                    var cardCat = normalize(col.getAttribute('data-category'));
+                    if (normCat === 'all' || normCat === cardCat) {
+                        col.classList.remove('d-none');
+                    } else {
+                        col.classList.add('d-none');
+                    }
+                });
+            });
+        });
+    });
+</script>
+</body>
+</html>

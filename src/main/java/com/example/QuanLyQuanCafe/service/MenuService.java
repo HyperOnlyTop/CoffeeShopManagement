@@ -4,6 +4,8 @@ import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.example.QuanLyQuanCafe.controller.dto.MenuItemRequest;
@@ -30,6 +32,10 @@ public class MenuService {
 
     public List<MenuItem> getAllItems() {
         return menuItemRepository.findAll();
+    }
+
+    public Page<MenuItem> getItemsPage(Pageable pageable) {
+        return menuItemRepository.findAll(pageable);
     }
 
     private MenuCategory getOrCreateCategory(String categoryName) {
