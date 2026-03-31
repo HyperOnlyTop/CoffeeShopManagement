@@ -34,3 +34,27 @@ build/
 
 
 .env
+
+### Secrets / local config (do not commit) ###
+# Keep `application.properties` tracked if you want defaults.
+# Put real secrets in `application-local.properties` or env vars.
+src/main/resources/application-local.properties
+src/main/resources/application-*.properties
+src/main/resources/application.properties
+
+### Uploaded files / user content ###
+uploads/
+
+### Keys / certificates ###
+*.jks
+*.p12
+*.pfx
+*.pem
+*.key
+*.crt
+
+### Logs / temp ###
+*.log
+*.tmp
+*.temp
+*.bak

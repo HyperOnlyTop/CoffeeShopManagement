@@ -22,7 +22,7 @@ public class SecurityConfig {
                 "/js/**",
                 "/images/**",
                 "/static/**",
-                "/upload/**",
+                "/uploads/**",
                 "/",
                 "/login",
                 "/register",
@@ -66,3 +66,4 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
+ 
