@@ -263,6 +263,11 @@ public class ProductController {
 		return "Setting";
 	}
 
+	@GetMapping("/Accounts")
+	public String quanLyTaiKhoan() {
+		return "Accounts";
+	}
+
 	public static class RecentOrderView {
 		private final CafeOrder order;
 		private final int itemsCount;

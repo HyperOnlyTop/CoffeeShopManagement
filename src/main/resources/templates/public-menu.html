@@ -120,6 +120,41 @@
             text-align: center;
         }
 
+        .menu-hero-logo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .menu-hero-logo-mark {
+            width: 96px;
+            height: 96px;
+            border-radius: 999px;
+            background: #111;
+            color: #ffc56b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 42px;
+            letter-spacing: 0.02em;
+        }
+
+        .menu-hero-logo-text {
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            font-size: 14px;
+        }
+
+        .menu-hero-logo-subtext {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: #c38b4b;
+        }
+
         .menu-eyebrow {
             text-transform: uppercase;
             letter-spacing: 0.18em;
@@ -144,6 +179,8 @@
         .menu-grid-wrapper {
             max-width: 100%;
             margin: 0 auto;
+            width: 100%;
+            padding: 0 24px;
         }
 
         .menu-grid-wrapper .row {
@@ -181,6 +218,11 @@
             height: 100%;
             display: flex;
             flex-direction: column;
+        }
+
+        .menu-card-placeholder {
+            visibility: hidden;
+            pointer-events: none;
         }
 
         .menu-card img {
@@ -314,6 +356,12 @@
 
     <main class="menu-main">
         <section class="menu-header">
+            <div class="menu-hero-logo">
+                <div class="menu-hero-logo-mark">B</div>
+                <div class="menu-hero-logo-text">BREW &amp; CO.</div>
+                <div class="menu-hero-logo-subtext">COFFEE STUDIO</div>
+                
+            </div>
             <div class="menu-eyebrow">Thực đơn hôm nay</div>
             <h1 class="menu-title">Chọn món bạn thích, phần pha chế còn lại để chúng tôi lo</h1>
             <p class="menu-subtitle">Toàn bộ thức uống và món ăn trong ngày đều được hiển thị tại đây. Giá đã bao gồm thuế, không phụ thu khi gọi tại quán.</p>
@@ -377,10 +425,63 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var chips = document.querySelectorAll('.menu-filter-chip');
+        var gridRow = document.querySelector('.menu-grid-wrapper .row.g-4');
         var cards = document.querySelectorAll('.menu-grid-wrapper .col-12.col-sm-6.col-lg-3');
 
         function normalize(t) {
             return t ? t.toString().toLowerCase().trim() : '';
+        }
+
+        function clearPlaceholders() {
+            var placeholders = document.querySelectorAll('.menu-card-placeholder');
+            placeholders.forEach(function (ph) {
+                ph.remove();
+            });
+        }
+
+        function getColumnCount() {
+            var width = window.innerWidth || document.documentElement.clientWidth || 0;
+            if (width >= 992) {
+                return 4;
+            }
+            if (width >= 576) {
+                return 2;
+            }
+            return 1;
+        }
+
+        function addPlaceholders(visibleCount) {
+            if (!gridRow) return;
+            clearPlaceholders();
+
+            var columns = getColumnCount();
+            var remainder = visibleCount % columns;
+            var needed = remainder === 0 ? 0 : columns - remainder;
+
+            for (var i = 0; i < needed; i++) {
+                var col = document.createElement('div');
+                col.className = 'col-12 col-sm-6 col-lg-3 menu-card-placeholder';
+
+                var card = document.createElement('div');
+                card.className = 'menu-card h-100';
+
+                var img = document.createElement('div');
+                img.style.height = '220px';
+
+                var body = document.createElement('div');
+                body.className = 'menu-card-body';
+                body.innerHTML = '<div style="height: 12px;"></div><div style="height: 10px;"></div><div style="height: 14px;"></div>';
+
+                card.appendChild(img);
+                card.appendChild(body);
+                col.appendChild(card);
+                gridRow.appendChild(col);
+            }
+        }
+
+        function updatePlaceholders() {
+            var visibleCount = document.querySelectorAll('.menu-grid-wrapper .col-12.col-sm-6.col-lg-3:not(.d-none)').length;
+            addPlaceholders(visibleCount);
         }
 
         chips.forEach(function (chip) {
@@ -391,16 +492,24 @@
                 var cat = this.getAttribute('data-category') || 'ALL';
                 var normCat = normalize(cat);
 
+                var visibleCount = 0;
+
                 cards.forEach(function (col) {
                     var cardCat = normalize(col.getAttribute('data-category'));
                     if (normCat === 'all' || normCat === cardCat) {
                         col.classList.remove('d-none');
+                        visibleCount += 1;
                     } else {
                         col.classList.add('d-none');
                     }
                 });
+
+                addPlaceholders(visibleCount);
             });
         });
+
+        updatePlaceholders();
+        window.addEventListener('resize', updatePlaceholders);
     });
 </script>
 </body>

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tài khoản | Quản lý quán cà phê</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+  <!-- Google Fonts - Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Shared layout styles -->
+  <link rel="stylesheet" href="/css/doanhthu.css">
+</head>
+
+<body>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <a th:href="@{/}" class="brand" style="text-decoration: none; color: inherit;">
+      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo"
+        class="brand-img">
+      <div class="brand-text">
+        <h5>Brew &amp; Co.</h5>
+        <p style="color: #d47633;">Coffee Management</p>
+      </div>
+    </a>
+
+    <div class="user-profile" th:if="${currentUser != null}">
+      <img
+        th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
+        alt="User" style="object-fit: cover;">
+      <div class="user-info">
+        <h6
+          th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
+          Tên tài khoản</h6>
+        <p th:text="${currentUser.email}">Email</p>
+      </div>
+      <div class="online-dot"></div>
+    </div>
+
+    <ul class="nav-menu">
+      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+        <a href="/dashboard" class="nav-link">
+          <i class="bi bi-grid-1x2"></i> Dashboard
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Menu" class="nav-link">
+          <i class="bi bi-cup-hot"></i> Menu
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Order" class="nav-link">
+          <i class="bi bi-bag"></i> Đơn hàng
+        </a>
+      </li>
+      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+        <a href="/Revenue" class="nav-link">
+          <i class="bi bi-bar-chart-fill"></i> Doanh thu
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Staff" class="nav-link">
+          <i class="bi bi-people"></i> Nhân viên
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Inventory" class="nav-link">
+          <i class="bi bi-box-seam"></i> Kho hàng
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Booking" class="nav-link">
+          <i class="bi bi-calendar-event"></i> Đặt bàn
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/Setting" class="nav-link">
+          <i class="bi bi-gear"></i> Cài đặt
+        </a>
+      </li>
+      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+        <a href="/Accounts" class="nav-link active">
+          <i class="bi bi-person-badge"></i> Tài khoản
+        </a>
+      </li>
+    </ul>
+
+    <div class="logout-btn">
+      <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="main-content">
+
+    <!-- Header -->
+    <div class="header-row">
+      <div class="page-title">
+        <h2>Quản lý tài khoản</h2>
+        <p>Thêm, sửa, xóa tài khoản và phân quyền (ADMIN/STAFF/KHACH)</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-primary" type="button" id="btnOpenCreateUserModal">
+          <i class="bi bi-person-plus"></i> Thêm tài khoản
+        </button>
+      </div>
+    </div>
+
+    <div class="custom-card mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="settings-section-title mb-0">Danh sách tài khoản hệ thống</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Họ tên</th>
+              <th>Email</th>
+              <th>Số điện thoại</th>
+              <th>Vai trò</th>
+              <th style="width: 140px;">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="userAdminTableBody">
+            <tr>
+              <td colspan="6" class="text-center text-muted py-3">Đang tải danh sách tài khoản...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal tạo / sửa tài khoản (ADMIN) -->
+  <div class="modal fade" id="userAdminModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="userAdminModalTitle">Thêm tài khoản</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <form id="userAdminForm">
+            <input type="hidden" id="userId">
+            <div class="mb-3">
+              <label class="form-label">Username</label>
+              <input type="text" class="form-control" id="userUsername" placeholder="vd: admin" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Mật khẩu <span class="text-muted small" id="userPasswordHint">(bắt buộc)</span></label>
+              <input type="password" class="form-control" id="userPassword" placeholder="Nhập mật khẩu">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Họ và tên</label>
+              <input type="text" class="form-control" id="userFullName" placeholder="vd: Nguyễn Văn A">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-control" id="userEmail" placeholder="vd: user@cafe.com">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Số điện thoại</label>
+              <input type="text" class="form-control" id="userPhone" placeholder="vd: 0901234567">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Vai trò</label>
+              <select class="form-select" id="userRole">
+                <option value="ADMIN">Quản trị (ADMIN)</option>
+                <option value="STAFF">Nhân viên (STAFF)</option>
+                <option value="KHACH">Khách (KHACH)</option>
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" form="userAdminForm" class="btn btn-primary" id="userAdminModalSaveBtn">Lưu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Admin common JS (logout confirm, etc.) -->
+  <script src="/js/admin-common.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const userTableBody = document.getElementById('userAdminTableBody');
+      const btnOpenCreateUserModal = document.getElementById('btnOpenCreateUserModal');
+      const userAdminModalEl = document.getElementById('userAdminModal');
+      let userAdminModalInstance = null;
+
+      if (userAdminModalEl && typeof bootstrap !== 'undefined') {
+        userAdminModalInstance = bootstrap.Modal.getOrCreateInstance(userAdminModalEl);
+      }
+
+      function renderUsers(users) {
+        if (!userTableBody) return;
+
+        if (!users || users.length === 0) {
+          userTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">Chưa có tài khoản nào.</td></tr>';
+          return;
+        }
+
+        const rows = users.map(function (u) {
+          const safeUsername = u.username || '';
+          const safeFullName = u.fullName || '';
+          const safeEmail = u.email || '';
+          const safePhone = u.phone || '';
+          const safeRole = u.role || '';
+
+          return '<tr data-id="' + u.id + '">' +
+            '<td>' + safeUsername + '</td>' +
+            '<td>' + safeFullName + '</td>' +
+            '<td>' + safeEmail + '</td>' +
+            '<td>' + safePhone + '</td>' +
+            '<td>' + safeRole + '</td>' +
+            '<td>' +
+            '<button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-edit-user">Sửa</button>' +
+            '<button type="button" class="btn btn-sm btn-outline-danger btn-delete-user">Xóa</button>' +
+            '</td>' +
+            '</tr>';
+        }).join('');
+
+        userTableBody.innerHTML = rows;
+      }
+
+      function loadUsers() {
+        if (!userTableBody) return;
+
+        fetch('/api/admin/users')
+          .then(function (res) {
+            if (!res.ok) {
+              throw new Error('Không thể tải danh sách tài khoản');
+            }
+            return res.json();
+          })
+          .then(function (data) {
+            renderUsers(data);
+          })
+          .catch(function () {
+            userTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-3">Lỗi khi tải danh sách tài khoản.</td></tr>';
+          });
+      }
+
+      function openUserModal(mode, user) {
+        const titleEl = document.getElementById('userAdminModalTitle');
+        const idInput = document.getElementById('userId');
+        const usernameInput = document.getElementById('userUsername');
+        const passwordInput = document.getElementById('userPassword');
+        const fullNameInput = document.getElementById('userFullName');
+        const emailInput = document.getElementById('userEmail');
+        const phoneInput = document.getElementById('userPhone');
+        const roleSelect = document.getElementById('userRole');
+        const passwordHint = document.getElementById('userPasswordHint');
+
+        if (!titleEl || !idInput || !usernameInput || !passwordInput || !fullNameInput || !emailInput || !phoneInput || !roleSelect || !passwordHint) {
+          return;
+        }
+
+        if (mode === 'edit' && user) {
+          titleEl.textContent = 'Cập nhật tài khoản';
+          idInput.value = user.id;
+          usernameInput.value = user.username || '';
+          usernameInput.disabled = true;
+          passwordInput.value = '';
+          passwordHint.textContent = '(để trống nếu không đổi mật khẩu)';
+          fullNameInput.value = user.fullName || '';
+          emailInput.value = user.email || '';
+          phoneInput.value = user.phone || '';
+          roleSelect.value = user.role || 'STAFF';
+        } else {
+          titleEl.textContent = 'Thêm tài khoản';
+          idInput.value = '';
+          usernameInput.value = '';
+          usernameInput.disabled = false;
+          passwordInput.value = '';
+          passwordHint.textContent = '(bắt buộc)';
+          fullNameInput.value = '';
+          emailInput.value = '';
+          phoneInput.value = '';
+          roleSelect.value = 'STAFF';
+        }
+
+        if (userAdminModalInstance) {
+          userAdminModalInstance.show();
+        }
+      }
+
+      if (btnOpenCreateUserModal) {
+        btnOpenCreateUserModal.addEventListener('click', function () {
+          openUserModal('create', null);
+        });
+      }
+
+      if (userTableBody) {
+        userTableBody.addEventListener('click', function (e) {
+          const target = e.target;
+          const row = target.closest('tr');
+          if (!row) return;
+          const id = row.getAttribute('data-id');
+          if (!id) return;
+
+          if (target.classList.contains('btn-edit-user')) {
+            const user = {
+              id: id,
+              username: row.children[0].textContent,
+              fullName: row.children[1].textContent,
+              email: row.children[2].textContent,
+              phone: row.children[3].textContent,
+              role: row.children[4].textContent
+            };
+            openUserModal('edit', user);
+          } else if (target.classList.contains('btn-delete-user')) {
+            if (!confirm('Bạn có chắc chắn muốn xóa tài khoản này?')) {
+              return;
+            }
+
+            fetch('/api/admin/users/' + id, {
+              method: 'DELETE'
+            })
+              .then(function (res) {
+                if (!res.ok && res.status !== 204) {
+                  throw new Error('Xóa tài khoản thất bại');
+                }
+                loadUsers();
+              })
+              .catch(function () {
+                alert('Không thể xóa tài khoản.');
+              });
+          }
+        });
+      }
+
+      const userAdminForm = document.getElementById('userAdminForm');
+      if (userAdminForm) {
+        userAdminForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+
+          const id = document.getElementById('userId').value;
+          const username = document.getElementById('userUsername').value.trim();
+          const password = document.getElementById('userPassword').value;
+          const fullName = document.getElementById('userFullName').value.trim();
+          const email = document.getElementById('userEmail').value.trim();
+          const phone = document.getElementById('userPhone').value.trim();
+          const role = document.getElementById('userRole').value;
+
+          if (!id && !username) {
+            alert('Username không được để trống');
+            return;
+          }
+
+          if (!id && !password) {
+            alert('Mật khẩu không được để trống');
+            return;
+          }
+
+          const payload = {
+            fullName: fullName || null,
+            email: email || null,
+            phone: phone || null,
+            role: role || null
+          };
+
+          if (password) {
+            payload.password = password;
+          }
+
+          let url = '/api/admin/users';
+          let method = 'POST';
+
+          if (id) {
+            url = '/api/admin/users/' + id;
+            method = 'PUT';
+          } else {
+            payload.username = username;
+          }
+
+          fetch(url, {
+            method: method,
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          })
+            .then(function (res) {
+              if (!res.ok) {
+                return res.text().then(function (t) { throw new Error(t || 'Lưu tài khoản thất bại'); });
+              }
+              return res.json().catch(function () { return null; });
+            })
+            .then(function () {
+              if (userAdminModalInstance) {
+                userAdminModalInstance.hide();
+              }
+              loadUsers();
+            })
+            .catch(function (err) {
+              alert(err.message || 'Không thể lưu tài khoản');
+            });
+        });
+      }
+
+      if (userTableBody) {
+        loadUsers();
+      }
+    });
+  </script>
+</body>
+
+</html>

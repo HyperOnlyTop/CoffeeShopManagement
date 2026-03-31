@@ -85,6 +85,11 @@
           <i class="bi bi-box-seam"></i> Kho hàng
         </a>
       </li>
+      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+        <a href="/Accounts" class="nav-link">
+          <i class="bi bi-person-badge"></i> Tài khoản
+        </a>
+      </li>
       <li class="nav-item">
         <a href="/Setting" class="nav-link active">
           <i class="bi bi-gear"></i> Cài đặt
@@ -123,7 +128,7 @@
       <button class="settings-tab" type="button" data-tab="payment" sec:authorize="hasRole('ADMIN')">Thanh toán
         QR</button>
       <button class="settings-tab" th:classappend="${#authorization.expression('hasRole(''STAFF'')') ? 'active' : ''}"
-        type="button" data-tab="account">Tài khoản</button>
+        type="button" data-tab="account">Tài khoản của tôi</button>
     </div>
 
     <!-- Thông tin quán -->
@@ -325,7 +330,7 @@
       </div>
     </div>
 
-    <!-- Tài khoản -->
+    <!-- Tài khoản (cá nhân) -->
     <div class="settings-tab-content"
       th:classappend="${#authorization.expression('hasRole(''STAFF'')') ? 'active' : ''}" data-tab-content="account"
       th:if="${currentUser != null}">
@@ -352,7 +357,7 @@
                 th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
                 Admin</h5>
               <p class="text-muted mb-2"
-                th:text="${currentUser.role == 'ADMIN' ? 'Quản trị viên hệ thống' : 'Nhân viên cửa hàng'}">Quản trị viên
+                th:text="${currentUser.role == 'ADMIN' ? 'Quản trị viên hệ thống' : (currentUser.role == 'STAFF' ? 'Nhân viên cửa hàng' : 'Khách hàng')}">Quản trị viên
                 hệ thống</p>
               <span class="badge bg-success-subtle text-success px-3 py-2">Đang hoạt động</span>
             </div>

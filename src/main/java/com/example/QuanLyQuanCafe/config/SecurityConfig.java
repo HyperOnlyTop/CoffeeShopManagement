@@ -29,8 +29,10 @@ public class SecurityConfig {
                 "/error"
             ).permitAll()
             .requestMatchers("/api/chat/**").permitAll()
+            .requestMatchers("/api/admin/**").hasRole("ADMIN")
             .requestMatchers("/Booking/new", "/Booking/edit/**", "/Booking/delete/**", "/Booking/save").hasRole("ADMIN")
             .requestMatchers("/dashboard/**", "/Menu/**", "/Order/**", "/Revenue/**", "/Inventory/**", "/Setting/**", "/Booking/**").hasAnyRole("ADMIN", "STAFF")
+            .requestMatchers("/Accounts/**").hasRole("ADMIN")
             .requestMatchers("/Staff/**").hasAnyRole("ADMIN", "STAFF")
             .requestMatchers("/api/staff/me").hasRole("STAFF")
             .anyRequest().authenticated()

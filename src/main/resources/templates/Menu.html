@@ -76,6 +76,11 @@
           <i class="bi bi-box-seam"></i> Kho hàng
         </a>
       </li>
+      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+        <a href="/Accounts" class="nav-link">
+          <i class="bi bi-person-badge"></i> Tài khoản
+        </a>
+      </li>
       <li class="nav-item">
         <a href="/Setting" class="nav-link">
           <i class="bi bi-gear"></i> Cài đặt
