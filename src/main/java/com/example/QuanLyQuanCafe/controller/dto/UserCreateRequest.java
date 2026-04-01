@@ -8,6 +8,7 @@ public class UserCreateRequest {
     private String email;
     private String phone;
     private String role;
+    private Long staffId;
 
     public String getUsername() {
         return username;
@@ -55,5 +56,13 @@ public class UserCreateRequest {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public Long getStaffId() {
+        return staffId;
+    }
+
+    public void setStaffId(Long staffId) {
+        this.staffId = staffId;
     }
 }

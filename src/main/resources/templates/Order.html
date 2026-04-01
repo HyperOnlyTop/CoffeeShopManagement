@@ -17,81 +17,87 @@
 
   <!-- Shared layout styles -->
   <link rel="stylesheet" href="/css/doanhthu.css">
+
+  <style>
+    .table-picker-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    @media (max-width: 576px) {
+      .table-picker-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
+    .table-btn {
+      border-radius: 12px;
+      padding: 10px 6px;
+      font-weight: 700;
+      border: 1px solid rgba(30, 41, 59, 0.18);
+      background: #fff;
+      color: #111827;
+    }
+
+    .table-btn.table-available {
+      background: rgba(17, 24, 39, 0.02);
+      color: #111827;
+    }
+
+    .table-btn.table-reserved {
+      background: rgba(59, 130, 246, 0.14);
+      border-color: rgba(59, 130, 246, 0.35);
+      color: #1d4ed8;
+    }
+
+    .table-btn.table-occupied {
+      background: rgba(239, 68, 68, 0.14);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #b91c1c;
+    }
+
+    .table-btn.table-selected {
+      outline: 2px solid rgba(255, 159, 26, 0.85);
+      outline-offset: 1px;
+    }
+
+    /* Menu autocomplete dropdown (overlay, không đẩy layout) */
+    .menu-search-wrap {
+      position: relative;
+    }
+
+    .menu-search-results {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 6px);
+      z-index: 1080; /* above modal content */
+      max-height: 240px;
+      overflow: auto;
+      display: none;
+    }
+
+    .menu-search-results .list-group-item.active {
+      background-color: #ffedd5;
+      border-color: rgba(255, 159, 26, 0.35);
+      color: #2a1704;
+    }
+
+    .menu-search-results.list-group {
+      background-color: #fff;
+    }
+
+    .menu-search-results .list-group-item {
+      background-color: #fff;
+    }
+  </style>
 </head>
 
 <body>
 
   <!-- Sidebar -->
-  <nav class="sidebar">
-    <a th:href="@{/}" class="brand" style="text-decoration: none; color: inherit;">
-      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo"
-        class="brand-img">
-      <div class="brand-text">
-        <h5>Brew &amp; Co.</h5>
-        <p style="color: #d47633">Coffee Management</p>
-      </div>
-    </a>
-
-    <div class="user-profile" th:if="${currentUser != null}">
-      <img
-        th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
-        alt="User" style="object-fit: cover;">
-      <div class="user-info">
-        <h6
-          th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
-          Tên tài khoản</h6>
-        <p th:text="${currentUser.email}">Email</p>
-      </div>
-      <div class="online-dot"></div>
-    </div>
-
-    <ul class="nav-menu">
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/dashboard" class="nav-link">
-          <i class="bi bi-grid-1x2"></i> Dashboard
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Menu" class="nav-link">
-          <i class="bi bi-cup-hot"></i> Menu
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Order" class="nav-link active">
-          <i class="bi bi-bag"></i> Đơn hàng
-        </a>
-      </li>
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/Revenue" class="nav-link">
-          <i class="bi bi-bar-chart-fill"></i> Doanh thu
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Staff" class="nav-link">
-          <i class="bi bi-people"></i> Nhân viên
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Inventory" class="nav-link">
-          <i class="bi bi-box-seam"></i> Kho hàng
-        </a>
-      </li>
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/Accounts" class="nav-link">
-          <i class="bi bi-person-badge"></i> Tài khoản
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Setting" class="nav-link">
-          <i class="bi bi-gear"></i> Cài đặt
-        </a>
-      </li>
-    </ul>
-
-    <div class="logout-btn">
-      <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
-    </div>
-  </nav>
+  <div th:replace="~{fragments/sidebar :: sidebar('ORDER')}"></div>
 
   <!-- Main content -->
   <main class="main-content">
@@ -102,8 +108,9 @@
         <h2>Quản lý Đơn hàng</h2>
         <p th:text="${#lists.size(orders)} + ' đơn trong hệ thống'">0 đơn trong hệ thống</p>
       </div>
+      <span id="roleBaristaFlag" class="d-none" sec:authorize="hasRole('BARISTA')">1</span>
       <div class="header-actions">
-        <button class="btn order-create-btn" type="button">
+        <button class="btn order-create-btn" type="button" sec:authorize="hasAnyRole('ADMIN','CASHIER')">
           <i class="bi bi-plus-lg"></i> Tạo đơn mới
         </button>
       </div>
@@ -113,7 +120,6 @@
     <div class="order-filters mb-4">
       <button class="order-filter active" type="button">Tất cả</button>
       <button class="order-filter" type="button">Chờ xử lý</button>
-      <button class="order-filter" type="button">Đang pha</button>
       <button class="order-filter" type="button">Hoàn thành</button>
       <button class="order-filter" type="button">Đã hủy</button>
     </div>
@@ -166,10 +172,6 @@
                   th:if="${order.status != null and order.status.name() == 'COMPLETED'}">
                   Hoàn thành
                 </span>
-                <span class="status-badge status-brewing"
-                  th:if="${order.status != null and order.status.name() == 'PREPARING'}">
-                  Đang pha
-                </span>
                 <span class="status-badge status-waiting"
                   th:if="${order.status != null and order.status.name() == 'PENDING'}">
                   Chờ xử lý
@@ -187,10 +189,7 @@
                   class="badge bg-secondary">Tiền mặt</span>
                 <span th:if="${order.paymentMethod != null and order.paymentMethod.name() == 'BANK_TRANSFER'}"
                   class="badge bg-primary">Chuyển khoản</span>
-                <span th:if="${order.paymentMethod != null and order.paymentMethod.name() == 'MOMO'}"
-                  class="badge text-white" style="background-color: #a50064;">MoMo</span>
-                <span th:if="${order.paymentMethod != null and order.paymentMethod.name() == 'CARD'}"
-                  class="badge bg-info text-dark">Thẻ</span>
+                <!-- Đã bỏ MoMo và Thẻ theo yêu cầu -->
                 <span th:if="${order.paymentMethod == null}" class="badge bg-secondary">Tiền mặt</span>
               </td>
               <td>
@@ -198,7 +197,11 @@
                   <button class="icon-circle-btn" type="button" aria-label="Xem chi tiết" title="Xem chi tiết"><i
                       class="bi bi-eye"></i></button>
                   <button class="icon-circle-btn edit-order-btn" type="button" aria-label="Sửa đơn" title="Sửa đơn"
-                    th:data-code="${order.orderCode}"><i class="bi bi-pencil"></i></button>
+                    th:data-code="${order.orderCode}" sec:authorize="hasAnyRole('ADMIN','CASHIER')"><i class="bi bi-pencil"></i></button>
+                  <button class="icon-circle-btn barista-ready-btn" type="button" aria-label="Sẵn sàng phục vụ"
+                    title="Sẵn sàng phục vụ" th:data-code="${order.orderCode}"
+                    th:if="${order.status != null and order.status.name() == 'PENDING'}"
+                    sec:authorize="hasRole('BARISTA')"><i class="bi bi-check2-circle"></i></button>
                   <button class="icon-circle-btn" type="button" aria-label="Hóa đơn" title="Hóa đơn"><i
                       class="bi bi-receipt"></i></button>
                   <button class="icon-circle-btn" type="button" aria-label="QR thanh toán" title="QR thanh toán"><i
@@ -215,7 +218,7 @@
   </main>
 
   <!-- Modal: Tạo đơn hàng mới -->
-  <div class="modal fade" id="createOrderModal" tabindex="-1" aria-hidden="true">
+  <div class="modal fade" id="createOrderModal" tabindex="-1" aria-hidden="true" sec:authorize="hasAnyRole('ADMIN','CASHIER')">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content border-0 shadow-lg rounded-4">
         <div class="modal-header border-0 pb-0 px-4 pt-4">
@@ -238,7 +241,6 @@
                 <label class="form-label fw-medium">Trạng thái</label>
                 <select class="form-select" id="orderStatus">
                   <option value="PENDING" selected>Chờ xử lý</option>
-                  <option value="PREPARING">Đang pha</option>
                   <option value="COMPLETED">Hoàn thành</option>
                   <option value="CANCELLED">Đã hủy</option>
                 </select>
@@ -261,18 +263,23 @@
             <div class="mb-3">
               <label class="form-label fw-medium">Chọn món trong menu</label>
               <div class="row g-2 align-items-end">
-                <div class="col-md-6">
-                  <select class="form-select" id="orderMenuItemSelect">
-                    <option value="" selected disabled>Đang tải danh sách món...</option>
-                  </select>
+                <div class="col-md-5">
+                  <div class="menu-search-wrap">
+                    <input type="text" class="form-control form-control-sm" id="orderMenuSearchInput" placeholder="Tìm món..." autocomplete="off">
+                    <div class="list-group shadow-sm menu-search-results" id="orderMenuSearchResults"></div>
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label fw-medium">SL</label>
+                  <input type="number" class="form-control form-control-sm" id="orderItemQuantity" value="1" min="1">
                 </div>
                 <div class="col-md-3">
-                  <label class="form-label fw-medium">Số lượng</label>
-                  <input type="number" class="form-control" id="orderItemQuantity" value="1" min="1">
+                  <label class="form-label fw-medium">Ghi chú món</label>
+                  <input type="text" class="form-control form-control-sm" id="orderItemNoteInput" placeholder="VD: ít đá, ít ngọt...">
                 </div>
-                <div class="col-md-3 d-grid">
-                  <button type="button" class="btn btn-outline-primary" id="addOrderItemBtn">
-                    <i class="bi bi-plus-lg"></i> Thêm món
+                <div class="col-md-2 d-grid">
+                  <button type="button" class="btn btn-outline-primary btn-sm" id="addOrderItemBtn">
+                    <i class="bi bi-plus-lg"></i> Thêm
                   </button>
                 </div>
               </div>
@@ -282,6 +289,7 @@
                     <tr>
                       <th>Món</th>
                       <th class="text-center" style="width: 80px;">SL</th>
+                      <th style="width: 220px;">Ghi chú</th>
                       <th class="text-end" style="width: 120px;">Đơn giá</th>
                       <th class="text-end" style="width: 120px;">Thành tiền</th>
                       <th style="width: 40px;"></th>
@@ -289,7 +297,7 @@
                   </thead>
                   <tbody id="orderItemsBody">
                     <tr class="text-muted" id="orderItemsEmptyRow">
-                      <td colspan="5">Chưa có món nào. Hãy chọn món và bấm "Thêm món".</td>
+                      <td colspan="6">Chưa có món nào. Hãy tìm món và bấm Enter hoặc click để thêm.</td>
                     </tr>
                   </tbody>
                 </table>
@@ -297,17 +305,34 @@
             </div>
 
             <div class="row g-3 mb-3">
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <label class="form-label fw-medium">Loại</label>
                 <select class="form-select" id="orderType">
                   <option value="DINE_IN">Tại bàn</option>
                   <option value="TAKEAWAY">Mang về</option>
                 </select>
               </div>
-              <div class="col-md-8">
-                <label class="form-label fw-medium">Bàn / Ghi chú</label>
-                <input type="text" class="form-control" id="orderTableNote" placeholder="VD: Bàn 5 · Ít đá, ít ngọt...">
+              <div class="col-md-3" id="selectedTableField">
+                <label class="form-label fw-medium">Bàn đã chọn</label>
+                <input type="text" class="form-control" id="selectedTableDisplay" placeholder="Chưa chọn bàn" readonly>
               </div>
+              <div class="col-md-6">
+                <label class="form-label fw-medium">Ghi chú đơn</label>
+                <input type="text" class="form-control" id="orderNote" placeholder="Ghi chú tổng cho đơn (nếu có)">
+              </div>
+            </div>
+
+            <!-- Chọn bàn (đồng bộ đặt bàn + đơn tại bàn) -->
+            <div class="mb-3" id="tablePickerSection">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="fw-medium">Chọn bàn</div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="reloadTablesBtn">
+                  <i class="bi bi-arrow-clockwise"></i> Tải lại
+                </button>
+              </div>
+              <div class="small text-muted mb-2">Đỏ: có khách · Xanh: đã đặt (giữ trong cửa sổ 15 phút) · Đen: trống</div>
+              <div class="table-picker-grid" id="tablePickerGrid"></div>
+              <div class="small text-muted mt-2" id="tablePickerHint"></div>
             </div>
 
             <div class="row g-3 mb-3 align-items-end">
@@ -321,8 +346,6 @@
                 <select class="form-select" id="orderPaymentMethod">
                   <option value="CASH">Tiền mặt</option>
                   <option value="BANK_TRANSFER">Chuyển khoản</option>
-                  <option value="MOMO">Momo</option>
-                  <option value="CARD">Thẻ</option>
                 </select>
               </div>
             </div>
@@ -402,13 +425,25 @@
         var orderTimeInput = document.getElementById('orderTime');
         var orderStatusSelect = document.getElementById('orderStatus');
         var orderTotalAmountInput = document.getElementById('orderTotalAmount');
-        var menuSelect = document.getElementById('orderMenuItemSelect');
+        var menuSearchInput = document.getElementById('orderMenuSearchInput');
+        var menuSearchResults = document.getElementById('orderMenuSearchResults');
         var quantityInput = document.getElementById('orderItemQuantity');
+        var orderItemNoteInput = document.getElementById('orderItemNoteInput');
         var addItemBtn = document.getElementById('addOrderItemBtn');
         var itemsBody = document.getElementById('orderItemsBody');
         var itemsEmptyRow = document.getElementById('orderItemsEmptyRow');
         var customerNameInput = document.getElementById('orderCustomerName');
         var customerPhoneInput = document.getElementById('orderCustomerPhone');
+        var orderTypeSelectEl = document.getElementById('orderType');
+        var orderNoteInput = document.getElementById('orderNote');
+        var selectedTableField = document.getElementById('selectedTableField');
+        var selectedTableDisplay = document.getElementById('selectedTableDisplay');
+        var tablePickerSection = document.getElementById('tablePickerSection');
+        var tablePickerGrid = document.getElementById('tablePickerGrid');
+        var reloadTablesBtn = document.getElementById('reloadTablesBtn');
+        var tablePickerHint = document.getElementById('tablePickerHint');
+
+        var selectedTableNumber = null;
 
         // QR thanh toán
         var orderPaymentMethodSelect = document.getElementById('orderPaymentMethod');
@@ -427,8 +462,7 @@
         var modalTitle = document.querySelector('#createOrderModal .modal-title');
         var editingOrderCode = null;
 
-        var menuItemsCache = [];
-        var currentOrderItems = []; // {id, name, price, quantity}
+        var currentOrderItems = []; // {id, name, price, quantity, note}
 
         function lookupCustomerByPhone() {
           if (!customerPhoneInput || !customerNameInput) return;
@@ -497,8 +531,8 @@
           var method = orderPaymentMethodSelect.value;
           var rawAmount = Number(orderTotalAmountInput.value || 0);
 
-          // Chỉ hiển thị khi có số tiền và phương thức là Chuyển khoản hoặc MoMo
-          if (!rawAmount || rawAmount <= 0 || (method !== 'BANK_TRANSFER' && method !== 'MOMO')) {
+          // Chỉ hiển thị khi có số tiền và phương thức là Chuyển khoản
+          if (!rawAmount || rawAmount <= 0 || (method !== 'BANK_TRANSFER')) {
             orderPaymentQrSection.style.display = 'none';
             if (orderPaymentQrImage) {
               orderPaymentQrImage.style.display = 'none';
@@ -514,9 +548,7 @@
           var amount = Math.round(rawAmount);
           orderPaymentAmountText.textContent = 'Số tiền: ' + formatCurrencyVND(amount);
           if (orderPaymentMethodText) {
-            orderPaymentMethodText.textContent = method === 'BANK_TRANSFER'
-              ? 'Phương thức: Chuyển khoản ngân hàng'
-              : 'Phương thức: Ví MoMo';
+            orderPaymentMethodText.textContent = 'Phương thức: Chuyển khoản ngân hàng';
           }
 
           var qrUrl = null;
@@ -552,23 +584,6 @@
               + '-compact2.png?amount=' + amount
               + '&addInfo=' + encodeURIComponent(addInfo)
               + '&accountName=' + encodeURIComponent(bankOwnerName);
-          } else if (method === 'MOMO') {
-            var momoPhone = paymentSettings.momoPhone || null;
-            var momoName = paymentSettings.momoOwnerName || null;
-
-            if (!momoPhone || !momoName || paymentSettings.momoEnabled === false) {
-              orderPaymentQrSection.style.display = 'none';
-              if (orderPaymentQrImage) {
-                orderPaymentQrImage.style.display = 'none';
-              }
-              return;
-            }
-
-            var momoData = 'Thanh toan MoMo - SDT: ' + momoPhone
-              + ' - Ten: ' + momoName
-              + ' - So tien: ' + amount + ' VND';
-            qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='
-              + encodeURIComponent(momoData);
           }
 
           if (!qrUrl || !orderPaymentQrImage) {
@@ -621,21 +636,6 @@
               + '&accountName=' + encodeURIComponent(bankOwnerName);
           }
 
-          if (method === 'MOMO') {
-            var momoPhone = paymentSettings.momoPhone || null;
-            var momoName = paymentSettings.momoOwnerName || null;
-            if (!momoPhone || !momoName || paymentSettings.momoEnabled === false) {
-              return null;
-            }
-
-            var momoData = 'Thanh toan MoMo don ' + (order.orderCode || '')
-              + ' - SDT: ' + momoPhone
-              + ' - Ten: ' + momoName
-              + ' - So tien: ' + Math.round(total) + ' VND';
-            return 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='
-              + encodeURIComponent(momoData);
-          }
-
           return null;
         }
 
@@ -645,7 +645,7 @@
           }
 
           var method = order.paymentMethod || 'CASH';
-          if (method !== 'BANK_TRANSFER' && method !== 'MOMO') {
+          if (method !== 'BANK_TRANSFER') {
             // Đơn thanh toán tiền mặt/thẻ thì chỉ ẩn modal QR
             return;
           }
@@ -658,9 +658,7 @@
           var amount = order.total != null ? Number(order.total) : 0;
           qrOrderAmountText.textContent = 'Số tiền: ' + formatCurrencyVND(amount);
           if (qrOrderMethodText) {
-            qrOrderMethodText.textContent = method === 'BANK_TRANSFER'
-              ? 'Phương thức: Chuyển khoản ngân hàng'
-              : 'Phương thức: Ví MoMo';
+            qrOrderMethodText.textContent = 'Phương thức: Chuyển khoản ngân hàng';
           }
 
           if (qrOrderInfoText) {
@@ -672,45 +670,269 @@
           orderPaymentQrModal.show();
         }
 
-        function fetchMenuItemsOnce() {
-          if (!menuSelect || menuItemsCache.length > 0) return;
+        var menuSearchTimer = null;
+        var lastMenuQuery = '';
+        var latestMenuAbort = null;
+        var menuResultsItems = [];
+        var menuActiveIndex = -1;
+        var selectedMenuItem = null; // item đã chọn, chờ bấm "Thêm"
 
-          fetch('/api/menu/items')
+        function hideMenuResults() {
+          if (!menuSearchResults) return;
+          menuSearchResults.style.display = 'none';
+          menuSearchResults.innerHTML = '';
+          menuResultsItems = [];
+          menuActiveIndex = -1;
+        }
+
+        function setMenuActiveIndex(nextIndex) {
+          if (!menuSearchResults) return;
+          var buttons = menuSearchResults.querySelectorAll('button.list-group-item');
+          if (!buttons || buttons.length === 0) {
+            menuActiveIndex = -1;
+            return;
+          }
+          var max = buttons.length - 1;
+          var idx = nextIndex;
+          if (idx < 0) idx = 0;
+          if (idx > max) idx = max;
+          menuActiveIndex = idx;
+
+          buttons.forEach(function (btn, i) {
+            btn.classList.toggle('active', i === menuActiveIndex);
+          });
+
+          var activeBtn = buttons[menuActiveIndex];
+          if (activeBtn && typeof activeBtn.scrollIntoView === 'function') {
+            activeBtn.scrollIntoView({ block: 'nearest' });
+          }
+        }
+
+        function selectMenuItem(item) {
+          if (!item || item.id == null) return;
+          selectedMenuItem = item;
+          if (menuSearchInput) {
+            menuSearchInput.value = item.name || '';
+          }
+          hideMenuResults();
+          if (quantityInput) {
+            quantityInput.focus();
+            quantityInput.select();
+          }
+        }
+
+        function commitSelectedMenuItem() {
+          var item = selectedMenuItem;
+          if (!item || item.id == null) {
+            // nếu chưa chọn item nhưng đang mở dropdown, lấy item đang highlight
+            if (menuSearchResults && menuSearchResults.style.display === 'block' && menuResultsItems.length > 0) {
+              var idx = menuActiveIndex >= 0 ? menuActiveIndex : 0;
+              item = menuResultsItems[idx];
+            }
+          }
+          if (!item || item.id == null) return;
+
+          var qty = parseInt(quantityInput ? quantityInput.value : '1', 10);
+          if (!qty || qty < 1) qty = 1;
+          var lineNote = orderItemNoteInput ? (orderItemNoteInput.value || '') : '';
+          lineNote = String(lineNote).trim();
+
+          var price = Number(item.price || 0);
+          if (!isFinite(price) || price < 0) price = 0;
+
+          var existing = currentOrderItems.find(function (row) { return String(row.id) === String(item.id); });
+          if (existing) {
+            existing.quantity += qty;
+            if (lineNote && (!existing.note || !String(existing.note).trim())) {
+              existing.note = lineNote;
+            }
+          } else {
+            currentOrderItems.push({
+              id: String(item.id),
+              name: item.name,
+              price: price,
+              quantity: qty,
+              note: lineNote || ''
+            });
+          }
+
+          renderOrderItems();
+          if (menuSearchInput) {
+            // clear để chọn món tiếp theo
+            menuSearchInput.value = '';
+            menuSearchInput.focus();
+          }
+          if (orderItemNoteInput) {
+            orderItemNoteInput.value = '';
+          }
+          if (quantityInput) {
+            quantityInput.value = '1';
+          }
+          selectedMenuItem = null;
+          hideMenuResults();
+        }
+
+        function showMenuResults(items) {
+          if (!menuSearchResults) return;
+          menuSearchResults.innerHTML = '';
+          menuResultsItems = Array.isArray(items) ? items.filter(function (x) { return x && x.id != null; }) : [];
+          menuActiveIndex = -1;
+
+          if (!menuResultsItems.length) {
+            var empty = document.createElement('div');
+            empty.className = 'list-group-item text-muted small';
+            empty.textContent = 'Không tìm thấy món phù hợp.';
+            menuSearchResults.appendChild(empty);
+            menuSearchResults.style.display = 'block';
+            return;
+          }
+
+          menuResultsItems.forEach(function (item, index) {
+            var a = document.createElement('button');
+            a.type = 'button';
+            a.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+            a.dataset.index = String(index);
+
+            var left = document.createElement('div');
+            left.innerHTML = '<div class="fw-semibold">' + (item.name || '') + '</div>';
+            var cat = item.category && item.category.name ? item.category.name : '';
+            if (cat) {
+              var small = document.createElement('div');
+              small.className = 'small text-muted';
+              small.textContent = cat;
+              left.appendChild(small);
+            }
+
+            var price = Number(item.price || 0);
+            var right = document.createElement('div');
+            right.className = 'small text-muted';
+            right.textContent = price > 0 ? price.toLocaleString('vi-VN') + ' đ' : '';
+
+            a.appendChild(left);
+            a.appendChild(right);
+
+            a.addEventListener('click', function () {
+              // chỉ chọn món, không auto thêm
+              selectMenuItem(item);
+            });
+
+            a.addEventListener('mousemove', function () {
+              setMenuActiveIndex(index);
+            });
+
+            menuSearchResults.appendChild(a);
+          });
+
+          menuSearchResults.style.display = 'block';
+          // default highlight first for Enter
+          setMenuActiveIndex(0);
+        }
+
+        function searchMenu(query) {
+          if (!query || query.trim().length < 2) {
+            hideMenuResults();
+            return;
+          }
+          var q = query.trim();
+          lastMenuQuery = q;
+
+          try {
+            if (latestMenuAbort) latestMenuAbort.abort();
+          } catch (e) { /* ignore */ }
+
+          latestMenuAbort = new AbortController();
+
+          fetch('/api/menu/search?q=' + encodeURIComponent(q), { signal: latestMenuAbort.signal })
             .then(function (res) { return res.ok ? res.json() : []; })
-            .then(function (data) {
-              if (!Array.isArray(data)) return;
-              menuItemsCache = data;
-
-              // Clear existing options
-              menuSelect.innerHTML = '';
-              var placeholder = document.createElement('option');
-              placeholder.value = '';
-              placeholder.disabled = true;
-              placeholder.selected = true;
-              placeholder.textContent = 'Chọn món trong menu';
-              menuSelect.appendChild(placeholder);
-
-              data.forEach(function (item) {
-                if (item && item.id != null) {
-                  var opt = document.createElement('option');
-                  opt.value = String(item.id);
-                  var price = Number(item.price || 0);
-                  opt.dataset.price = String(price);
-                  opt.textContent = item.name + (price > 0 ? ' - ' + price.toLocaleString('vi-VN') + ' đ' : '');
-                  menuSelect.appendChild(opt);
-                }
-              });
+            .then(function (items) {
+              // tránh race condition: chỉ render nếu query vẫn là query mới nhất
+              if (lastMenuQuery !== q) return;
+              showMenuResults(items);
             })
-            .catch(function () {
-              if (menuSelect) {
-                menuSelect.innerHTML = '';
-                var opt = document.createElement('option');
-                opt.value = '';
-                opt.disabled = true;
-                opt.selected = true;
-                opt.textContent = 'Không tải được danh sách món';
-                menuSelect.appendChild(opt);
+            .catch(function (err) {
+              if (err && err.name === 'AbortError') return;
+              hideMenuResults();
+            });
+        }
+
+        function toggleTablePickerByType() {
+          if (!tablePickerSection || !orderTypeSelectEl) return;
+          var type = orderTypeSelectEl.value || 'DINE_IN';
+          tablePickerSection.style.display = (type === 'DINE_IN') ? 'block' : 'none';
+          if (selectedTableField) {
+            selectedTableField.style.display = (type === 'DINE_IN') ? 'block' : 'none';
+          }
+          if (type !== 'DINE_IN') {
+            selectedTableNumber = null;
+            if (selectedTableDisplay) selectedTableDisplay.value = '';
+          }
+        }
+
+        function renderTablesStatus(list) {
+          if (!tablePickerGrid) return;
+          tablePickerGrid.innerHTML = '';
+
+          if (!Array.isArray(list) || list.length === 0) {
+            var empty = document.createElement('div');
+            empty.className = 'text-muted small';
+            empty.textContent = 'Không có dữ liệu bàn.';
+            tablePickerGrid.appendChild(empty);
+            return;
+          }
+
+          list.forEach(function (t) {
+            if (!t || t.number == null) return;
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'table-btn';
+            btn.textContent = String(t.number);
+
+            var status = t.status || 'AVAILABLE';
+            if (status === 'OCCUPIED') btn.classList.add('table-occupied');
+            else if (status === 'RESERVED') btn.classList.add('table-reserved');
+            else btn.classList.add('table-available');
+
+            if (selectedTableNumber != null && Number(selectedTableNumber) === Number(t.number)) {
+              btn.classList.add('table-selected');
+            }
+
+            btn.addEventListener('click', function () {
+              selectedTableNumber = Number(t.number);
+              if (selectedTableDisplay) {
+                selectedTableDisplay.value = 'Bàn ' + selectedTableNumber;
               }
+
+              // highlight selected
+              Array.prototype.forEach.call(tablePickerGrid.querySelectorAll('.table-btn'), function (b) {
+                b.classList.remove('table-selected');
+              });
+              btn.classList.add('table-selected');
+
+              // chọn bàn chỉ highlight; ghi chú đơn nhập ở ô riêng
+
+              if (tablePickerHint) {
+                if (status === 'OCCUPIED') {
+                  tablePickerHint.textContent = 'Bàn ' + selectedTableNumber + ' đang có khách. Nếu vẫn tạo đơn mới, có thể bị trùng đơn theo bàn.';
+                } else if (status === 'RESERVED') {
+                  tablePickerHint.textContent = 'Bàn ' + selectedTableNumber + ' đang được giữ theo đặt bàn (cửa sổ 15 phút).';
+                } else {
+                  tablePickerHint.textContent = 'Đã chọn bàn ' + selectedTableNumber + '.';
+                }
+              }
+            });
+
+            tablePickerGrid.appendChild(btn);
+          });
+        }
+
+        function loadTableStatus() {
+          if (!tablePickerGrid) return;
+          tablePickerGrid.innerHTML = '<div class="text-muted small">Đang tải danh sách bàn...</div>';
+          fetch('/api/tables/status?total=20')
+            .then(function (res) { return res.ok ? res.json() : []; })
+            .then(function (data) { renderTablesStatus(data); })
+            .catch(function () {
+              tablePickerGrid.innerHTML = '<div class="text-muted small">Không tải được trạng thái bàn.</div>';
             });
         }
 
@@ -740,7 +962,29 @@
 
             var tdQty = document.createElement('td');
             tdQty.className = 'text-center';
-            tdQty.textContent = row.quantity;
+            var qtyInput = document.createElement('input');
+            qtyInput.type = 'number';
+            qtyInput.min = '1';
+            qtyInput.className = 'form-control form-control-sm text-center';
+            qtyInput.value = String(row.quantity || 1);
+            qtyInput.addEventListener('input', function () {
+              var v = parseInt(qtyInput.value, 10);
+              if (!v || v < 1) v = 1;
+              currentOrderItems[index].quantity = v;
+              renderOrderItems();
+            });
+            tdQty.appendChild(qtyInput);
+
+            var tdNote = document.createElement('td');
+            var noteInput = document.createElement('input');
+            noteInput.type = 'text';
+            noteInput.className = 'form-control form-control-sm';
+            noteInput.placeholder = 'Ghi chú món...';
+            noteInput.value = row.note || '';
+            noteInput.addEventListener('input', function () {
+              currentOrderItems[index].note = noteInput.value;
+            });
+            tdNote.appendChild(noteInput);
 
             var tdPrice = document.createElement('td');
             tdPrice.className = 'text-end';
@@ -766,6 +1010,7 @@
 
             tr.appendChild(tdName);
             tr.appendChild(tdQty);
+            tr.appendChild(tdNote);
             tr.appendChild(tdPrice);
             tr.appendChild(tdLineTotal);
             tr.appendChild(tdRemove);
@@ -782,33 +1027,7 @@
         }
 
         function addSelectedItem() {
-          if (!menuSelect || !quantityInput) return;
-
-          var selectedId = menuSelect.value;
-          if (!selectedId) return;
-
-          var qty = parseInt(quantityInput.value, 10);
-          if (!qty || qty < 1) qty = 1;
-
-          var item = menuItemsCache.find(function (m) { return String(m.id) === String(selectedId); });
-          if (!item) return;
-
-          var price = Number(item.price || 0);
-          if (isNaN(price)) price = 0;
-
-          var existing = currentOrderItems.find(function (row) { return row.id === item.id; });
-          if (existing) {
-            existing.quantity += qty;
-          } else {
-            currentOrderItems.push({
-              id: item.id,
-              name: item.name,
-              price: price,
-              quantity: qty
-            });
-          }
-
-          renderOrderItems();
+          // Đã chuyển sang search autocomplete -> không dùng nữa
         }
 
         createBtn.addEventListener('click', function () {
@@ -818,6 +1037,8 @@
           if (createForm) {
             createForm.reset();
           }
+          selectedTableNumber = null;
+          if (tablePickerHint) tablePickerHint.textContent = '';
           // Reset items state
           currentOrderItems = [];
           renderOrderItems();
@@ -828,11 +1049,14 @@
             orderStatusSelect.value = 'PENDING';
           }
 
-          // Fetch menu items (once) for selector
-          fetchMenuItemsOnce();
+          hideMenuResults();
+          if (menuSearchInput) menuSearchInput.value = '';
 
           // Tải cấu hình thanh toán (Ngân hàng + MoMo) cho QR
           loadPaymentSettingsForOrder();
+
+          toggleTablePickerByType();
+          loadTableStatus();
 
           // Ẩn QR lúc mới mở
           updateOrderPaymentQr();
@@ -853,7 +1077,7 @@
             currentOrderItems = [];
             renderOrderItems();
 
-            fetchMenuItemsOnce();
+            hideMenuResults();
             loadPaymentSettingsForOrder();
 
             // Lấy thông tin đơn hàng
@@ -869,8 +1093,20 @@
                 if (document.getElementById('orderCustomerName')) document.getElementById('orderCustomerName').value = order.customerName || '';
                 if (document.getElementById('orderCustomerPhone')) document.getElementById('orderCustomerPhone').value = order.customerPhone || '';
                 if (document.getElementById('orderType')) document.getElementById('orderType').value = order.type || 'DINE_IN';
-                if (document.getElementById('orderTableNote')) document.getElementById('orderTableNote').value = order.tableName || '';
+                if (document.getElementById('orderNote')) document.getElementById('orderNote').value = order.tableName || '';
                 if (document.getElementById('orderPaymentMethod')) document.getElementById('orderPaymentMethod').value = order.paymentMethod || 'CASH';
+
+                // cố gắng parse số bàn từ tableName để highlight
+                try {
+                  var tn = order.tableName || '';
+                  var m = tn.match(/(\d+)/);
+                  selectedTableNumber = m ? Number(m[1]) : null;
+                } catch (e) {
+                  selectedTableNumber = null;
+                }
+
+                toggleTablePickerByType();
+                loadTableStatus();
 
                 // Lấy thông tin các món
                 return fetch('/api/orders/' + code + '/items');
@@ -883,7 +1119,8 @@
                       id: item.menuItemId ? String(item.menuItemId) : (item.menuItem ? String(item.menuItem.id) : null),
                       name: item.itemName,
                       price: item.itemPrice,
-                      quantity: item.quantity
+                      quantity: item.quantity,
+                      note: item.note || ''
                     };
                   }).filter(function (x) { return x.id != null; });
                 }
@@ -896,18 +1133,88 @@
           });
         });
 
-        if (addItemBtn) {
-          addItemBtn.addEventListener('click', function () {
-            addSelectedItem();
+        // nút "Thêm" đã được bind để commitSelectedMenuItem()
+
+        if (menuSearchInput) {
+          menuSearchInput.addEventListener('input', function () {
+            var val = menuSearchInput.value || '';
+            if (menuSearchTimer) clearTimeout(menuSearchTimer);
+            menuSearchTimer = setTimeout(function () {
+              searchMenu(val);
+            }, 300);
+          });
+
+          menuSearchInput.addEventListener('focus', function () {
+            var val = menuSearchInput.value || '';
+            if (val.trim().length >= 2) {
+              searchMenu(val);
+            }
+          });
+
+          menuSearchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+              hideMenuResults();
+              return;
+            }
+
+            if (e.key === 'ArrowDown') {
+              if (menuSearchResults && menuSearchResults.style.display === 'block') {
+                e.preventDefault();
+                setMenuActiveIndex(menuActiveIndex + 1);
+              }
+              return;
+            }
+
+            if (e.key === 'ArrowUp') {
+              if (menuSearchResults && menuSearchResults.style.display === 'block') {
+                e.preventDefault();
+                setMenuActiveIndex(menuActiveIndex - 1);
+              }
+              return;
+            }
+
+            if (e.key === 'Enter') {
+              // Enter chỉ chọn món đầu tiên / món đang highlight (không auto thêm)
+              if (menuSearchResults && menuSearchResults.style.display === 'block' && menuResultsItems.length > 0) {
+                e.preventDefault();
+                var idx = menuActiveIndex >= 0 ? menuActiveIndex : 0;
+                var item = menuResultsItems[idx];
+                selectMenuItem(item);
+              }
+            }
           });
         }
 
-        // Tự động thêm món vào bảng khi chọn trong dropdown
-        if (menuSelect) {
-          menuSelect.addEventListener('change', function () {
-            addSelectedItem();
+        if (addItemBtn) {
+          addItemBtn.addEventListener('click', function () {
+            commitSelectedMenuItem();
           });
         }
+
+        if (quantityInput) {
+          quantityInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              commitSelectedMenuItem();
+            }
+          });
+        }
+
+        if (orderItemNoteInput) {
+          orderItemNoteInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              commitSelectedMenuItem();
+            }
+          });
+        }
+
+        document.addEventListener('click', function (e) {
+          if (!menuSearchResults || !menuSearchInput) return;
+          if (menuSearchResults.contains(e.target)) return;
+          if (menuSearchInput.contains(e.target)) return;
+          hideMenuResults();
+        });
 
         if (createForm) {
           createForm.addEventListener('submit', function (e) {
@@ -919,20 +1226,30 @@
             }
 
             // customerNameInput & customerPhoneInput đã được khai báo phía trên
-            var orderTypeSelect = document.getElementById('orderType');
-            var tableNoteInput = document.getElementById('orderTableNote');
 
             var payload = {
               customerName: customerNameInput ? customerNameInput.value.trim() : null,
               customerPhone: customerPhoneInput ? customerPhoneInput.value.trim() : null,
-              type: orderTypeSelect ? orderTypeSelect.value : 'DINE_IN',
-              tableNote: tableNoteInput ? tableNoteInput.value.trim() : null,
+              type: orderTypeSelectEl ? orderTypeSelectEl.value : 'DINE_IN',
+              tableNote: (function () {
+                var type = orderTypeSelectEl ? orderTypeSelectEl.value : 'DINE_IN';
+                var note = orderNoteInput ? orderNoteInput.value.trim() : '';
+                if (type === 'DINE_IN') {
+                  // vẫn lưu tableName chung field tableName: "Bàn X · ghi chú"
+                  var tablePart = selectedTableNumber ? ('Bàn ' + selectedTableNumber) : '';
+                  if (tablePart && note) return tablePart + ' · ' + note;
+                  if (tablePart) return tablePart;
+                  return note || null;
+                }
+                return note || null;
+              })(),
               status: orderStatusSelect ? orderStatusSelect.value : 'PENDING',
               paymentMethod: orderPaymentMethodSelect ? orderPaymentMethodSelect.value : 'CASH',
               items: currentOrderItems.map(function (row) {
                 return {
                   menuItemId: row.id,
-                  quantity: row.quantity
+                  quantity: row.quantity,
+                  note: row.note ? row.note.trim() : null
                 };
               })
             };
@@ -986,8 +1303,8 @@
                   });
                 }
 
-                // Tránh trường hợp không có QR modal nào hiện ra, ta reload trực tiếp nếu là CASH or CARD
-                if (payload.paymentMethod !== 'BANK_TRANSFER' && payload.paymentMethod !== 'MOMO') {
+                // Tránh trường hợp không có QR modal nào hiện ra, ta reload trực tiếp nếu là CASH
+                if (payload.paymentMethod !== 'BANK_TRANSFER') {
                   setTimeout(function () { window.location.reload(); }, 300);
                 }
 
@@ -1004,9 +1321,54 @@
           });
         }
 
+        if (orderTypeSelectEl) {
+          orderTypeSelectEl.addEventListener('change', function () {
+            toggleTablePickerByType();
+            if (orderTypeSelectEl.value === 'DINE_IN') {
+              loadTableStatus();
+            } else {
+              selectedTableNumber = null;
+              if (tablePickerHint) tablePickerHint.textContent = '';
+            }
+          });
+        }
+
+        if (reloadTablesBtn) {
+          reloadTablesBtn.addEventListener('click', function () {
+            loadTableStatus();
+          });
+        }
+
         // Tab filtering logic
         var filterBtns = document.querySelectorAll('.order-filter');
+        var tbodyEl = document.querySelector('.orders-table tbody');
         var tableRows = document.querySelectorAll('.orders-table tbody tr');
+
+        function getRowStatusText(row) {
+          var statusEl = row ? row.querySelector('.status-badge') : null;
+          return statusEl ? statusEl.textContent.trim() : '';
+        }
+
+        function isEmptyRow(row) {
+          return !!(row && row.querySelector('.text-muted.py-4'));
+        }
+
+        function sortPendingFirst() {
+          if (!tbodyEl) return;
+          var rows = Array.prototype.slice.call(tbodyEl.querySelectorAll('tr'));
+          var empty = rows.filter(isEmptyRow);
+          var normal = rows.filter(function (r) { return !isEmptyRow(r); });
+
+          normal.sort(function (a, b) {
+            var aIsPending = getRowStatusText(a) === 'Chờ xử lý' ? 1 : 0;
+            var bIsPending = getRowStatusText(b) === 'Chờ xử lý' ? 1 : 0;
+            if (aIsPending !== bIsPending) return bIsPending - aIsPending; // pending first
+            return 0;
+          });
+
+          normal.forEach(function (r) { tbodyEl.appendChild(r); });
+          empty.forEach(function (r) { tbodyEl.appendChild(r); });
+        }
 
         if (filterBtns.length > 0) {
           filterBtns.forEach(function (btn) {
@@ -1016,28 +1378,59 @@
 
               var filterText = this.textContent.trim();
 
+              // re-query rows (vì có thể đã reorder)
+              tableRows = document.querySelectorAll('.orders-table tbody tr');
               tableRows.forEach(function (row) {
-                if (row.querySelector('.text-muted.py-4')) return; // empty row
+                if (isEmptyRow(row)) return; // empty row
 
                 if (filterText === 'Tất cả') {
                   row.style.display = '';
                   return;
                 }
 
-                var statusEl = row.querySelector('.status-badge');
-                if (statusEl) {
-                  var statusText = statusEl.textContent.trim();
-                  if (statusText === filterText) {
-                    row.style.display = '';
-                  } else {
-                    row.style.display = 'none';
-                  }
+                var statusText = getRowStatusText(row);
+                if (statusText === filterText) {
+                  row.style.display = '';
+                } else {
+                  row.style.display = 'none';
                 }
               });
             });
           });
+
+          // BARISTA: ưu tiên hàng chờ pha (PENDING) và default filter = "Chờ xử lý"
+          var isBarista = !!document.getElementById('roleBaristaFlag');
+          if (isBarista) {
+            sortPendingFirst();
+            var pendingBtn = Array.prototype.slice.call(filterBtns).find(function (b) {
+              return b.textContent && b.textContent.trim() === 'Chờ xử lý';
+            });
+            if (pendingBtn) pendingBtn.click();
+          }
         }
       }
+
+      // Barista: nút "Sẵn sàng phục vụ" (chỉ đổi trạng thái PENDING -> COMPLETED)
+      var readyBtns = document.querySelectorAll('.barista-ready-btn');
+      readyBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var code = this.getAttribute('data-code');
+          if (!code) return;
+          if (!confirm('Đánh dấu đơn ' + code + ' là "Hoàn thành"?')) return;
+
+          fetch('/api/orders/' + code + '/status', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'COMPLETED' })
+          })
+            .then(function (res) {
+              if (!res.ok) throw new Error('Update status failed');
+              return res.json();
+            })
+            .then(function () { window.location.reload(); })
+            .catch(function () { alert('Không thể cập nhật trạng thái đơn.'); });
+        });
+      });
     });
   </script>
 

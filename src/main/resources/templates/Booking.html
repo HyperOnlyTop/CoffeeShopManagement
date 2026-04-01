@@ -22,81 +22,7 @@
 <body>
 
   <!-- Sidebar -->
-  <nav class="sidebar">
-    <a th:href="@{/}" class="brand" style="text-decoration: none; color: inherit;">
-      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo"
-        class="brand-img">
-      <div class="brand-text">
-        <h5>Brew &amp; Co.</h5>
-        <p style="color: #d47633">Coffee Management</p>
-      </div>
-    </a>
-
-    <div class="user-profile" th:if="${currentUser != null}">
-      <img
-        th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
-        alt="User" style="object-fit: cover;">
-      <div class="user-info">
-        <h6
-          th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
-          Tên tài khoản</h6>
-        <p th:text="${currentUser.email}">Email</p>
-      </div>
-      <div class="online-dot"></div>
-    </div>
-
-    <ul class="nav-menu">
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/dashboard" class="nav-link">
-          <i class="bi bi-grid-1x2"></i> Dashboard
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Menu" class="nav-link">
-          <i class="bi bi-cup-hot"></i> Menu
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Order" class="nav-link">
-          <i class="bi bi-bag"></i> Đơn hàng
-        </a>
-      </li>
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/Revenue" class="nav-link">
-          <i class="bi bi-bar-chart-fill"></i> Doanh thu
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Staff" class="nav-link">
-          <i class="bi bi-people"></i> Nhân viên
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Inventory" class="nav-link">
-          <i class="bi bi-box-seam"></i> Kho hàng
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Booking" class="nav-link active">
-          <i class="bi bi-calendar-event"></i> Đặt bàn
-        </a>
-      </li>
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/Accounts" class="nav-link">
-          <i class="bi bi-person-badge"></i> Tài khoản
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Setting" class="nav-link">
-          <i class="bi bi-gear"></i> Cài đặt
-        </a>
-      </li>
-    </ul>
-
-    <div class="logout-btn">
-      <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
-    </div>
-  </nav>
+  <div th:replace="~{fragments/sidebar :: sidebar('BOOKING')}"></div>
 
   <!-- Main content -->
   <main class="main-content">
@@ -126,13 +52,14 @@
               <th scope="col">Thời gian đặt</th>
               <th scope="col">Số khách</th>
               <th scope="col">Ghi chú</th>
+              <th scope="col">Giữ bàn</th>
               <th scope="col">Thời gian gửi</th>
               <th scope="col" sec:authorize="hasRole('ADMIN')">Thao tác</th>
             </tr>
           </thead>
           <tbody>
             <tr th:if="${#lists.isEmpty(bookings)}">
-              <td colspan="7" class="text-center text-muted py-4">Chưa có yêu cầu đặt bàn nào.</td>
+              <td colspan="8" class="text-center text-muted py-4">Chưa có yêu cầu đặt bàn nào.</td>
             </tr>
 
             <tr th:each="b : ${bookings}">
@@ -142,6 +69,7 @@
               <td th:text="${b.bookingTime != null ? #temporals.format(b.bookingTime, 'dd/MM/yyyy HH:mm') : ''}">01/01/2026 09:00</td>
               <td th:text="${b.guests}">2</td>
               <td th:text="${b.note}">Ghi chú</td>
+              <td th:text="${b.reservedTableNumber != null ? 'Bàn ' + b.reservedTableNumber : ''}">Bàn 1</td>
               <td th:text="${b.createdAt != null ? #temporals.format(b.createdAt, 'dd/MM/yyyy HH:mm') : ''}">01/01/2026 08:30</td>
               <td sec:authorize="hasRole('ADMIN')">
                 <div class="d-flex gap-2">

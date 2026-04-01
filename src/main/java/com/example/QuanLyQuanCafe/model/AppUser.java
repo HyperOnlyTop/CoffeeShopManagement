@@ -25,6 +25,7 @@ public class AppUser {
     private String email;
     private String phone;
     private String role;
+    private Long staffId;
 
     public Long getId() {
         return id;
@@ -90,5 +91,13 @@ public class AppUser {
 
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
+    }
+
+    public Long getStaffId() {
+        return staffId;
+    }
+
+    public void setStaffId(Long staffId) {
+        this.staffId = staffId;
     }
 }

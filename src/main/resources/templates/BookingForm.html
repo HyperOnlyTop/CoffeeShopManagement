@@ -17,80 +17,8 @@
 </head>
 
 <body>
-  <nav class="sidebar">
-    <a th:href="@{/}" class="brand">
-      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo" class="brand-img">
-      <div class="brand-text">
-        <h5>Brew &amp; Co.</h5>
-        <p>Coffee Management</p>
-      </div>
-    </a>
-
-    <div class="user-profile" th:if="${currentUser != null}">
-      <img
-        th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
-        alt="User" class="object-fit-cover">
-      <div class="user-info">
-        <h6
-          th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
-          Tên tài khoản</h6>
-        <p th:text="${currentUser.email}">Email</p>
-      </div>
-      <div class="online-dot"></div>
-    </div>
-
-    <ul class="nav-menu">
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/dashboard" class="nav-link">
-          <i class="bi bi-grid-1x2"></i> Dashboard
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Menu" class="nav-link">
-          <i class="bi bi-cup-hot"></i> Menu
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Order" class="nav-link">
-          <i class="bi bi-bag"></i> Đơn hàng
-        </a>
-      </li>
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/Revenue" class="nav-link">
-          <i class="bi bi-bar-chart-fill"></i> Doanh thu
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Staff" class="nav-link">
-          <i class="bi bi-people"></i> Nhân viên
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Inventory" class="nav-link">
-          <i class="bi bi-box-seam"></i> Kho hàng
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Booking" class="nav-link active">
-          <i class="bi bi-calendar-event"></i> Đặt bàn
-        </a>
-      </li>
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/Accounts" class="nav-link">
-          <i class="bi bi-person-badge"></i> Tài khoản
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Setting" class="nav-link">
-          <i class="bi bi-gear"></i> Cài đặt
-        </a>
-      </li>
-    </ul>
-
-    <div class="logout-btn">
-      <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
-    </div>
-  </nav>
+  <!-- Sidebar -->
+  <div th:replace="~{fragments/sidebar :: sidebar('BOOKING')}"></div>
 
   <main class="main-content">
     <div class="header-row mb-3">
@@ -133,6 +61,15 @@
              <label class="form-label" for="bookingNoteAdmin">Ghi chú</label>
              <input id="bookingNoteAdmin" type="text" class="form-control" th:field="*{note}"
                placeholder="Yêu cầu đặc biệt (nếu có)" title="Ghi chú thêm cho đặt bàn">
+        </div>
+
+        <div class="col-md-4">
+             <label class="form-label" for="reservedTableNumber">Giữ bàn (tuỳ chọn)</label>
+             <select id="reservedTableNumber" class="form-select" th:field="*{reservedTableNumber}">
+               <option th:value="${null}">-- Chưa gán bàn --</option>
+               <option th:each="n : ${#numbers.sequence(1,20)}" th:value="${n}" th:text="${'Bàn ' + n}">Bàn 1</option>
+             </select>
+             <div class="form-text">Bàn sẽ hiển thị màu xanh trong cửa sổ giữ 15 phút.</div>
         </div>
 
         <div class="col-12 d-flex justify-content-between mt-3">

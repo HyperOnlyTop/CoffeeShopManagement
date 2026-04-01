@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 import java.util.Optional;
 
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.example.QuanLyQuanCafe.model.BookingStatus;
 import com.example.QuanLyQuanCafe.model.TableBooking;
 import com.example.QuanLyQuanCafe.repository.TableBookingRepository;
 
@@ -35,35 +37,51 @@ public class BookingController {
                                 @RequestParam("guests") int guests,
                                 @RequestParam(value = "note", required = false) String note) {
 
-        
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        LocalDate date = LocalDate.parse(dateStr, dateFormatter);
+        try {
+            if (name == null || name.isBlank() || phone == null || phone.isBlank() || guests < 1) {
+                return "redirect:/?bookingError=invalidTime#booking";
+            }
 
-        // Nếu ngày đặt sau ngày hiện tại thì coi là không hợp lệ
-        LocalDate today = LocalDate.now();
-        if (date.isAfter(today)) {
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            LocalDate date = LocalDate.parse(dateStr, dateFormatter);
+
+            // Không cho đặt ngày trong quá khứ
+            LocalDate today = LocalDate.now();
+            if (date.isBefore(today)) {
+                return "redirect:/?bookingError=invalidTime#booking";
+            }
+
+            // timeStr có thể là "Chọn giờ" -> parse sẽ lỗi
+            LocalTime time = LocalTime.parse(timeStr);
+            LocalDateTime bookingTime = LocalDateTime.of(date, time);
+
+            // Nếu đặt trong quá khứ (so với hiện tại) thì báo lỗi
+            if (bookingTime.isBefore(LocalDateTime.now())) {
+                return "redirect:/?bookingError=invalidTime#booking";
+            }
+
+            // Nếu đã có đặt bàn trùng chính xác khung giờ này thì báo lỗi
+            if (tableBookingRepository.existsByBookingTime(bookingTime)) {
+                return "redirect:/?bookingError=conflict#booking";
+            }
+
+            TableBooking booking = new TableBooking();
+            booking.setName(name.trim());
+            booking.setPhone(phone.trim());
+            booking.setEmail(email != null ? email.trim() : null);
+            booking.setBookingTime(bookingTime);
+            booking.setGuests(guests);
+            booking.setNote(note != null ? note.trim() : null);
+            booking.setStatus(BookingStatus.CONFIRMED);
+
+            tableBookingRepository.save(booking);
+
+            return "redirect:/?bookingSuccess=1#booking";
+        } catch (DateTimeParseException ex) {
             return "redirect:/?bookingError=invalidTime#booking";
+        } catch (Exception ex) {
+            return "redirect:/?bookingError=1#booking";
         }
-
-        LocalTime time = LocalTime.parse(timeStr);
-        LocalDateTime bookingTime = LocalDateTime.of(date, time);
-
-		// Nếu đã có đặt bàn trùng chính xác khung giờ này thì báo lỗi
-		if (tableBookingRepository.existsByBookingTime(bookingTime)) {
-			return "redirect:/?bookingError=conflict#booking";
-		}
-
-        TableBooking booking = new TableBooking();
-        booking.setName(name.trim());
-        booking.setPhone(phone.trim());
-        booking.setEmail(email != null ? email.trim() : null);
-        booking.setBookingTime(bookingTime);
-        booking.setGuests(guests);
-        booking.setNote(note != null ? note.trim() : null);
-
-        tableBookingRepository.save(booking);
-
-        return "redirect:/?bookingSuccess=1#booking";
     }
 
     @GetMapping("/Booking/new")
@@ -91,7 +109,12 @@ public class BookingController {
         if (booking.getId() != null) {
             // lấy bản ghi cũ để giữ createdAt
             Optional<TableBooking> existing = tableBookingRepository.findById(booking.getId());
-            existing.ifPresent(old -> booking.setCreatedAt(old.getCreatedAt()));
+            existing.ifPresent(old -> {
+                booking.setCreatedAt(old.getCreatedAt());
+                if (booking.getStatus() == null) {
+                    booking.setStatus(old.getStatus());
+                }
+            });
         }
         
         if (booking.getBookingTime() != null) {

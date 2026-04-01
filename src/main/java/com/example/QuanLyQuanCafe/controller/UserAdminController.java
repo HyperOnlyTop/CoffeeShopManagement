@@ -17,9 +17,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.QuanLyQuanCafe.controller.dto.UserCreateRequest;
+import com.example.QuanLyQuanCafe.controller.dto.UserLinkStaffRequest;
 import com.example.QuanLyQuanCafe.controller.dto.UserUpdateRequest;
 import com.example.QuanLyQuanCafe.model.AppUser;
 import com.example.QuanLyQuanCafe.repository.AppUserRepository;
+import com.example.QuanLyQuanCafe.repository.StaffRepository;
 
 @RestController
 @RequestMapping("/api/admin/users")
@@ -27,10 +29,12 @@ public class UserAdminController {
 
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final StaffRepository staffRepository;
 
-    public UserAdminController(AppUserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserAdminController(AppUserRepository userRepository, PasswordEncoder passwordEncoder, StaffRepository staffRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.staffRepository = staffRepository;
     }
 
     private boolean isAdmin() {
@@ -64,6 +68,18 @@ public class UserAdminController {
             return ResponseEntity.badRequest().body("Username đã tồn tại");
         }
 
+        Long staffId = request.getStaffId();
+        if (staffId == null) {
+            return ResponseEntity.badRequest().body("Vui lòng chọn nhân viên để gán cho tài khoản");
+        }
+        if (staffRepository.findById(staffId).isEmpty()) {
+            return ResponseEntity.badRequest().body("Không tìm thấy nhân viên");
+        }
+        AppUser other = userRepository.findByStaffId(staffId);
+        if (other != null) {
+            return ResponseEntity.badRequest().body("Nhân viên này đã được gán cho tài khoản: " + other.getUsername());
+        }
+
         AppUser user = new AppUser();
         user.setUsername(request.getUsername().trim());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -71,6 +87,7 @@ public class UserAdminController {
         user.setEmail(request.getEmail());
         user.setPhone(request.getPhone());
         user.setRole(request.getRole());
+        user.setStaffId(staffId);
 
         AppUser saved = userRepository.save(user);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
@@ -120,5 +137,35 @@ public class UserAdminController {
 
         userRepository.delete(user);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/staff")
+    public ResponseEntity<?> linkStaff(@PathVariable("id") Long id, @RequestBody UserLinkStaffRequest request) {
+        if (!isAdmin()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        AppUser user = userRepository.findById(id).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy tài khoản");
+        }
+
+        Long staffId = request != null ? request.getStaffId() : null;
+        if (staffId == null) {
+            user.setStaffId(null);
+            return ResponseEntity.ok(userRepository.save(user));
+        }
+
+        if (staffRepository.findById(staffId).isEmpty()) {
+            return ResponseEntity.badRequest().body("Không tìm thấy nhân viên");
+        }
+
+        AppUser other = userRepository.findByStaffId(staffId);
+        if (other != null && other.getId() != null && !other.getId().equals(user.getId())) {
+            return ResponseEntity.badRequest().body("Nhân viên này đã được gán cho tài khoản: " + other.getUsername());
+        }
+
+        user.setStaffId(staffId);
+        AppUser saved = userRepository.save(user);
+        return ResponseEntity.ok(saved);
     }
 }

@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -77,6 +78,62 @@ public class OrderService {
         return cafeOrderRepository.save(order);
     }
 
+    private static final Set<String> NON_DRINK_CATEGORIES = Set.of(
+            "bánh ngọt",
+            "thức ăn nhẹ",
+            "đồ ăn nhẹ",
+            "do an nhe",
+            "banh ngot",
+            "food",
+            "snack"
+    );
+
+    private boolean isDrinkMenuItem(MenuItem menuItem) {
+        if (menuItem == null) return false;
+        if (menuItem.getCategory() == null || menuItem.getCategory().getName() == null) {
+            return true; // không có danh mục thì tạm coi là đồ uống để không mất điểm
+        }
+        String cat = menuItem.getCategory().getName().trim().toLowerCase();
+        return !NON_DRINK_CATEGORIES.contains(cat);
+    }
+
+    private void maybeAwardLoyaltyPoints(CafeOrder order, List<OrderItem> orderItems) {
+        if (order == null) return;
+        if (order.getStatus() != OrderStatus.COMPLETED) return;
+        if (Boolean.TRUE.equals(order.getLoyaltyPointsAwarded())) return;
+
+        String phone = order.getCustomerPhone();
+        if (phone == null || phone.isBlank()) return;
+
+        Customer customer = customerRepository.findByPhone(phone.trim()).orElse(null);
+        if (customer == null) return;
+
+        int earned = 0;
+        if (orderItems != null) {
+            for (OrderItem oi : orderItems) {
+                if (oi == null) continue;
+                int qty = oi.getQuantity() != null ? oi.getQuantity() : 0;
+                if (qty <= 0) continue;
+                MenuItem mi = oi.getMenuItem();
+                if (isDrinkMenuItem(mi)) {
+                    earned += qty;
+                }
+            }
+        }
+        if (earned <= 0) {
+            order.setLoyaltyPointsAwarded(Boolean.TRUE);
+            cafeOrderRepository.save(order);
+            return;
+        }
+
+        int currentPoints = customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0;
+        customer.setLoyaltyPoints(currentPoints + earned);
+        customerRepository.save(customer);
+
+        order.setLoyaltyPointsAwarded(Boolean.TRUE);
+        cafeOrderRepository.save(order);
+    }
+
     @Transactional
     public CafeOrder createOrder(OrderCreateRequest request) {
         CafeOrder order = new CafeOrder();
@@ -121,6 +178,8 @@ public class OrderService {
         order.setPaymentMethod(paymentMethod);
 
         order.setCreatedAt(LocalDateTime.now());
+        order.setLoyaltyPointsAwarded(Boolean.FALSE);
+        order.setTableReleased(Boolean.FALSE);
 
         // Initial save to get ID
         CafeOrder savedOrder = cafeOrderRepository.save(order);
@@ -154,6 +213,7 @@ public class OrderService {
                 orderItem.setItemCost(cost);
                 orderItem.setQuantity(quantity);
                 orderItem.setSubtotal(lineSubtotal);
+                orderItem.setNote(line.getNote());
 
                 orderItemRepository.save(orderItem);
             }
@@ -182,10 +242,15 @@ public class OrderService {
                 cust.setName(request.getCustomerName() != null && !request.getCustomerName().trim().isEmpty() ? request.getCustomerName().trim() : "Khách mới");
                 cust.setTotalOrders(1);
                 cust.setTotalSpent(finalOrder.getTotal());
+                cust.setLoyaltyPoints(0);
+                cust.setLoyaltyRedeemedCount(0);
             }
             customerRepository.save(cust);
         }
 
+        // Nếu đơn tạo ra đã là COMPLETED thì cộng điểm ngay (1 ly = 1 điểm, theo SĐT)
+        List<OrderItem> finalItems = orderItemRepository.findByOrder(finalOrder);
+        maybeAwardLoyaltyPoints(finalOrder, finalItems);
         return finalOrder;
     }
 
@@ -195,6 +260,8 @@ public class OrderService {
         if (order == null) {
             return null;
         }
+
+        OrderStatus previousStatus = order.getStatus();
 
         order.setCustomerName(request.getCustomerName());
         order.setCustomerPhone(request.getCustomerPhone());
@@ -267,6 +334,7 @@ public class OrderService {
                 orderItem.setItemCost(cost);
                 orderItem.setQuantity(quantity);
                 orderItem.setSubtotal(lineSubtotal);
+                orderItem.setNote(line.getNote());
 
                 orderItemRepository.save(orderItem);
             }
@@ -276,7 +344,15 @@ public class OrderService {
         order.setDiscount(BigDecimal.ZERO);
         order.setTotal(subtotal);
 
-        return cafeOrderRepository.save(order);
+        CafeOrder saved = cafeOrderRepository.save(order);
+
+        // Nếu chuyển sang COMPLETED và chưa cộng điểm thì cộng 1 lần
+        if (saved.getStatus() == OrderStatus.COMPLETED && previousStatus != OrderStatus.COMPLETED) {
+            List<OrderItem> finalItems = orderItemRepository.findByOrder(saved);
+            maybeAwardLoyaltyPoints(saved, finalItems);
+        }
+
+        return saved;
     }
 
     private String generateOrderCode() {

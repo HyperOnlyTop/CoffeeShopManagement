@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tài khoản | Quản lý quán cà phê</title>
+  <title>Thành viên | Quản lý quán cà phê</title>
 
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -17,86 +17,17 @@
 
   <!-- Shared layout styles -->
   <link rel="stylesheet" href="/css/doanhthu.css">
+  <style>
+    .accounts-tabs .nav-link {
+      font-weight: 600;
+    }
+  </style>
 </head>
 
 <body>
 
   <!-- Sidebar -->
-  <nav class="sidebar">
-    <a th:href="@{/}" class="brand" style="text-decoration: none; color: inherit;">
-      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo"
-        class="brand-img">
-      <div class="brand-text">
-        <h5>Brew &amp; Co.</h5>
-        <p style="color: #d47633;">Coffee Management</p>
-      </div>
-    </a>
-
-    <div class="user-profile" th:if="${currentUser != null}">
-      <img
-        th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
-        alt="User" style="object-fit: cover;">
-      <div class="user-info">
-        <h6
-          th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
-          Tên tài khoản</h6>
-        <p th:text="${currentUser.email}">Email</p>
-      </div>
-      <div class="online-dot"></div>
-    </div>
-
-    <ul class="nav-menu">
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/dashboard" class="nav-link">
-          <i class="bi bi-grid-1x2"></i> Dashboard
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Menu" class="nav-link">
-          <i class="bi bi-cup-hot"></i> Menu
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Order" class="nav-link">
-          <i class="bi bi-bag"></i> Đơn hàng
-        </a>
-      </li>
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/Revenue" class="nav-link">
-          <i class="bi bi-bar-chart-fill"></i> Doanh thu
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Staff" class="nav-link">
-          <i class="bi bi-people"></i> Nhân viên
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Inventory" class="nav-link">
-          <i class="bi bi-box-seam"></i> Kho hàng
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Booking" class="nav-link">
-          <i class="bi bi-calendar-event"></i> Đặt bàn
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Setting" class="nav-link">
-          <i class="bi bi-gear"></i> Cài đặt
-        </a>
-      </li>
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/Accounts" class="nav-link active">
-          <i class="bi bi-person-badge"></i> Tài khoản
-        </a>
-      </li>
-    </ul>
-
-    <div class="logout-btn">
-      <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
-    </div>
-  </nav>
+  <div th:replace="~{fragments/sidebar :: sidebar('ACCOUNTS')}"></div>
 
   <!-- Main content -->
   <main class="main-content">
@@ -104,87 +35,89 @@
     <!-- Header -->
     <div class="header-row">
       <div class="page-title">
-        <h2>Quản lý tài khoản</h2>
-        <p>Thêm, sửa, xóa tài khoản và phân quyền (ADMIN/STAFF/KHACH)</p>
+        <h2>Thành viên</h2>
+        <p>Quản lý khách hàng theo SĐT, tích điểm theo ly, và lịch sử đặt bàn</p>
       </div>
       <div class="header-actions">
-        <button class="btn btn-primary" type="button" id="btnOpenCreateUserModal">
-          <i class="bi bi-person-plus"></i> Thêm tài khoản
-        </button>
+        <!-- Quản lý tài khoản nhân sự đã chuyển sang trang Nhân viên -->
       </div>
     </div>
 
     <div class="custom-card mb-4">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="settings-section-title mb-0">Danh sách tài khoản hệ thống</h6>
-      </div>
-      <div class="table-responsive">
-        <table class="table align-middle mb-0">
-          <thead>
-            <tr>
-              <th>Username</th>
-              <th>Họ tên</th>
-              <th>Email</th>
-              <th>Số điện thoại</th>
-              <th>Vai trò</th>
-              <th style="width: 140px;">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody id="userAdminTableBody">
-            <tr>
-              <td colspan="6" class="text-center text-muted py-3">Đang tải danh sách tài khoản...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <div class="pt-3">
+          <div class="alert alert-light border rounded-3 small mb-3">
+            <div class="fw-semibold mb-1">Quy tắc tích điểm</div>
+            <div>- Tích điểm bằng <strong>SĐT</strong>.</div>
+            <div>- <strong>Mỗi ly nước = 1 điểm</strong>.</div>
+            <div>- <strong>Đủ 10 điểm</strong> đổi <strong>1 ly nước</strong> (giá <strong>&lt; 50.000 VNĐ</strong>).</div>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+            <div class="input-group" style="max-width: 420px;">
+              <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+              <input id="customerSearchInput" type="text" class="form-control" placeholder="Tìm theo tên / SĐT / email">
+            </div>
+            <button class="btn btn-outline-secondary btn-sm" type="button" id="btnReloadCustomers">
+              <i class="bi bi-arrow-clockwise me-1"></i> Tải lại
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th style="width: 70px;">ID</th>
+                  <th>Họ tên</th>
+                  <th>SĐT</th>
+                  <th>Email</th>
+                  <th class="text-end" style="width: 120px;">Điểm</th>
+                  <th class="text-end" style="width: 120px;">Đã đổi</th>
+                  <th style="width: 240px;">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="customersTableBody">
+                <tr>
+                  <td colspan="7" class="text-center text-muted py-3">Đang tải danh sách khách hàng...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
     </div>
 
   </main>
 
-  <!-- Modal tạo / sửa tài khoản (ADMIN) -->
-  <div class="modal fade" id="userAdminModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+  <!-- Quản lý tài khoản nhân sự đã chuyển sang trang Nhân viên -->
+
+  <!-- Modal: Lịch sử đặt bàn theo SĐT -->
+  <div class="modal fade" id="bookingHistoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="userAdminModalTitle">Thêm tài khoản</h5>
+          <h5 class="modal-title fw-semibold">Lịch sử đặt bàn</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
         </div>
         <div class="modal-body">
-          <form id="userAdminForm">
-            <input type="hidden" id="userId">
-            <div class="mb-3">
-              <label class="form-label">Username</label>
-              <input type="text" class="form-control" id="userUsername" placeholder="vd: admin" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Mật khẩu <span class="text-muted small" id="userPasswordHint">(bắt buộc)</span></label>
-              <input type="password" class="form-control" id="userPassword" placeholder="Nhập mật khẩu">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Họ và tên</label>
-              <input type="text" class="form-control" id="userFullName" placeholder="vd: Nguyễn Văn A">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Email</label>
-              <input type="email" class="form-control" id="userEmail" placeholder="vd: user@cafe.com">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Số điện thoại</label>
-              <input type="text" class="form-control" id="userPhone" placeholder="vd: 0901234567">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Vai trò</label>
-              <select class="form-select" id="userRole">
-                <option value="ADMIN">Quản trị (ADMIN)</option>
-                <option value="STAFF">Nhân viên (STAFF)</option>
-                <option value="KHACH">Khách (KHACH)</option>
-              </select>
-            </div>
-          </form>
+          <div class="small text-muted mb-2">SĐT: <strong id="bookingHistoryPhoneText">—</strong></div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Thời gian đặt</th>
+                  <th class="text-center" style="width: 80px;">Số khách</th>
+                  <th>Ghi chú</th>
+                  <th style="width: 160px;">Thời gian gửi</th>
+                </tr>
+              </thead>
+              <tbody id="bookingHistoryBody">
+                <tr>
+                  <td colspan="4" class="text-center text-muted py-3">Đang tải...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-          <button type="submit" form="userAdminForm" class="btn btn-primary" id="userAdminModalSaveBtn">Lưu</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
         </div>
       </div>
     </div>
@@ -196,224 +129,206 @@
   <script src="/js/admin-common.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      const userTableBody = document.getElementById('userAdminTableBody');
-      const btnOpenCreateUserModal = document.getElementById('btnOpenCreateUserModal');
-      const userAdminModalEl = document.getElementById('userAdminModal');
-      let userAdminModalInstance = null;
+      // Customers (loyalty)
+      const customersTableBody = document.getElementById('customersTableBody');
+      const customerSearchInput = document.getElementById('customerSearchInput');
+      const btnReloadCustomers = document.getElementById('btnReloadCustomers');
+      let customersCache = [];
 
-      if (userAdminModalEl && typeof bootstrap !== 'undefined') {
-        userAdminModalInstance = bootstrap.Modal.getOrCreateInstance(userAdminModalEl);
+      // Booking history modal
+      const bookingHistoryModalEl = document.getElementById('bookingHistoryModal');
+      const bookingHistoryPhoneText = document.getElementById('bookingHistoryPhoneText');
+      const bookingHistoryBody = document.getElementById('bookingHistoryBody');
+      let bookingHistoryModalInstance = null;
+
+      if (bookingHistoryModalEl && typeof bootstrap !== 'undefined') {
+        bookingHistoryModalInstance = bootstrap.Modal.getOrCreateInstance(bookingHistoryModalEl);
       }
 
-      function renderUsers(users) {
-        if (!userTableBody) return;
+      function normalize(text) {
+        return text ? text.toString().toLowerCase().trim() : '';
+      }
 
-        if (!users || users.length === 0) {
-          userTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">Chưa có tài khoản nào.</td></tr>';
+      function renderCustomers(customers) {
+        if (!customersTableBody) return;
+        if (!customers || customers.length === 0) {
+          customersTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Chưa có khách hàng nào.</td></tr>';
           return;
         }
 
-        const rows = users.map(function (u) {
-          const safeUsername = u.username || '';
-          const safeFullName = u.fullName || '';
-          const safeEmail = u.email || '';
-          const safePhone = u.phone || '';
-          const safeRole = u.role || '';
+        const rows = customers.map(function (c) {
+          const id = c.id != null ? c.id : '';
+          const name = c.name || '';
+          const phone = c.phone || '';
+          const email = c.email || '';
+          const points = c.loyaltyPoints != null ? Number(c.loyaltyPoints) : 0;
+          const redeemed = c.loyaltyRedeemedCount != null ? Number(c.loyaltyRedeemedCount) : 0;
+          const canRedeem = points >= 10 && phone;
 
-          return '<tr data-id="' + u.id + '">' +
-            '<td>' + safeUsername + '</td>' +
-            '<td>' + safeFullName + '</td>' +
-            '<td>' + safeEmail + '</td>' +
-            '<td>' + safePhone + '</td>' +
-            '<td>' + safeRole + '</td>' +
+          return '<tr data-phone="' + phone + '">' +
+            '<td>' + id + '</td>' +
+            '<td>' + name + '</td>' +
+            '<td>' + phone + '</td>' +
+            '<td>' + email + '</td>' +
+            '<td class="text-end"><strong>' + points + '</strong></td>' +
+            '<td class="text-end">' + redeemed + '</td>' +
             '<td>' +
-            '<button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-edit-user">Sửa</button>' +
-            '<button type="button" class="btn btn-sm btn-outline-danger btn-delete-user">Xóa</button>' +
+            '<button type="button" class="btn btn-sm btn-outline-primary me-2 btn-booking-history" ' + (phone ? '' : 'disabled') + '>' +
+            '<i class="bi bi-clock-history me-1"></i> Lịch sử đặt bàn' +
+            '</button>' +
+            '<button type="button" class="btn btn-sm btn-warning me-2 btn-redeem" ' + (canRedeem ? '' : 'disabled') + '>' +
+            '<i class="bi bi-gift me-1"></i> Đổi 10 điểm' +
+            '</button>' +
+            '<button type="button" class="btn btn-sm btn-outline-secondary btn-adjust" data-delta="1" ' + (phone ? '' : 'disabled') + '>+1</button>' +
+            '<button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-adjust" data-delta="-1" ' + (phone ? '' : 'disabled') + '>-1</button>' +
             '</td>' +
             '</tr>';
         }).join('');
 
-        userTableBody.innerHTML = rows;
+        customersTableBody.innerHTML = rows;
       }
 
-      function loadUsers() {
-        if (!userTableBody) return;
+      function applyCustomerSearch() {
+        const term = normalize(customerSearchInput ? customerSearchInput.value : '');
+        if (!term) {
+          renderCustomers(customersCache);
+          return;
+        }
+        const filtered = customersCache.filter(function (c) {
+          const hay = normalize((c.name || '') + ' ' + (c.phone || '') + ' ' + (c.email || ''));
+          return hay.indexOf(term) !== -1;
+        });
+        renderCustomers(filtered);
+      }
 
-        fetch('/api/admin/users')
+      function loadCustomers() {
+        if (!customersTableBody) return;
+        customersTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Đang tải danh sách khách hàng...</td></tr>';
+
+        fetch('/api/loyalty/customers')
           .then(function (res) {
-            if (!res.ok) {
-              throw new Error('Không thể tải danh sách tài khoản');
-            }
+            if (!res.ok) throw new Error('Không thể tải khách hàng');
             return res.json();
           })
           .then(function (data) {
-            renderUsers(data);
+            customersCache = Array.isArray(data) ? data : [];
+            applyCustomerSearch();
           })
           .catch(function () {
-            userTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-3">Lỗi khi tải danh sách tài khoản.</td></tr>';
+            customersTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Lỗi khi tải khách hàng.</td></tr>';
           });
       }
 
-      function openUserModal(mode, user) {
-        const titleEl = document.getElementById('userAdminModalTitle');
-        const idInput = document.getElementById('userId');
-        const usernameInput = document.getElementById('userUsername');
-        const passwordInput = document.getElementById('userPassword');
-        const fullNameInput = document.getElementById('userFullName');
-        const emailInput = document.getElementById('userEmail');
-        const phoneInput = document.getElementById('userPhone');
-        const roleSelect = document.getElementById('userRole');
-        const passwordHint = document.getElementById('userPasswordHint');
-
-        if (!titleEl || !idInput || !usernameInput || !passwordInput || !fullNameInput || !emailInput || !phoneInput || !roleSelect || !passwordHint) {
-          return;
-        }
-
-        if (mode === 'edit' && user) {
-          titleEl.textContent = 'Cập nhật tài khoản';
-          idInput.value = user.id;
-          usernameInput.value = user.username || '';
-          usernameInput.disabled = true;
-          passwordInput.value = '';
-          passwordHint.textContent = '(để trống nếu không đổi mật khẩu)';
-          fullNameInput.value = user.fullName || '';
-          emailInput.value = user.email || '';
-          phoneInput.value = user.phone || '';
-          roleSelect.value = user.role || 'STAFF';
-        } else {
-          titleEl.textContent = 'Thêm tài khoản';
-          idInput.value = '';
-          usernameInput.value = '';
-          usernameInput.disabled = false;
-          passwordInput.value = '';
-          passwordHint.textContent = '(bắt buộc)';
-          fullNameInput.value = '';
-          emailInput.value = '';
-          phoneInput.value = '';
-          roleSelect.value = 'STAFF';
-        }
-
-        if (userAdminModalInstance) {
-          userAdminModalInstance.show();
-        }
-      }
-
-      if (btnOpenCreateUserModal) {
-        btnOpenCreateUserModal.addEventListener('click', function () {
-          openUserModal('create', null);
-        });
-      }
-
-      if (userTableBody) {
-        userTableBody.addEventListener('click', function (e) {
-          const target = e.target;
-          const row = target.closest('tr');
-          if (!row) return;
-          const id = row.getAttribute('data-id');
-          if (!id) return;
-
-          if (target.classList.contains('btn-edit-user')) {
-            const user = {
-              id: id,
-              username: row.children[0].textContent,
-              fullName: row.children[1].textContent,
-              email: row.children[2].textContent,
-              phone: row.children[3].textContent,
-              role: row.children[4].textContent
-            };
-            openUserModal('edit', user);
-          } else if (target.classList.contains('btn-delete-user')) {
-            if (!confirm('Bạn có chắc chắn muốn xóa tài khoản này?')) {
+      function redeemByPhone(phone) {
+        if (!phone) return;
+        fetch('/api/loyalty/redeem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: phone })
+        })
+          .then(function (res) {
+            return res.text().then(function (txt) { return { ok: res.ok, txt: txt }; });
+          })
+          .then(function (result) {
+            if (!result.ok) {
+              alert(result.txt || 'Đổi điểm thất bại');
               return;
             }
-
-            fetch('/api/admin/users/' + id, {
-              method: 'DELETE'
-            })
-              .then(function (res) {
-                if (!res.ok && res.status !== 204) {
-                  throw new Error('Xóa tài khoản thất bại');
-                }
-                loadUsers();
-              })
-              .catch(function () {
-                alert('Không thể xóa tài khoản.');
-              });
-          }
-        });
-      }
-
-      const userAdminForm = document.getElementById('userAdminForm');
-      if (userAdminForm) {
-        userAdminForm.addEventListener('submit', function (e) {
-          e.preventDefault();
-
-          const id = document.getElementById('userId').value;
-          const username = document.getElementById('userUsername').value.trim();
-          const password = document.getElementById('userPassword').value;
-          const fullName = document.getElementById('userFullName').value.trim();
-          const email = document.getElementById('userEmail').value.trim();
-          const phone = document.getElementById('userPhone').value.trim();
-          const role = document.getElementById('userRole').value;
-
-          if (!id && !username) {
-            alert('Username không được để trống');
-            return;
-          }
-
-          if (!id && !password) {
-            alert('Mật khẩu không được để trống');
-            return;
-          }
-
-          const payload = {
-            fullName: fullName || null,
-            email: email || null,
-            phone: phone || null,
-            role: role || null
-          };
-
-          if (password) {
-            payload.password = password;
-          }
-
-          let url = '/api/admin/users';
-          let method = 'POST';
-
-          if (id) {
-            url = '/api/admin/users/' + id;
-            method = 'PUT';
-          } else {
-            payload.username = username;
-          }
-
-          fetch(url, {
-            method: method,
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
+            loadCustomers();
+            alert('Đã đổi 10 điểm thành công. (Nhớ chọn món < 50.000 VNĐ)');
           })
-            .then(function (res) {
-              if (!res.ok) {
-                return res.text().then(function (t) { throw new Error(t || 'Lưu tài khoản thất bại'); });
-              }
-              return res.json().catch(function () { return null; });
-            })
-            .then(function () {
-              if (userAdminModalInstance) {
-                userAdminModalInstance.hide();
-              }
-              loadUsers();
-            })
-            .catch(function (err) {
-              alert(err.message || 'Không thể lưu tài khoản');
-            });
-        });
+          .catch(function () {
+            alert('Lỗi khi đổi điểm');
+          });
       }
 
-      if (userTableBody) {
-        loadUsers();
+      function adjustPoints(phone, delta) {
+        if (!phone) return;
+        fetch('/api/loyalty/adjust', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: phone, delta: delta })
+        })
+          .then(function (res) { return res.ok ? res.json() : null; })
+          .then(function () { loadCustomers(); })
+          .catch(function () { alert('Lỗi khi cập nhật điểm'); });
+      }
+
+      function formatDateTime(isoString) {
+        if (!isoString) return '';
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return isoString;
+        return d.toLocaleString('vi-VN');
+      }
+
+      function openBookingHistory(phone) {
+        if (!bookingHistoryModalInstance || !bookingHistoryBody) {
+          return;
+        }
+        if (bookingHistoryPhoneText) bookingHistoryPhoneText.textContent = phone || '—';
+        bookingHistoryBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Đang tải...</td></tr>';
+
+        fetch('/api/bookings/by-phone?phone=' + encodeURIComponent(phone))
+          .then(function (res) { return res.ok ? res.json() : []; })
+          .then(function (data) {
+            if (!Array.isArray(data) || data.length === 0) {
+              bookingHistoryBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Chưa có đặt bàn nào theo SĐT này.</td></tr>';
+              return;
+            }
+            const rows = data.map(function (b) {
+              const bookingTime = formatDateTime(b.bookingTime);
+              const guests = b.guests != null ? b.guests : '';
+              const note = b.note || '';
+              const createdAt = formatDateTime(b.createdAt);
+              return '<tr>' +
+                '<td>' + bookingTime + '</td>' +
+                '<td class="text-center">' + guests + '</td>' +
+                '<td>' + note + '</td>' +
+                '<td>' + createdAt + '</td>' +
+                '</tr>';
+            }).join('');
+            bookingHistoryBody.innerHTML = rows;
+          })
+          .catch(function () {
+            bookingHistoryBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-3">Lỗi khi tải lịch sử đặt bàn.</td></tr>';
+          });
+
+        bookingHistoryModalInstance.show();
+      }
+
+      loadCustomers();
+
+      if (btnReloadCustomers) {
+        btnReloadCustomers.addEventListener('click', loadCustomers);
+      }
+      if (customerSearchInput) {
+        customerSearchInput.addEventListener('input', applyCustomerSearch);
+      }
+      if (customersTableBody) {
+        customersTableBody.addEventListener('click', function (e) {
+          const redeemBtn = e.target.closest('.btn-redeem');
+          const adjustBtn = e.target.closest('.btn-adjust');
+          const bookingBtn = e.target.closest('.btn-booking-history');
+          const row = e.target.closest('tr');
+          const phone = row ? row.getAttribute('data-phone') : null;
+
+          if (bookingBtn && phone) {
+            openBookingHistory(phone);
+            return;
+          }
+
+          if (redeemBtn && phone) {
+            if (confirm('Đổi 10 điểm lấy 1 ly nước (< 50.000 VNĐ)?')) {
+              redeemByPhone(phone);
+            }
+            return;
+          }
+
+          if (adjustBtn && phone) {
+            const delta = Number(adjustBtn.getAttribute('data-delta') || 0);
+            if (delta) adjustPoints(phone, delta);
+          }
+        });
       }
     });
   </script>

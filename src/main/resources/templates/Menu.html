@@ -22,76 +22,7 @@
 <body>
 
   <!-- Sidebar -->
-  <nav class="sidebar">
-    <a th:href="@{/}" class="brand" style="text-decoration: none; color: inherit;">
-      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo"
-        class="brand-img">
-      <div class="brand-text">
-        <h5>Brew &amp; Co.</h5>
-        <p style="color: #d47633;">Coffee Management</p>
-      </div>
-    </a>
-
-    <div class="user-profile" th:if="${currentUser != null}">
-      <img
-        th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
-        alt="User" style="object-fit: cover;">
-      <div class="user-info">
-        <h6
-          th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
-          Tên tài khoản</h6>
-        <p th:text="${currentUser.email}">Email</p>
-      </div>
-      <div class="online-dot"></div>
-    </div>
-
-    <ul class="nav-menu">
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/dashboard" class="nav-link">
-          <i class="bi bi-grid-1x2"></i> Dashboard
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Menu" class="nav-link active">
-          <i class="bi bi-cup-hot"></i> Menu
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Order" class="nav-link">
-          <i class="bi bi-bag"></i> Đơn hàng
-        </a>
-      </li>
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/Revenue" class="nav-link">
-          <i class="bi bi-bar-chart-fill"></i> Doanh thu
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Staff" class="nav-link">
-          <i class="bi bi-people"></i> Nhân viên
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Inventory" class="nav-link">
-          <i class="bi bi-box-seam"></i> Kho hàng
-        </a>
-      </li>
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/Accounts" class="nav-link">
-          <i class="bi bi-person-badge"></i> Tài khoản
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="/Setting" class="nav-link">
-          <i class="bi bi-gear"></i> Cài đặt
-        </a>
-      </li>
-    </ul>
-
-    <div class="logout-btn">
-      <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
-    </div>
-  </nav>
+  <div th:replace="~{fragments/sidebar :: sidebar('MENU')}"></div>
 
   <!-- Main content -->
   <main class="main-content">
@@ -116,12 +47,8 @@
         <input id="menuSearchInput" type="text" placeholder="Tìm kiếm món..." />
       </div>
       <div class="menu-filters">
-        <button class="menu-filter active" data-category="ALL">Tất cả</button>
-        <button class="menu-filter" data-category="Cà phê">Cà phê</button>
-        <button class="menu-filter" data-category="Trà">Trà</button>
-        <button class="menu-filter" data-category="Sinh tố">Sinh tố</button>
-        <button class="menu-filter" data-category="Bánh ngọt">Bánh ngọt</button>
-        <button class="menu-filter" data-category="Thức ăn nhẹ">Thức ăn nhẹ</button>
+        <button class="menu-filter active" data-category="ALL" type="button">Tất cả</button>
+        <!-- Các nút danh mục sẽ được render từ DB qua API /api/menu/categories -->
       </div>
     </div>
 
@@ -188,11 +115,7 @@
               <div class="col-6">
                 <label class="form-label fw-medium">Danh mục</label>
                 <select id="addItemCategory" class="form-select" required>
-                  <option>Cà phê</option>
-                  <option>Trà</option>
-                  <option>Sinh tố</option>
-                  <option>Bánh ngọt</option>
-                  <option>Đồ ăn nhẹ</option>
+                  <option value="" selected disabled>Đang tải danh mục...</option>
                 </select>
               </div>
             </div>
@@ -250,11 +173,7 @@
             <div class="mb-3">
               <label class="form-label fw-medium">Danh mục</label>
               <select id="editItemCategory" class="form-select">
-                <option>Cà phê</option>
-                <option>Trà</option>
-                <option>Sinh tố</option>
-                <option>Bánh ngọt</option>
-                <option>Đồ ăn nhẹ</option>
+                <option value="" selected disabled>Đang tải danh mục...</option>
               </select>
             </div>
 
@@ -297,6 +216,106 @@
         var filterButtons = document.querySelectorAll('.menu-filter');
         var currentCategory = 'ALL';
         var selectedCard = null;
+        var categoriesCache = [];
+
+        function normalize(text) {
+          return text ? text.toString().toLowerCase().trim() : '';
+        }
+
+        function clearSelect(selectEl, placeholderText) {
+          if (!selectEl) return;
+          selectEl.innerHTML = '';
+          var opt = document.createElement('option');
+          opt.value = '';
+          opt.disabled = true;
+          opt.selected = true;
+          opt.textContent = placeholderText || 'Chọn danh mục';
+          selectEl.appendChild(opt);
+        }
+
+        function setSelectOptions(selectEl, values, placeholderText) {
+          if (!selectEl) return;
+          clearSelect(selectEl, placeholderText);
+          (values || []).forEach(function (val) {
+            if (!val) return;
+            var opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = val;
+            selectEl.appendChild(opt);
+          });
+        }
+
+        function renderCategoryFilters(categories) {
+          var filtersContainer = document.querySelector('.menu-filters');
+          if (!filtersContainer) return;
+
+          // Xóa các nút danh mục cũ (giữ lại "Tất cả")
+          filtersContainer.querySelectorAll('button.menu-filter').forEach(function (btn) {
+            if (btn.dataset && btn.dataset.category !== 'ALL') {
+              btn.remove();
+            }
+          });
+
+          (categories || []).forEach(function (cat) {
+            if (!cat) return;
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'menu-filter';
+            btn.dataset.category = cat;
+            btn.textContent = cat;
+            filtersContainer.appendChild(btn);
+          });
+
+          // Re-bind filterButtons sau khi render
+          filterButtons = document.querySelectorAll('.menu-filter');
+          if (filterButtons && filterButtons.length) {
+            filterButtons.forEach(function (btn) {
+              btn.addEventListener('click', function () {
+                filterButtons.forEach(function (b) { b.classList.remove('active'); });
+                this.classList.add('active');
+                currentCategory = this.dataset.category || 'ALL';
+                applyMenuFilters();
+              });
+            });
+          }
+        }
+
+        function loadCategoriesFromDb() {
+          return fetch('/api/menu/categories')
+            .then(function (res) { return res.ok ? res.json() : []; })
+            .then(function (data) {
+              if (!Array.isArray(data)) {
+                return [];
+              }
+              // data là List<MenuCategory> => map name
+              var names = data
+                .map(function (c) { return c && c.name ? c.name : null; })
+                .filter(function (s) { return s && s.toString().trim().length > 0; });
+              // distinct + sort
+              var seen = {};
+              var distinct = [];
+              names.forEach(function (n) {
+                var key = normalize(n);
+                if (!key || seen[key]) return;
+                seen[key] = true;
+                distinct.push(n.toString().trim());
+              });
+              distinct.sort(function (a, b) { return a.localeCompare(b, 'vi', { sensitivity: 'base' }); });
+              categoriesCache = distinct;
+
+              // Render filters + fill selects
+              renderCategoryFilters(categoriesCache);
+              setSelectOptions(document.getElementById('addItemCategory'), categoriesCache, 'Chọn danh mục');
+              setSelectOptions(document.getElementById('editItemCategory'), categoriesCache, 'Chọn danh mục');
+              return categoriesCache;
+            })
+            .catch(function () {
+              // Nếu lỗi, giữ nguyên trạng (chỉ có "Tất cả"), và để select hiển thị thông báo
+              setSelectOptions(document.getElementById('addItemCategory'), [], 'Không tải được danh mục');
+              setSelectOptions(document.getElementById('editItemCategory'), [], 'Không tải được danh mục');
+              return [];
+            });
+        }
 
         if (addItemBtn && addItemModalEl) {
           var addItemModal = new bootstrap.Modal(addItemModalEl);
@@ -352,10 +371,6 @@
           }
 
           // Tìm kiếm + lọc theo danh mục
-          function normalize(text) {
-            return text ? text.toString().toLowerCase().trim() : '';
-          }
-
           function applyMenuFilters() {
             var term = normalize(searchInput ? searchInput.value : '');
             var cols = document.querySelectorAll('.row.g-4 > .col-sm-6.col-lg-4.col-xl-3');
@@ -384,16 +399,7 @@
             searchInput.addEventListener('input', applyMenuFilters);
           }
 
-          if (filterButtons && filterButtons.length) {
-            filterButtons.forEach(function (btn) {
-              btn.addEventListener('click', function () {
-                filterButtons.forEach(function (b) { b.classList.remove('active'); });
-                this.classList.add('active');
-                currentCategory = this.dataset.category || 'ALL';
-                applyMenuFilters();
-              });
-            });
-          }
+          // filterButtons sẽ được bind lại sau khi renderCategoryFilters()
         }
 
         if (editItemModalEl) {
@@ -447,9 +453,19 @@
               }
               var categorySelect = document.getElementById('editItemCategory');
               if (categorySelect) {
+                // Nếu danh mục chưa được load kịp, fallback: set value trực tiếp
+                var target = category ? category.toString().trim() : '';
+                var matched = false;
                 Array.from(categorySelect.options).forEach(function (opt) {
-                  opt.selected = (opt.text.trim().toLowerCase() === category.trim().toLowerCase());
+                  var same = normalize(opt.value || opt.textContent) === normalize(target);
+                  if (same) {
+                    opt.selected = true;
+                    matched = true;
+                  }
                 });
+                if (!matched && target) {
+                  categorySelect.value = target;
+                }
               }
               var imgUrlInput = document.getElementById('editItemImageUrl');
               if (imgUrlInput) {
@@ -580,6 +596,9 @@
           }
         }
       }
+
+      // Load categories as early as possible (filters + dropdown categories)
+      loadCategoriesFromDb();
     });
   </script>
 

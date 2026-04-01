@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Collections;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import java.security.Principal;
 import org.springframework.security.core.Authentication;
@@ -27,6 +29,7 @@ import com.example.QuanLyQuanCafe.model.OrderItem;
 import com.example.QuanLyQuanCafe.model.OrderStatus;
 import com.example.QuanLyQuanCafe.model.AppUser;
 import com.example.QuanLyQuanCafe.model.TableBooking;
+import com.example.QuanLyQuanCafe.model.OrderType;
 import com.example.QuanLyQuanCafe.service.MenuService;
 import com.example.QuanLyQuanCafe.service.OrderService;
 import com.example.QuanLyQuanCafe.service.StaffService;
@@ -69,13 +72,6 @@ public class ProductController {
 
 	@GetMapping("/dashboard")
 	public String dashboard(Model model, Principal principal) {
-		if (principal != null) {
-			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-			if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_STAFF"))) {
-				return "redirect:/Menu";
-			}
-		}
-
 		LocalDate today = LocalDate.now();
 
 		DailyRevenue todayRevenueRow = dailyRevenueService.findByDate(today);
@@ -197,6 +193,91 @@ public class ProductController {
 		return "Booking";
 	}
 
+	@GetMapping("/Tables")
+	public String tableManagement(Model model) {
+		final int totalTables = 20;
+		List<TableView> tables = new ArrayList<>();
+		for (int i = 1; i <= totalTables; i++) {
+			tables.add(TableView.free(i));
+		}
+
+		// Xác định các bàn đang có khách dựa theo đơn "tại bàn" chưa hoàn thành/chưa hủy
+		List<CafeOrder> orders = orderService.findAll();
+		Pattern digitPattern = Pattern.compile("(\\d+)");
+
+		for (CafeOrder o : orders) {
+			if (o == null) continue;
+			if (o.getType() != OrderType.DINE_IN) continue;
+			// Bàn chỉ trả trống khi đơn bị HỦY. Các trạng thái khác vẫn coi là có khách/block.
+			if (o.getStatus() == OrderStatus.CANCELLED) continue;
+			if (Boolean.TRUE.equals(o.getTableReleased())) continue;
+
+			String tableName = o.getTableName();
+			if (tableName == null || tableName.isBlank()) continue;
+
+			Matcher m = digitPattern.matcher(tableName);
+			if (!m.find()) continue;
+
+			int tableNo;
+			try {
+				tableNo = Integer.parseInt(m.group(1));
+			} catch (NumberFormatException ex) {
+				continue;
+			}
+
+			if (tableNo < 1 || tableNo > totalTables) continue;
+
+			TableView tv = tables.get(tableNo - 1);
+			// Nếu có nhiều đơn cùng 1 bàn, ưu tiên đơn mới hơn (createdAt)
+			if (!tv.occupied || (tv.createdAt != null && o.getCreatedAt() != null && o.getCreatedAt().isAfter(tv.createdAt))) {
+				tables.set(tableNo - 1, TableView.occupied(
+						tableNo,
+						o.getOrderCode(),
+						o.getCustomerName(),
+						o.getStatus() != null ? o.getStatus().name() : "UNKNOWN",
+						o.getCreatedAt()
+				));
+			}
+		}
+
+		// Xác định bàn đã được giữ chỗ theo booking CONFIRMED trong cửa sổ giữ: [now-15p, now+15p]
+		LocalDateTime now = LocalDateTime.now();
+		LocalDateTime holdWindowStart = now.minusMinutes(com.example.QuanLyQuanCafe.config.BookingPolicy.GRACE_AFTER_MINUTES);
+		LocalDateTime holdWindowEnd = now.plusMinutes(com.example.QuanLyQuanCafe.config.BookingPolicy.HOLD_BEFORE_MINUTES);
+		List<TableBooking> activeBookings = tableBookingRepository.findByStatusAndBookingTimeBetween(
+				com.example.QuanLyQuanCafe.model.BookingStatus.CONFIRMED,
+				holdWindowStart,
+				holdWindowEnd
+		);
+
+		for (TableBooking b : activeBookings) {
+			if (b == null) continue;
+			Integer tableNoObj = b.getReservedTableNumber();
+			if (tableNoObj == null) continue; // booking web không chọn bàn; nhân viên gán ở admin
+			int tableNo = tableNoObj;
+			if (tableNo < 1 || tableNo > totalTables) continue;
+
+			TableView tv = tables.get(tableNo - 1);
+			if (tv == null) continue;
+			if (tv.occupied) continue; // ưu tiên đỏ nếu đang có khách
+
+			tables.set(tableNo - 1, TableView.reserved(
+					tableNo,
+					b.getName(),
+					b.getPhone(),
+					b.getBookingTime()
+			));
+		}
+
+		long occupiedCount = tables.stream().filter(t -> t != null && t.occupied).count();
+		long reservedCount = tables.stream().filter(t -> t != null && t.reserved && !t.occupied).count();
+		model.addAttribute("tables", tables);
+		model.addAttribute("totalTables", totalTables);
+		model.addAttribute("occupiedCount", occupiedCount);
+		model.addAttribute("reservedCount", reservedCount);
+		return "Tables";
+	}
+
 	@GetMapping("/Revenue")
 	public String revenue() {
 		return "Revenue";
@@ -268,6 +349,11 @@ public class ProductController {
 		return "Accounts";
 	}
 
+	@GetMapping("/Customers")
+	public String customers(Model model) {
+		return "redirect:/Accounts";
+	}
+
 	public static class RecentOrderView {
 		private final CafeOrder order;
 		private final int itemsCount;
@@ -313,5 +399,64 @@ public class ProductController {
 		public BigDecimal getTotalRevenue() {
 			return totalRevenue;
 		}
+	}
+
+	public static class TableView {
+		public final int number;
+		public final String label;
+		public final boolean occupied;
+		public final boolean reserved;
+		public final String orderCode;
+		public final String customerName;
+		public final String statusLabel;
+		public final LocalDateTime createdAt;
+		public final LocalDateTime bookingTime;
+		public final String bookingPhone;
+
+		private TableView(
+				int number,
+				boolean occupied,
+				boolean reserved,
+				String orderCode,
+				String customerName,
+				String statusLabel,
+				LocalDateTime createdAt,
+				LocalDateTime bookingTime,
+				String bookingPhone
+		) {
+			this.number = number;
+			this.label = "Bàn " + number;
+			this.occupied = occupied;
+			this.reserved = reserved;
+			this.orderCode = orderCode;
+			this.customerName = customerName;
+			this.statusLabel = statusLabel;
+			this.createdAt = createdAt;
+			this.bookingTime = bookingTime;
+			this.bookingPhone = bookingPhone;
+		}
+
+		public static TableView free(int number) {
+			return new TableView(number, false, false, null, null, null, null, null, null);
+		}
+
+		public static TableView occupied(int number, String orderCode, String customerName, String statusLabel, LocalDateTime createdAt) {
+			return new TableView(number, true, false, orderCode, customerName, statusLabel, createdAt, null, null);
+		}
+
+		public static TableView reserved(int number, String customerName, String bookingPhone, LocalDateTime bookingTime) {
+			return new TableView(number, false, true, null, customerName, "RESERVED", null, bookingTime, bookingPhone);
+		}
+
+		public int getNumber() { return number; }
+		public String getLabel() { return label; }
+		public boolean isOccupied() { return occupied; }
+		public boolean isReserved() { return reserved; }
+		public String getOrderCode() { return orderCode; }
+		public String getCustomerName() { return customerName; }
+		public String getStatusLabel() { return statusLabel; }
+		public LocalDateTime getCreatedAt() { return createdAt; }
+		public LocalDateTime getBookingTime() { return bookingTime; }
+		public String getBookingPhone() { return bookingPhone; }
 	}
 }

@@ -70,6 +70,14 @@ public class CafeOrder {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column(name = "loyalty_points_awarded")
+    private Boolean loyaltyPointsAwarded;
+
+    // Trả bàn là thao tác riêng ở màn Quản lý bàn.
+    // Hoàn thành pha chế (COMPLETED) KHÔNG tự động trả bàn.
+    @Column(name = "table_released")
+    private Boolean tableReleased;
+
     public Long getId() {
         return id;
     }
@@ -188,5 +196,21 @@ public class CafeOrder {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Boolean getLoyaltyPointsAwarded() {
+        return loyaltyPointsAwarded;
+    }
+
+    public void setLoyaltyPointsAwarded(Boolean loyaltyPointsAwarded) {
+        this.loyaltyPointsAwarded = loyaltyPointsAwarded;
+    }
+
+    public Boolean getTableReleased() {
+        return tableReleased;
+    }
+
+    public void setTableReleased(Boolean tableReleased) {
+        this.tableReleased = tableReleased;
     }
 }

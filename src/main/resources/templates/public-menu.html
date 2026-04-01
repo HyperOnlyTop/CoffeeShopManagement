@@ -24,6 +24,8 @@
             font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: radial-gradient(circle at top, #fffaf0 0, #ffeedd 35%, #f7e1c4 70%, #f4d9b2 100%);
             color: #2d1b0f;
+            display: block;
+            width: 100%;
         }
 
         .menu-page-wrapper {
@@ -177,7 +179,7 @@
         }
 
         .menu-grid-wrapper {
-            max-width: 100%;
+            max-width: 1580px;
             margin: 0 auto;
             width: 100%;
             padding: 0 24px;
@@ -202,6 +204,35 @@
             font-size: 13px;
             background: rgba(255, 255, 255, 0.6);
             cursor: pointer;
+            color: #3b2818;
+            text-decoration: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .menu-filter-chip:hover {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: rgba(108, 75, 47, 0.28);
+            color: #3b2818;
+            text-decoration: none;
+        }
+
+        .menu-filter-chip:visited {
+            color: #3b2818;
+            text-decoration: none;
+        }
+
+        .menu-filter-chip:focus,
+        .menu-filter-chip:active {
+            outline: none;
+            box-shadow: none;
+            text-decoration: none;
+            color: #3b2818;
+        }
+
+        .menu-filter-chip:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 159, 26, 0.35);
+            text-decoration: none;
         }
 
         .menu-filter-chip.active {
@@ -278,6 +309,17 @@
             color: #7a5b3a;
         }
 
+        .menu-empty-state {
+            margin: 18px auto 6px;
+            max-width: 720px;
+            padding: 16px 16px;
+            border-radius: 16px;
+            border: 1px dashed rgba(108, 75, 47, 0.25);
+            background: rgba(255, 255, 255, 0.55);
+            color: #7a5b3a;
+            text-align: center;
+        }
+
         .menu-footer-note {
             text-align: center;
             font-size: 12px;
@@ -323,6 +365,10 @@
             .menu-navbar {
                 padding-inline: 18px;
             }
+
+            .menu-grid-wrapper {
+                padding-inline: 16px;
+            }
         }
     </style>
 </head>
@@ -347,7 +393,11 @@
             </a>
 
             <!-- Nếu đã đăng nhập thì cho đi thẳng vào dashboard / khu quản lý -->
-            <a sec:authorize="isAuthenticated()" th:href="@{/dashboard}" class="btn-primary-gold ms-2">
+            <a sec:authorize="hasRole('ADMIN')" th:href="@{/dashboard}" class="btn-primary-gold ms-2">
+                <i class="bi bi-speedometer2 me-1"></i>
+                Vào trang quản lý
+            </a>
+            <a sec:authorize="hasAnyRole('CASHIER','SERVER','BARISTA','SECURITY')" th:href="@{/Staff}" class="btn-primary-gold ms-2">
                 <i class="bi bi-speedometer2 me-1"></i>
                 Vào trang quản lý
             </a>
@@ -368,13 +418,19 @@
         </section>
 
         <section class="menu-grid-wrapper">
-            <div class="menu-filter-bar" th:if="${menuItems != null and !#lists.isEmpty(menuItems)}">
-                <button type="button" class="menu-filter-chip active" data-category="ALL">Tất cả</button>
-                <button type="button" class="menu-filter-chip" data-category="Cà phê">Cà phê</button>
-                <button type="button" class="menu-filter-chip" data-category="Trà">Trà</button>
-                <button type="button" class="menu-filter-chip" data-category="Sinh tố">Sinh tố</button>
-                <button type="button" class="menu-filter-chip" data-category="Bánh ngọt">Bánh ngọt</button>
-                <button type="button" class="menu-filter-chip" data-category="Thức ăn nhẹ">Thức ăn nhẹ</button>
+            <div class="menu-filter-bar" th:if="${menuCategories != null and !#lists.isEmpty(menuCategories)}">
+                <a class="menu-filter-chip"
+                   th:classappend="${selectedCategory == null} ? ' active'"
+                   th:href="@{/menu}">
+                    Tất cả
+                </a>
+                <a class="menu-filter-chip"
+                   th:each="cat : ${menuCategories}"
+                   th:classappend="${selectedCategory != null and selectedCategory == cat} ? ' active'"
+                   th:href="@{/menu(category=${cat})}"
+                   th:text="${cat}">
+                    Danh mục
+                </a>
             </div>
 
             <div class="row g-4">
@@ -399,22 +455,27 @@
                 </div>
             </div>
 
+            <div class="menu-empty-state"
+                 th:if="${menuPage != null and #lists.isEmpty(menuPage.content) and selectedCategory != null}">
+                Không có món nào trong danh mục này. Hãy thử chọn danh mục khác.
+            </div>
+
             <p class="menu-footer-note">* Hình ảnh mang tính minh họa. Vui lòng hỏi nhân viên nếu bạn có yêu cầu đặc biệt về khẩu vị hoặc dị ứng nguyên liệu.</p>
 
             <div class="menu-pagination" th:if="${totalPages != null and totalPages > 1}">
                 <a th:classappend="${currentPage == 0} ? ' disabled'"
-                   th:href="@{/menu(page=${currentPage - 1})}">
+                   th:href="@{/menu(page=${currentPage - 1}, category=${selectedCategory})}">
                     ‹
                 </a>
 
                 <a th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
                    th:text="${i + 1}"
-                   th:href="@{/menu(page=${i})}"
+                   th:href="@{/menu(page=${i}, category=${selectedCategory})}"
                    th:classappend="${i} == ${currentPage} ? ' active'">
                 </a>
 
                 <a th:classappend="${currentPage + 1 >= totalPages} ? ' disabled'"
-                   th:href="@{/menu(page=${currentPage + 1})}">
+                   th:href="@{/menu(page=${currentPage + 1}, category=${selectedCategory})}">
                     ›
                 </a>
             </div>
@@ -422,95 +483,5 @@
     </main>
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var chips = document.querySelectorAll('.menu-filter-chip');
-        var gridRow = document.querySelector('.menu-grid-wrapper .row.g-4');
-        var cards = document.querySelectorAll('.menu-grid-wrapper .col-12.col-sm-6.col-lg-3');
-
-        function normalize(t) {
-            return t ? t.toString().toLowerCase().trim() : '';
-        }
-
-        function clearPlaceholders() {
-            var placeholders = document.querySelectorAll('.menu-card-placeholder');
-            placeholders.forEach(function (ph) {
-                ph.remove();
-            });
-        }
-
-        function getColumnCount() {
-            var width = window.innerWidth || document.documentElement.clientWidth || 0;
-            if (width >= 992) {
-                return 4;
-            }
-            if (width >= 576) {
-                return 2;
-            }
-            return 1;
-        }
-
-        function addPlaceholders(visibleCount) {
-            if (!gridRow) return;
-            clearPlaceholders();
-
-            var columns = getColumnCount();
-            var remainder = visibleCount % columns;
-            var needed = remainder === 0 ? 0 : columns - remainder;
-
-            for (var i = 0; i < needed; i++) {
-                var col = document.createElement('div');
-                col.className = 'col-12 col-sm-6 col-lg-3 menu-card-placeholder';
-
-                var card = document.createElement('div');
-                card.className = 'menu-card h-100';
-
-                var img = document.createElement('div');
-                img.style.height = '220px';
-
-                var body = document.createElement('div');
-                body.className = 'menu-card-body';
-                body.innerHTML = '<div style="height: 12px;"></div><div style="height: 10px;"></div><div style="height: 14px;"></div>';
-
-                card.appendChild(img);
-                card.appendChild(body);
-                col.appendChild(card);
-                gridRow.appendChild(col);
-            }
-        }
-
-        function updatePlaceholders() {
-            var visibleCount = document.querySelectorAll('.menu-grid-wrapper .col-12.col-sm-6.col-lg-3:not(.d-none)').length;
-            addPlaceholders(visibleCount);
-        }
-
-        chips.forEach(function (chip) {
-            chip.addEventListener('click', function () {
-                chips.forEach(function (c) { c.classList.remove('active'); });
-                this.classList.add('active');
-
-                var cat = this.getAttribute('data-category') || 'ALL';
-                var normCat = normalize(cat);
-
-                var visibleCount = 0;
-
-                cards.forEach(function (col) {
-                    var cardCat = normalize(col.getAttribute('data-category'));
-                    if (normCat === 'all' || normCat === cardCat) {
-                        col.classList.remove('d-none');
-                        visibleCount += 1;
-                    } else {
-                        col.classList.add('d-none');
-                    }
-                });
-
-                addPlaceholders(visibleCount);
-            });
-        });
-
-        updatePlaceholders();
-        window.addEventListener('resize', updatePlaceholders);
-    });
-</script>
 </body>
 </html>

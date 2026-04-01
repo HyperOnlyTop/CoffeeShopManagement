@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Bàn | Quản lý quán cà phê</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <!-- Google Fonts - Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Shared layout styles -->
+  <link rel="stylesheet" href="/css/doanhthu.css">
+
+  <style>
+    .table-card {
+      border-radius: 18px;
+      background: #fff;
+      border: 1px solid rgba(30, 41, 59, 0.08);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.05);
+      padding: 14px 14px 12px;
+      height: 100%;
+    }
+
+    .table-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .table-card-title {
+      font-weight: 700;
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .table-badge {
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .table-badge-free {
+      background: rgba(16, 185, 129, 0.12);
+      color: #0f766e;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .table-badge-occupied {
+      background: rgba(245, 158, 11, 0.14);
+      color: #92400e;
+      border: 1px solid rgba(245, 158, 11, 0.28);
+    }
+
+    .table-badge-reserved {
+      background: rgba(59, 130, 246, 0.14);
+      color: #1d4ed8;
+      border: 1px solid rgba(59, 130, 246, 0.28);
+    }
+
+    .table-meta {
+      font-size: 13px;
+      color: rgba(55, 65, 81, 0.9);
+      margin-bottom: 0;
+    }
+
+    .table-meta small {
+      color: rgba(75, 85, 99, 0.8);
+    }
+
+    .table-card {
+      cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+
+    .table-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 38px rgba(0, 0, 0, 0.06);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <div th:replace="~{fragments/sidebar :: sidebar('TABLES')}"></div>
+
+  <main class="main-content">
+    <div class="header-row">
+      <div class="page-title">
+        <h2>Quản lý Bàn</h2>
+        <p>
+          <span th:text="${occupiedCount} + '/' + ${totalTables} + ' bàn đang có khách'">0/20 bàn đang có khách</span>
+          <span class="text-muted" th:if="${reservedCount != null}">
+            · <span th:text="${reservedCount}">0</span> bàn đang được giữ
+          </span>
+        </p>
+      </div>
+      <div class="header-actions">
+        <a href="/Order" class="btn btn-outline-secondary">
+          <i class="bi bi-bag me-1"></i> Xem đơn hàng
+        </a>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-6 col-md-4 col-lg-3" th:each="t : ${tables}">
+        <div class="table-card" th:attr="data-table=${t.number}">
+          <div class="table-card-header">
+            <p class="table-card-title" th:text="${t.label}">Bàn 1</p>
+            <span class="table-badge"
+                  th:classappend="${t.occupied} ? ' table-badge-occupied' : (${t.reserved} ? ' table-badge-reserved' : ' table-badge-free')"
+                  th:text="${t.occupied} ? 'Có khách' : (${t.reserved} ? 'Đã đặt' : 'Trống')">Trống</span>
+          </div>
+          <p class="table-meta mb-1" th:if="${t.occupied}">
+            <strong th:text="${t.orderCode}">ORD-0000</strong>
+            <span th:if="${t.customerName != null && !t.customerName.isBlank()}"> · <span th:text="${t.customerName}">Khách</span></span>
+          </p>
+          <p class="table-meta" th:if="${t.occupied}">
+            <small>Trạng thái: </small><span th:text="${t.statusLabel}">PENDING</span>
+          </p>
+          <p class="table-meta mb-1" th:if="${!t.occupied and t.reserved}">
+            <small>Khách: </small><span th:text="${t.customerName}">Tên khách</span>
+            <span th:if="${t.bookingPhone != null && !t.bookingPhone.isBlank()}"> · <small>SĐT: </small><span th:text="${t.bookingPhone}">090...</span></span>
+          </p>
+          <p class="table-meta" th:if="${!t.occupied and t.reserved}">
+            <small>Giờ đặt: </small>
+            <span th:text="${t.bookingTime != null ? #temporals.format(t.bookingTime, 'dd/MM/yyyy HH:mm') : ''}">01/01/2026 09:00</span>
+          </p>
+          <p class="table-meta" th:unless="${t.occupied}">
+            <small th:text="${t.reserved} ? 'Bàn đang được giữ chỗ.' : 'Chưa có đơn tại bàn.'">Chưa có đơn tại bàn.</small>
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal: Chi tiết bàn / đơn tại bàn -->
+  <div class="modal fade" id="tableDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-header border-0 pb-0 px-4 pt-4">
+          <h5 class="modal-title fw-semibold" id="tableDetailTitle">Chi tiết bàn</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body px-4 pb-0">
+          <div id="tableDetailBody" class="small text-muted">Đang tải...</div>
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-between">
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-danger" id="btnReleaseTable" style="display:none;">
+              Trả bàn
+            </button>
+          </div>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!window.bootstrap) return;
+
+      var modalEl = document.getElementById('tableDetailModal');
+      var modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+      var titleEl = document.getElementById('tableDetailTitle');
+      var bodyEl = document.getElementById('tableDetailBody');
+      var releaseBtn = document.getElementById('btnReleaseTable');
+      var activeTableNo = null;
+
+      function renderDetail(data) {
+        if (!bodyEl) return;
+        if (!data || !data.order) {
+          bodyEl.innerHTML = '<div class="text-muted">Bàn đang trống hoặc không có đơn hoạt động.</div>';
+          if (releaseBtn) releaseBtn.style.display = 'none';
+          return;
+        }
+
+        var order = data.order;
+        var items = Array.isArray(data.items) ? data.items : [];
+
+        var html = '';
+        html += '<div class="mb-2"><strong>Mã đơn:</strong> ' + (order.orderCode || '') + '</div>';
+        html += '<div class="mb-2"><strong>Khách:</strong> ' + (order.customerName || 'Khách lẻ') + (order.customerPhone ? (' · ' + order.customerPhone) : '') + '</div>';
+        html += '<div class="mb-2"><strong>Trạng thái đơn:</strong> ' + (order.status || '') + '</div>';
+        html += '<div class="mb-3"><strong>Ghi chú:</strong> ' + (order.tableName || '') + '</div>';
+
+        html += '<div class="table-responsive">';
+        html += '<table class="table table-sm align-middle mb-0">';
+        html += '<thead><tr><th>Món</th><th class="text-center" style="width:90px;">SL</th><th>Ghi chú</th></tr></thead><tbody>';
+        if (!items.length) {
+          html += '<tr><td colspan="3" class="text-muted">Chưa có món.</td></tr>';
+        } else {
+          items.forEach(function (it) {
+            if (!it) return;
+            html += '<tr>';
+            html += '<td>' + (it.itemName || '') + '</td>';
+            html += '<td class="text-center">' + (it.quantity != null ? it.quantity : '') + '</td>';
+            html += '<td>' + (it.note || '') + '</td>';
+            html += '</tr>';
+          });
+        }
+        html += '</tbody></table></div>';
+
+        bodyEl.innerHTML = html;
+        if (releaseBtn) releaseBtn.style.display = 'inline-block';
+      }
+
+      function loadTableDetail(tableNo) {
+        if (!bodyEl) return;
+        bodyEl.textContent = 'Đang tải...';
+        if (releaseBtn) releaseBtn.style.display = 'none';
+        fetch('/api/tables/' + encodeURIComponent(tableNo) + '/active-order')
+          .then(function (res) {
+            if (!res.ok) return null;
+            return res.json();
+          })
+          .then(function (data) {
+            renderDetail(data);
+          })
+          .catch(function () {
+            bodyEl.innerHTML = '<div class="text-danger">Không tải được chi tiết bàn.</div>';
+          });
+      }
+
+      document.querySelectorAll('.table-card[data-table]').forEach(function (card) {
+        card.addEventListener('click', function () {
+          var tableNo = card.getAttribute('data-table');
+          activeTableNo = tableNo;
+          if (titleEl) titleEl.textContent = 'Bàn ' + tableNo;
+          if (modal) modal.show();
+          loadTableDetail(tableNo);
+        });
+      });
+
+      if (releaseBtn) {
+        releaseBtn.addEventListener('click', function () {
+          if (!activeTableNo) return;
+          fetch('/api/tables/' + encodeURIComponent(activeTableNo) + '/release', { method: 'POST' })
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function () {
+              // reload để cập nhật màu bàn
+              window.location.reload();
+            })
+            .catch(function () {
+              alert('Không trả bàn được. Vui lòng thử lại.');
+            });
+        });
+      }
+    });
+  </script>
+</body>
+
+</html>
+

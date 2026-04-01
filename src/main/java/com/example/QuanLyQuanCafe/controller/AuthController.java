@@ -3,6 +3,7 @@ package com.example.QuanLyQuanCafe.controller;
 import java.math.BigDecimal;
 import java.security.Principal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -45,8 +46,8 @@ public class AuthController {
 
     @GetMapping("/")
     public String landingPage(Model model) {
-        List<MenuItem> menuItems = menuService.getAllItems();
-        model.addAttribute("menuItems", menuItems);
+        List<MenuItem> bestSellerItems = menuService.getBestSellerAvailableItems(12);
+        model.addAttribute("menuItems", bestSellerItems);
         List<CustomerReview> customerReviews = customerReviewRepository.findTop3ByOrderByCreatedAtDesc();
         model.addAttribute("customerReviews", customerReviews);
         return "index"; // trang giới thiệu công khai
@@ -54,20 +55,51 @@ public class AuthController {
 
     @GetMapping("/menu")
     public String publicMenu(Model model,
-                             @RequestParam(name = "page", defaultValue = "0") int page) {
+                             @RequestParam(name = "page", defaultValue = "0") int page,
+                             @RequestParam(name = "category", required = false) String category) {
         int pageSize = 8;
         if (page < 0) {
             page = 0;
         }
 
-        Page<MenuItem> menuPage = menuService.getItemsPage(PageRequest.of(page, pageSize));
+        String selectedCategory = (category != null && !category.isBlank()) ? category.trim() : null;
+        Page<MenuItem> menuPage = (selectedCategory == null)
+                ? menuService.getAvailableItemsPage(PageRequest.of(page, pageSize))
+                : menuService.getAvailableItemsPageByCategory(selectedCategory, PageRequest.of(page, pageSize));
 
         model.addAttribute("menuPage", menuPage);
         model.addAttribute("menuItems", menuPage.getContent()); // giữ lại để tương thích nếu cần
+        List<String> menuCategories = menuService.getAvailableItems().stream()
+                .map(mi -> mi != null && mi.getCategory() != null ? mi.getCategory().getName() : null)
+                .filter(s -> s != null && !s.isBlank())
+                .distinct()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .collect(Collectors.toList());
+        model.addAttribute("menuCategories", menuCategories);
+        model.addAttribute("selectedCategory", selectedCategory);
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", menuPage.getTotalPages());
 
         return "public-menu"; // trang xem toàn bộ thực đơn cho khách
+    }
+
+    @GetMapping("/reviews")
+    public String publicReviews(Model model,
+                                @RequestParam(name = "page", defaultValue = "0") int page) {
+        int pageSize = 12;
+        if (page < 0) {
+            page = 0;
+        }
+
+        Page<CustomerReview> reviewsPage = customerReviewRepository
+                .findAllByOrderByCreatedAtDesc(PageRequest.of(page, pageSize));
+
+        model.addAttribute("reviewsPage", reviewsPage);
+        model.addAttribute("customerReviews", reviewsPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", reviewsPage.getTotalPages());
+
+        return "reviews";
     }
 
     @GetMapping("/login")

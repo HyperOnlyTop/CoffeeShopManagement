@@ -9,8 +9,12 @@ import org.springframework.stereotype.Component;
 
 import com.example.QuanLyQuanCafe.model.AppUser;
 import com.example.QuanLyQuanCafe.model.CustomerReview;
+import com.example.QuanLyQuanCafe.model.Staff;
+import com.example.QuanLyQuanCafe.model.StaffRole;
+import com.example.QuanLyQuanCafe.model.StaffStatus;
 import com.example.QuanLyQuanCafe.repository.AppUserRepository;
 import com.example.QuanLyQuanCafe.repository.CustomerReviewRepository;
+import com.example.QuanLyQuanCafe.repository.StaffRepository;
 
 @Component
 public class DatabaseInitializer {
@@ -18,13 +22,16 @@ public class DatabaseInitializer {
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final CustomerReviewRepository customerReviewRepository;
+    private final StaffRepository staffRepository;
 
     public DatabaseInitializer(AppUserRepository userRepository,
                                PasswordEncoder passwordEncoder,
-                               CustomerReviewRepository customerReviewRepository) {
+                               CustomerReviewRepository customerReviewRepository,
+                               StaffRepository staffRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.customerReviewRepository = customerReviewRepository;
+        this.staffRepository = staffRepository;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -35,20 +42,16 @@ public class DatabaseInitializer {
             admin.setPassword(passwordEncoder.encode("123456"));
             admin.setFullName("Quản trị viên");
             admin.setEmail("admin@cafe.com");
-            admin.setPhone("0901 234 567");
+            admin.setPhone("0901234567");
             admin.setRole("ADMIN");
             userRepository.save(admin);
         }
-        if (userRepository.findByUsername("nhanvien") == null) {
-            AppUser staff = new AppUser();
-            staff.setUsername("nhanvien");
-            staff.setPassword(passwordEncoder.encode("123456"));
-            staff.setFullName("Nhân viên thu ngân");
-            staff.setEmail("nhanvien@cafe.com");
-            staff.setPhone("0912 345 678");
-            staff.setRole("STAFF");
-            userRepository.save(staff);
-        }
+        // Nghiệp vụ: đa số nhân viên xoay ca theo ngày -> shift mặc định để trống (null).
+        // Riêng Bảo vệ thường cố định giờ -> có thể set shift mặc định FULL_DAY.
+        seedStaffUser("nhanvien", "Nhân viên thu ngân", "nhanvien@cafe.com", "0912345678", "CASHIER", StaffRole.THU_NGAN, null);
+        seedStaffUser("phucvu", "Nhân viên phục vụ", "phucvu@cafe.com", "0912345679", "SERVER", StaffRole.PHUC_VU, null);
+        seedStaffUser("phache", "Nhân viên pha chế", "phache@cafe.com", "0912345680", "BARISTA", StaffRole.PHA_CHE, null);
+        seedStaffUser("baove", "Nhân viên bảo vệ", "baove@cafe.com", "0912345681", "SECURITY", StaffRole.BAO_VE, "FULL_DAY");
 
         if (customerReviewRepository.count() == 0) {
             CustomerReview r1 = new CustomerReview();
@@ -75,6 +78,61 @@ public class DatabaseInitializer {
             customerReviewRepository.save(r1);
             customerReviewRepository.save(r2);
             customerReviewRepository.save(r3);
+        }
+    }
+
+    private void seedStaffUser(
+            String username,
+            String fullName,
+            String email,
+            String phoneDigits,
+            String appRole,
+            StaffRole staffRole,
+            String shiftCode
+    ) {
+        if (username == null || username.isBlank()) return;
+        if (phoneDigits == null || phoneDigits.isBlank()) return;
+
+        Staff staff = staffRepository.findByPhone(phoneDigits);
+        if (staff == null) {
+            staff = new Staff();
+            staff.setName(fullName);
+            staff.setPhone(phoneDigits);
+            staff.setRole(staffRole);
+            staff.setStatus(StaffStatus.ACTIVE);
+            staff.setShift(shiftCode); // ca mặc định (tuỳ chọn)
+            staff = staffRepository.save(staff);
+        }
+
+        AppUser user = userRepository.findByUsername(username);
+        if (user == null) {
+            user = new AppUser();
+            user.setUsername(username);
+            user.setPassword(passwordEncoder.encode("123456"));
+            user.setFullName(fullName);
+            user.setEmail(email);
+            user.setPhone(phoneDigits);
+            user.setRole(appRole);
+            user.setStaffId(staff.getId());
+            userRepository.save(user);
+            return;
+        }
+
+        // Nếu đã có user thì đảm bảo role và staffId đúng để không bị lệch data
+        boolean changed = false;
+        if (user.getRole() == null || !user.getRole().equalsIgnoreCase(appRole)) {
+            user.setRole(appRole);
+            changed = true;
+        }
+        if (user.getStaffId() == null || !user.getStaffId().equals(staff.getId())) {
+            // tránh gán nhầm nếu staffId đang trỏ tới staff khác
+            if (user.getStaffId() == null) {
+                user.setStaffId(staff.getId());
+                changed = true;
+            }
+        }
+        if (changed) {
+            userRepository.save(user);
         }
     }
 }

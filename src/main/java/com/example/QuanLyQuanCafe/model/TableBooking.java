@@ -6,11 +6,16 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+
+import com.example.QuanLyQuanCafe.config.BookingPolicy;
 
 @Entity
 @Table(name = "table_bookings")
@@ -42,11 +47,31 @@ public class TableBooking {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private BookingStatus status;
+
+    @Column(name = "reserved_table_number")
+    private Integer reservedTableNumber;
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }
+        if (status == null) {
+            status = BookingStatus.CONFIRMED;
+        }
+    }
+
+    @Transient
+    public LocalDateTime getHoldStartTime() {
+        return bookingTime == null ? null : bookingTime.minusMinutes(BookingPolicy.HOLD_BEFORE_MINUTES);
+    }
+
+    @Transient
+    public LocalDateTime getHoldEndTime() {
+        return bookingTime == null ? null : bookingTime.plusMinutes(BookingPolicy.GRACE_AFTER_MINUTES);
     }
 
     public Long getId() {
@@ -111,5 +136,21 @@ public class TableBooking {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public BookingStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(BookingStatus status) {
+        this.status = status;
+    }
+
+    public Integer getReservedTableNumber() {
+        return reservedTableNumber;
+    }
+
+    public void setReservedTableNumber(Integer reservedTableNumber) {
+        this.reservedTableNumber = reservedTableNumber;
     }
 }

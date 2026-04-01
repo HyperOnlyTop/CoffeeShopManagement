@@ -35,6 +35,12 @@ public class Customer {
     @Column(columnDefinition = "TEXT")
     private String note;
 
+    @Column(name = "loyalty_points")
+    private Integer loyaltyPoints;
+
+    @Column(name = "loyalty_redeemed_count")
+    private Integer loyaltyRedeemedCount;
+
     public Long getId() {
         return id;
     }
@@ -89,5 +95,21 @@ public class Customer {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public Integer getLoyaltyPoints() {
+        return loyaltyPoints;
+    }
+
+    public void setLoyaltyPoints(Integer loyaltyPoints) {
+        this.loyaltyPoints = loyaltyPoints;
+    }
+
+    public Integer getLoyaltyRedeemedCount() {
+        return loyaltyRedeemedCount;
+    }
+
+    public void setLoyaltyRedeemedCount(Integer loyaltyRedeemedCount) {
+        this.loyaltyRedeemedCount = loyaltyRedeemedCount;
     }
 }

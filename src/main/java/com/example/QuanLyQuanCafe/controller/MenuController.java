@@ -2,6 +2,7 @@ package com.example.QuanLyQuanCafe.controller;
 
 import java.util.List;
 
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,6 +33,11 @@ public class MenuController {
     @GetMapping("/items")
     public List<MenuItem> getItems() {
         return menuService.getAllItems();
+    }
+
+    @GetMapping("/search")
+    public List<MenuItem> search(@RequestParam(value = "q", required = false) String q) {
+        return menuService.searchAvailableItemsByName(q);
     }
 
     @PostMapping("/items")

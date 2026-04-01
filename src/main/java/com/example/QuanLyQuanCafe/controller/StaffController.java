@@ -6,6 +6,7 @@ import java.security.Principal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -64,6 +65,22 @@ public class StaffController {
         }
     }
 
+    // Dùng cho các màn hình cần xem lịch/nhân sự ở mức cơ bản (không lộ lương, ghi chú...)
+    @GetMapping("/basic")
+    public ResponseEntity<?> getAllBasic() {
+        List<Staff> staff = staffService.findAll();
+        List<Map<String, Object>> res = staff.stream().map(s -> {
+            Map<String, Object> m = new java.util.HashMap<>();
+            m.put("id", s.getId());
+            m.put("name", s.getName());
+            m.put("phone", s.getPhone());
+            m.put("role", s.getRole() != null ? s.getRole().name() : null);
+            m.put("status", s.getStatus() != null ? s.getStatus().name() : null);
+            return m;
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(res);
+    }
+
     @GetMapping("/me")
     public ResponseEntity<Staff> getMe(Principal principal) {
         if (principal == null) {
@@ -74,7 +91,11 @@ public class StaffController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
         Staff staff = null;
-        if (appUser.getFullName() != null && !appUser.getFullName().isBlank()) {
+        if (appUser.getStaffId() != null) {
+            staff = staffRepository.findById(appUser.getStaffId()).orElse(null);
+        }
+        // fallback cũ (tránh break dữ liệu hiện có)
+        if (staff == null && appUser.getFullName() != null && !appUser.getFullName().isBlank()) {
             staff = staffRepository.findByName(appUser.getFullName());
         }
         if (staff == null) {

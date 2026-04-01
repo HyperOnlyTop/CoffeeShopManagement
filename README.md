@@ -32,7 +32,7 @@ Các nghiệp vụ chính:
   - Spring Security, cấu hình trong `config/SecurityConfig.java`
   - Đăng nhập bằng form login tùy biến (`/login`), đăng ký tài khoản `/register`
   - Mã hóa mật khẩu bằng `BCryptPasswordEncoder`
-  - Phân quyền theo role: `ROLE_ADMIN`, `ROLE_STAFF`, khách thường (KHACH)
+  - Phân quyền theo role: `ROLE_ADMIN`, `ROLE_CASHIER`, `ROLE_SERVER`, `ROLE_BARISTA`, `ROLE_SECURITY`, khách thường (`ROLE_CUSTOMER`)
 - **Truy cập dữ liệu:**
   - Spring Data JPA repositories dưới `repository/`
   - Entity cho các bảng: menu, đơn hàng, khách hàng, nhân viên, chấm công, doanh thu, kho, cài đặt, đặt bàn, v.v… trong `model/`

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -114,6 +114,21 @@
         .btn-primary-gold:hover {
             background-color: #ffb341;
             color: #2a1704;
+        }
+
+        .btn-outline-black-dark {
+            border-radius: 999px;
+            padding: 8px 20px;
+            border: 1px solid rgba(55, 36, 22, 0.25);
+            background: transparent;
+            color: #2b190a;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .btn-outline-black-dark:hover {
+            background: rgba(255, 159, 26, 0.12);
+            color: #2b190a;
         }
 
         .landing-hero {
@@ -279,6 +294,204 @@
             font-weight: 600;
             color: #c27a1a;
             margin-top: 8px;
+        }
+
+        /* Featured best seller slider */
+        .featured-menu-title {
+            font-size: clamp(30px, 4vw, 44px);
+        }
+
+        .section-corner-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: #2b190a;
+            font-weight: 600;
+            font-size: 14px;
+            letter-spacing: 0.01em;
+        }
+
+        .section-corner-link:hover {
+            text-decoration: underline;
+            color: #2b190a;
+        }
+
+        .section-corner-link i {
+            font-size: 18px;
+        }
+
+        .section-corner-link--reviews {
+            padding-right: 44px;
+        }
+
+        .featured-menu-actions {
+            position: absolute;
+            right: 6px;
+            top: -30px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .featured-menu-shell {
+            position: relative;
+            padding-inline: 0px;
+        }
+
+        .featured-menu-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 44px;
+            height: 44px;
+            border-radius: 999px;
+            border: 1px solid rgba(55, 36, 22, 0.15);
+            background: rgba(255, 255, 255, 0.92);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 26px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+            z-index: 3;
+        }
+
+        .featured-menu-nav:hover {
+            background: #fff;
+        }
+
+        .featured-menu-nav.prev {
+            left: -60px;
+        }
+
+        .featured-menu-nav.next {
+            right: -60px;
+        }
+
+        .featured-menu-track {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            padding: -3px 0 18px;
+            scrollbar-width: none;
+            justify-content: center;
+        }
+
+        .featured-menu-track::-webkit-scrollbar {
+            display: none;
+        }
+
+        .featured-menu-item {
+            flex: 0 0 auto;
+            width: 290px;
+            scroll-snap-align: start;
+        }
+
+
+        .featured-menu-item .menu-card img {
+            height: 220px;
+        }
+
+        @media (max-width: 576px) {
+            .featured-menu-actions {
+                position: static;
+                justify-content: center;
+                margin-top: 14px;
+            }
+
+            .featured-menu-nav {
+                display: none;
+            }
+
+            .featured-menu-item {
+                width: 78vw;
+            }
+        }
+
+        /* Testimonials slider */
+        .featured-review-shell {
+            position: relative;
+            padding-top: 14px;
+            padding-inline: 30px;
+        }
+
+        .featured-review-track {
+            display: flex;
+            gap: 18px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            padding: 18px 0 18px;
+            scrollbar-width: none;
+            justify-content: center;
+        }
+
+        .featured-review-track::-webkit-scrollbar {
+            display: none;
+        }
+
+        .featured-review-item {
+            flex: 0 0 auto;
+            width: 360px;
+            scroll-snap-align: start;
+        }
+
+        .featured-review-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 44px;
+            height: 44px;
+            border-radius: 999px;
+            border: 1px solid rgba(55, 36, 22, 0.15);
+            background: rgba(255, 255, 255, 0.92);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 26px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+            z-index: 3;
+        }
+
+        .featured-review-nav:hover {
+            background: #fff;
+        }
+
+        .featured-review-nav.prev {
+            left: -3px;
+        }
+
+        .featured-review-nav.next {
+            right: -3px;
+        }
+
+        .featured-review-actions {
+            position: absolute;
+            right: 6px;
+            top: 0;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        @media (max-width: 576px) {
+            .featured-review-nav {
+                display: none;
+            }
+
+            .featured-review-track {
+                padding-inline: 16px;
+            }
+
+            .featured-review-item {
+                width: 84vw;
+            }
+
+            .featured-review-actions {
+                position: static;
+                justify-content: center;
+                margin-top: 14px;
+            }
         }
 
         .testimonial-card {
@@ -571,7 +784,8 @@
             <div class="d-flex align-items-center gap-3">
                 <div th:if="${currentUser != null}" class="d-flex align-items-center gap-2">
                     <span class="text-white small">Xin chào, <strong th:text="${currentUser.fullName}">Tên</strong>!</span>
-                    <a th:href="@{/dashboard}" class="btn btn-primary-gold btn-sm">Quản lý</a>
+                    <a sec:authorize="hasRole('ADMIN')" th:href="@{/dashboard}" class="btn btn-primary-gold btn-sm">Quản lý</a>
+                    <a sec:authorize="hasAnyRole('CASHIER','SERVER','BARISTA','SECURITY')" th:href="@{/Staff}" class="btn btn-primary-gold btn-sm">Quản lý</a>
                     <form th:action="@{/logout}" method="post" class="m-0">
                         <button type="submit" class="btn btn-outline-light-soft btn-sm">Đăng xuất</button>
                     </form>
@@ -699,51 +913,54 @@
 
     <!-- Featured menu -->
     <section id="menu" class="section-inner section-large">
-        <div class="text-center mb-5">
-            <div class="section-title-eyebrow">Thực đơn nổi bật</div>
-            <h2 class="section-title-main">Những tuyệt phẩm không thể bỏ lỡ</h2>
+        <div class="text-center mb-5 section-heading-offset">
+            <div class="section-title-eyebrow">Best seller</div>
+            <h2 class="section-title-main featured-menu-title">Thực đơn nổi bật</h2>
             <p class="text-muted-coffee mb-0">Mỗi món đều là kết quả của sự thử nghiệm và cải tiến không ngừng nghỉ từ đội
                 ngũ barista tâm huyết.</p>
         </div>
 
-        <div class="row g-4 mb-4">
-            <div class="col-12" th:if="${menuItems == null or #lists.isEmpty(menuItems)}">
-                <p class="text-center text-muted-coffee">Thực đơn đang được cập nhật. Vui lòng quay lại sau.</p>
+        <div class="featured-menu-shell">
+            <div class="featured-menu-actions">
+                <a th:href="@{/menu}" class="section-corner-link" aria-label="Xem tất cả thực đơn">
+                    Xem tất cả
+                    <i class="bi bi-arrow-right"></i>
+                </a>
             </div>
+            <button type="button" class="featured-menu-nav prev" id="featuredMenuPrev" aria-label="Trước">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <button type="button" class="featured-menu-nav next" id="featuredMenuNext" aria-label="Sau">
+                <i class="bi bi-chevron-right"></i>
+            </button>
 
-            <div class="col-12 col-sm-6 col-lg-3" th:each="item, iter : ${menuItems}" th:if="${iter.index} &lt; 4">
-                <div class="menu-card h-100">
-                    <img th:src="${item.imageUrl != null ? item.imageUrl : 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=600&h=400&fit=crop'}"
-                         class="img-fluid" th:alt="${item.name}" alt="Món">
-                    <h6 class="fw-semibold mb-1" th:text="${item.name}">Tên món</h6>
-                    <p class="small text-muted-coffee mb-1" th:text="${item.description}">Mô tả món</p>
-                    <div class="price-label" th:text="${item.price != null ? #numbers.formatInteger(item.price, 0, 'POINT') + ' đ' : '0 đ'}">0 đ</div>
+            <div class="featured-menu-track" id="featuredMenuTrack">
+                <div th:if="${menuItems == null or #lists.isEmpty(menuItems)}" class="w-100">
+                    <p class="text-center text-muted-coffee mb-0">Thực đơn đang được cập nhật. Vui lòng quay lại sau.</p>
+                </div>
+
+                <div class="featured-menu-item" th:each="item : ${menuItems}">
+                    <div class="menu-card h-100">
+                        <img th:src="${item.imageUrl != null ? item.imageUrl : 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=600&h=400&fit=crop'}"
+                             class="img-fluid" th:alt="${item.name}" alt="Món">
+                        <h6 class="fw-semibold mb-1">
+                            <span th:text="${item.name}">Tên món</span>
+                            <span class="menu-tag" th:if="${item.category != null}" th:text="${item.category.name}">Danh mục</span>
+                        </h6>
+                        <p class="small text-muted-coffee mb-1" th:text="${item.description}">Mô tả món</p>
+                        <div class="price-label" th:text="${item.price != null ? #numbers.formatInteger(item.price, 0, 'POINT') + ' đ' : '0 đ'}">0 đ</div>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <div class="d-flex justify-content-center gap-3">
-            <a th:href="@{/menu}" class="btn btn-primary-gold">
-                <i class="bi bi-list-ul me-1"></i>
-                Xem toàn bộ thực đơn
-            </a>
-            <a href="#booking" class="btn btn-outline-black-dark">
-                <i class="bi bi-calendar-event me-1"></i>
-                Đặt bàn ngay
-            </a>
         </div>
     </section>
 
     <!-- Testimonials -->
     <section id="testimonials" class="section-inner section-large">
-        <div class="text-center mb-3">
+        <div class="text-center mb-3 section-heading-offset">
             <div class="section-title-eyebrow">Khách hàng nói gì</div>
             <h2 class="section-title-main">Lời từ trái tim khách hàng</h2>
             <p class="text-muted-coffee mb-2">Chia sẻ cảm nhận của bạn về Brew &amp; Co. để chúng tôi phục vụ tốt hơn.</p>
-            <button type="button" class="btn btn-primary-gold mt-1" id="openReviewFormBtn">
-                <i class="bi bi-chat-heart me-1"></i>
-                Gửi đánh giá
-            </button>
         </div>
 
         <div class="row justify-content-center mb-3" th:if="${param.reviewSuccess}">
@@ -761,15 +978,33 @@
             </div>
         </div>
 
-        <div class="row g-4 mb-4" th:if="${customerReviews != null and !#lists.isEmpty(customerReviews)}">
-            <div class="col-md-4" th:each="review : ${customerReviews}">
-                <div class="testimonial-card">
-                    <div class="text-warning mb-2">
-                        <span th:each="i : ${#numbers.sequence(1, review.rating)}">★</span>
+        <div class="featured-review-shell mb-4" th:if="${customerReviews != null and !#lists.isEmpty(customerReviews)}">
+            <div class="featured-review-actions">
+                <a th:href="@{/reviews}" class="section-corner-link section-corner-link--reviews" aria-label="Xem tất cả đánh giá">
+                    Xem tất cả
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <button type="button" class="featured-review-nav prev" id="featuredReviewPrev" aria-label="Trước">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <button type="button" class="featured-review-nav next" id="featuredReviewNext" aria-label="Sau">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+
+            <div class="featured-review-track" id="featuredReviewTrack">
+                <div class="featured-review-item"
+                     th:each="review, iter : ${customerReviews}"
+                     th:if="${iter.index < 9}">
+                    <div class="testimonial-card">
+                        <div class="text-warning mb-2">
+                            <span th:each="i : ${#numbers.sequence(1, review.rating)}">★</span>
+                        </div>
+                        <p class="small text-muted-coffee mb-3" th:text="${review.comment}">Nội dung đánh giá</p>
+                        <div class="fw-semibold" th:text="${review.customerName}">Tên khách</div>
+                        <div class="small text-muted-coffee" th:text="${review.customerRole}">Vai trò</div>
                     </div>
-                    <p class="small text-muted-coffee mb-3" th:text="${review.comment}">Nội dung đánh giá</p>
-                    <div class="fw-semibold" th:text="${review.customerName}">Tên khách</div>
-                    <div class="small text-muted-coffee" th:text="${review.customerRole}">Vai trò</div>
                 </div>
             </div>
         </div>
@@ -780,8 +1015,9 @@
         </div>
 
         <!-- Form gửi đánh giá -->
-        <div class="row g-4 align-items-start d-none" id="reviewFormSection">
+        <div class="row g-4 align-items-start" id="reviewFormSection">
             <div class="col-lg-6">
+                <div class="section-title-eyebrow mb-2">Đánh giá</div>
                 <h3 class="booking-left-title mb-3">Gửi đánh giá của bạn</h3>
                 <p class="text-muted-coffee small mb-3">Chúng tôi rất trân trọng mọi góp ý từ bạn. Đánh giá của bạn sẽ giúp Brew &amp; Co. hoàn thiện trải nghiệm tốt hơn.</p>
                 <p class="text-muted-coffee small mb-0">Một số đánh giá nổi bật sẽ được hiển thị công khai tại đây.</p>
@@ -848,7 +1084,7 @@
                 <p class="text-muted-coffee mb-4">Dù là buổi hẹn hò, họp nhóm hay chỉ đơn giản là muốn có một góc yên tĩnh,
                     chúng tôi luôn sẵn sàng chuẩn bị cho bạn.</p>
                 <div th:if="${param.bookingSuccess}" class="alert alert-success py-2 small" role="alert">
-                    Yêu cầu đặt bàn của bạn đã được gửi. Chúng tôi sẽ liên hệ xác nhận trong thời gian sớm nhất.
+                    Đặt bàn thành công. Quán sẽ giữ bàn cho bạn tối đa 15 phút sau giờ đặt.
                 </div>
                 <div th:if="${param.bookingError}" class="alert alert-danger py-2 small" role="alert">
                     <span th:switch="${param.bookingError}">
@@ -905,9 +1141,21 @@
                             <label class="form-label" for="bookingTime">Giờ *</label>
                             <select id="bookingTime" name="time" class="form-select" required>
                                 <option>Chọn giờ</option>
+                                <option>07:00</option>
+                                <option>08:00</option>
                                 <option>09:00</option>
+                                <option>10:00</option>
+                                <option>11:00</option>
+                                <option>12:00</option>
+                                <option>13:00</option>
                                 <option>14:00</option>
+                                <option>15:00</option>
+                                <option>16:00</option>
+                                <option>17:00</option>
+                                <option>18:00</option>
                                 <option>19:00</option>
+                                <option>20:00</option>
+                                <option>21:00</option>
                             </select>
                         </div>
                         <div class="col-md-4">
@@ -1023,9 +1271,29 @@
         var inputEl = document.getElementById('chatInput');
         var sendBtn = document.getElementById('chatSendBtn');
 
-        // Review form toggle
-        var openReviewFormBtn = document.getElementById('openReviewFormBtn');
-        var reviewFormSection = document.getElementById('reviewFormSection');
+        // Featured menu navigation
+        var featuredTrack = document.getElementById('featuredMenuTrack');
+        var featuredPrev = document.getElementById('featuredMenuPrev');
+        var featuredNext = document.getElementById('featuredMenuNext');
+        function scrollFeatured(direction) {
+            if (!featuredTrack) return;
+            var step = Math.max(320, Math.floor(featuredTrack.clientWidth * 0.9));
+            featuredTrack.scrollBy({ left: direction * step, behavior: 'smooth' });
+        }
+        if (featuredPrev) featuredPrev.addEventListener('click', function () { scrollFeatured(-1); });
+        if (featuredNext) featuredNext.addEventListener('click', function () { scrollFeatured(1); });
+
+        // Featured reviews navigation
+        var reviewTrack = document.getElementById('featuredReviewTrack');
+        var reviewPrev = document.getElementById('featuredReviewPrev');
+        var reviewNext = document.getElementById('featuredReviewNext');
+        function scrollReviews(direction) {
+            if (!reviewTrack) return;
+            var step = Math.max(380, Math.floor(reviewTrack.clientWidth * 0.9));
+            reviewTrack.scrollBy({ left: direction * step, behavior: 'smooth' });
+        }
+        if (reviewPrev) reviewPrev.addEventListener('click', function () { scrollReviews(-1); });
+        if (reviewNext) reviewNext.addEventListener('click', function () { scrollReviews(1); });
 
         if (!toggleBtn || !panel || !closeBtn || !modeStaffBtn || !modeAiBtn || !messagesEl || !inputEl || !sendBtn) {
             return;
@@ -1135,13 +1403,6 @@
                 handleUserMessage();
             }
         });
-
-        if (openReviewFormBtn && reviewFormSection) {
-            openReviewFormBtn.addEventListener('click', function () {
-                reviewFormSection.classList.remove('d-none');
-                reviewFormSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            });
-        }
     });
 </script>
 

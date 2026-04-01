@@ -22,78 +22,11 @@
 <body>
 
     <!-- Sidebar -->
-    <nav class="sidebar">
-        <a th:href="@{/}" class="brand" style="text-decoration: none; color: inherit;">
-            <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo"
-                class="brand-img">
-            <div class="brand-text">
-                <h5>Brew &amp; Co.</h5>
-                <p style="color: #d47633;">Coffee Management</p>
-            </div>
-        </a>
-
-        <div class="user-profile" th:if="${currentUser != null}">
-            <img th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
-                alt="User" style="object-fit: cover;">
-            <div class="user-info">
-                <h6
-                    th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
-                    Tên tài khoản</h6>
-                <p th:text="${currentUser.email}">Email</p>
-            </div>
-            <div class="online-dot"></div>
-        </div>
-
-        <ul class="nav-menu">
-            <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-                <a href="/dashboard" class="nav-link">
-                    <i class="bi bi-grid-1x2"></i> Dashboard
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="/Menu" class="nav-link">
-                    <i class="bi bi-cup-hot"></i> Menu
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="/Order" class="nav-link">
-                    <i class="bi bi-bag"></i> Đơn hàng
-                </a>
-            </li>
-            <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-                <a href="/Revenue" class="nav-link">
-                    <i class="bi bi-bar-chart-fill"></i> Doanh thu
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="/Staff" class="nav-link active">
-                    <i class="bi bi-people"></i> Nhân viên
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="/Inventory" class="nav-link">
-                    <i class="bi bi-box-seam"></i> Kho hàng
-                </a>
-            </li>
-            <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-                <a href="/Accounts" class="nav-link">
-                    <i class="bi bi-person-badge"></i> Tài khoản
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="/Setting" class="nav-link">
-                    <i class="bi bi-gear"></i> Cài đặt
-                </a>
-            </li>
-        </ul>
-
-        <div class="logout-btn">
-            <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
-        </div>
-    </nav>
+    <div th:replace="~{fragments/sidebar :: sidebar('STAFF')}"></div>
 
     <!-- Main content -->
     <main class="main-content">
+        <span id="roleAdminFlag" class="d-none" sec:authorize="hasRole('ADMIN')">1</span>
 
         <!-- Header -->
         <div class="header-row">
@@ -102,7 +35,7 @@
                 <p>4/6 nhân viên đang làm việc</p>
             </div>
             <div class="header-actions">
-                <button class="btn btn-primary me-2" id="checkinBtn" sec:authorize="hasRole('STAFF')"
+                <button class="btn btn-primary me-2" id="checkinBtn" sec:authorize="hasAnyRole('CASHIER','SERVER','BARISTA','SECURITY')"
                     style="display: none;" onclick="staffCheckInOut()">
                     <i class="bi bi-clock"></i> <span id="checkinText">Chấm công</span>
                 </button>
@@ -168,8 +101,25 @@
             </div>
         </div>
 
-        <!-- Toolbar + Staff cards trong cùng custom card -->
+        <!-- Tabs: Hồ sơ nhân viên / Phân ca -->
         <div class="custom-card mb-4">
+            <ul class="nav nav-tabs nav-fill w-100 accounts-tabs" id="staffTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="tab-staff" data-bs-toggle="tab" data-bs-target="#pane-staff"
+                            type="button" role="tab" aria-controls="pane-staff" aria-selected="true">
+                        <i class="bi bi-people me-1"></i> Nhân viên
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER','BARISTA','SECURITY')">
+                    <button class="nav-link" id="tab-shifts" data-bs-toggle="tab" data-bs-target="#pane-shifts"
+                            type="button" role="tab" aria-controls="pane-shifts" aria-selected="false">
+                        <i class="bi bi-calendar-week me-1"></i> Phân ca
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content pt-3">
+                <div class="tab-pane fade show active" id="pane-staff" role="tabpanel" aria-labelledby="tab-staff">
             <div class="d-flex flex-wrap gap-3 align-items-center staff-toolbar">
                 <div class="staff-search">
                     <i class="bi bi-search"></i>
@@ -259,8 +209,141 @@
                     </div>
                 </div>
             </div>
+                </div>
+
+                <div class="tab-pane fade" id="pane-shifts" role="tabpanel" aria-labelledby="tab-shifts" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER','BARISTA','SECURITY')">
+                    <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
+                        <div>
+                            <label class="form-label fw-medium mb-1">Ngày</label>
+                            <input type="date" class="form-control" id="shiftDateInput">
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnLoadShiftDate">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Tải
+                        </button>
+                        <div class="small text-muted ms-auto">
+                            Ca sáng 07:00-14:00 · Ca chiều 14:00-18:00 · Ca tối 18:00-22:00 · Cả ngày 07:00-22:00
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                            <tr>
+                                <th>Nhân viên</th>
+                                <th class="text-center" style="width: 140px;">Ca sáng</th>
+                                <th class="text-center" style="width: 140px;">Ca chiều</th>
+                                <th class="text-center" style="width: 140px;">Ca tối</th>
+                                <th class="text-center" style="width: 140px;">Cả ngày</th>
+                            </tr>
+                            </thead>
+                            <tbody id="shiftTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">Chọn ngày để phân ca.</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quản lý tài khoản nhân sự (ADMIN) -->
+        <div class="custom-card mb-4" sec:authorize="hasRole('ADMIN')">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="settings-section-title mb-0">Tài khoản nhân sự</h6>
+                <button class="btn btn-primary btn-sm" type="button" id="btnOpenCreateUserModal">
+                    <i class="bi bi-person-plus"></i> Thêm tài khoản
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Họ tên</th>
+                        <th>Email</th>
+                        <th>Số điện thoại</th>
+                        <th>Vai trò</th>
+                        <th>Nhân viên</th>
+                        <th style="width: 160px;">Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody id="userAdminTableBody">
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-3">Đang tải danh sách tài khoản...</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </main>
+
+    <!-- Modal: Tạo tài khoản nhân sự (ADMIN) -->
+    <div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true" sec:authorize="hasRole('ADMIN')">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <h5 class="modal-title fw-semibold">Thêm tài khoản nhân sự</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body px-4 pb-0">
+                    <form id="createUserForm">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Username</label>
+                                <input type="text" class="form-control" id="userUsername" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Mật khẩu</label>
+                                <input type="password" class="form-control" id="userPassword" required>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Họ tên (tuỳ chọn)</label>
+                                <input type="text" class="form-control" id="userFullName">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Số điện thoại (tuỳ chọn)</label>
+                                <input type="tel" class="form-control" id="userPhone">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Email (tuỳ chọn)</label>
+                                <input type="email" class="form-control" id="userEmail">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Vai trò</label>
+                                <select class="form-select" id="userRole" required>
+                                    <option value="" selected disabled>Chọn vai trò</option>
+                                    <option value="ADMIN">ADMIN</option>
+                                    <option value="CASHIER">CASHIER</option>
+                                    <option value="SERVER">SERVER</option>
+                                    <option value="BARISTA">BARISTA</option>
+                                    <option value="SECURITY">SECURITY</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label fw-medium">Gán nhân viên</label>
+                            <select class="form-select" id="userStaffId" required>
+                                <option value="" selected disabled>Chọn nhân viên…</option>
+                            </select>
+                            <div class="small text-muted mt-1">Mỗi nhân viên chỉ được gán cho 1 tài khoản.</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-end">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" form="createUserForm" class="btn btn-primary" id="btnCreateUserSubmit">Tạo tài khoản</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal: Thêm nhân viên mới -->
     <div class="modal fade" id="createStaffModal" tabindex="-1" aria-hidden="true">
@@ -298,9 +381,14 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-medium">Ca làm</label>
-                                <input type="text" class="form-control" id="staffShift"
-                                    placeholder="VD: Ca sáng (06:00 - 14:00)">
+                                <label class="form-label fw-medium">Ca mặc định (tuỳ chọn)</label>
+                                <select class="form-select" id="staffShift">
+                                    <option value="" selected>-- Ca mặc định (tuỳ chọn) --</option>
+                                    <option value="MORNING">Ca sáng (07:00 - 14:00)</option>
+                                    <option value="AFTERNOON">Ca chiều (14:00 - 18:00)</option>
+                                    <option value="EVENING">Ca tối (18:00 - 22:00)</option>
+                                    <option value="FULL_DAY">Cả ngày (07:00 - 22:00)</option>
+                                </select>
                             </div>
                         </div>
 
@@ -314,9 +402,9 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-medium">Lương cơ bản (đ)</label>
-                                <input type="number" class="form-control" id="staffSalary" min="0" step="100000"
-                                    placeholder="VD: 6000000">
+                                <label class="form-label fw-medium">Lương theo giờ (đ)</label>
+                                <input type="text" class="form-control" id="staffSalary" inputmode="numeric"
+                                    placeholder="VD: 22.000">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-medium">Link ảnh (tùy chọn)</label>
@@ -386,9 +474,14 @@
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label fw-medium">Ca làm</label>
-                                <input type="text" class="form-control" id="editStaffShift"
-                                    placeholder="VD: Ca sáng (06:00 - 14:00)">
+                                <label class="form-label fw-medium">Ca mặc định (tuỳ chọn)</label>
+                                <select class="form-select" id="editStaffShift">
+                                    <option value="">-- Ca mặc định (tuỳ chọn) --</option>
+                                    <option value="MORNING">Ca sáng (07:00 - 14:00)</option>
+                                    <option value="AFTERNOON">Ca chiều (14:00 - 18:00)</option>
+                                    <option value="EVENING">Ca tối (18:00 - 22:00)</option>
+                                    <option value="FULL_DAY">Cả ngày (07:00 - 22:00)</option>
+                                </select>
                             </div>
                         </div>
 
@@ -399,7 +492,8 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-medium">Lương theo giờ (đ)</label>
-                                <input type="number" class="form-control" id="editStaffSalary" min="0" step="100000">
+                                <input type="text" class="form-control" id="editStaffSalary" inputmode="numeric"
+                                       placeholder="VD: 22.000">
                             </div>
                         </div>
 
@@ -491,6 +585,386 @@
 
             if (!window.bootstrap) return;
 
+            function parseVnMoneyToInt(value) {
+                if (value == null) return null;
+                var s = String(value).trim();
+                if (!s) return null;
+                // Accept: "22000", "22.000", "22,000", "22 000đ"...
+                s = s.replace(/[^\d]/g, '');
+                if (!s) return null;
+                var n = Number(s);
+                if (!Number.isFinite(n)) return null;
+                return Math.max(0, Math.trunc(n));
+            }
+
+            function formatVnMoney(n) {
+                var num = Number(n);
+                if (!Number.isFinite(num)) return '';
+                return Math.trunc(num).toLocaleString('vi-VN');
+            }
+
+            function bindMoneyInput(el) {
+                if (!el) return;
+                el.addEventListener('focus', function () {
+                    var raw = parseVnMoneyToInt(el.value);
+                    el.value = raw != null ? String(raw) : '';
+                });
+                el.addEventListener('blur', function () {
+                    var raw = parseVnMoneyToInt(el.value);
+                    el.value = raw != null ? formatVnMoney(raw) : '';
+                });
+            }
+
+            // Admin - quản lý tài khoản nhân sự
+            var userAdminModalInstance = null;
+            var staffOptionsCache = [];
+            var userTableBody = document.getElementById('userAdminTableBody');
+            var btnOpenCreateUserModal = document.getElementById('btnOpenCreateUserModal');
+            var createUserModalEl = document.getElementById('createUserModal');
+            var createUserForm = document.getElementById('createUserForm');
+
+            function roleIsStaff(role) {
+                var r = role ? String(role).toUpperCase() : '';
+                return r && r !== 'CUSTOMER';
+            }
+
+            function renderCreateUserStaffOptions(users) {
+                var sel = document.getElementById('userStaffId');
+                if (!sel) return;
+
+                var used = new Set();
+                if (Array.isArray(users)) {
+                    users.forEach(function (u) {
+                        if (!u) return;
+                        if (!roleIsStaff(u.role)) return;
+                        if (u.staffId != null) used.add(String(u.staffId));
+                    });
+                }
+
+                var opts = ['<option value="" selected disabled>Chọn nhân viên…</option>'];
+                staffOptionsCache.forEach(function (s) {
+                    if (!s || s.id == null) return;
+                    if (used.has(String(s.id))) return;
+                    var label = (s.name || ('Staff #' + s.id)) + (s.phone ? (' · ' + s.phone) : '');
+                    opts.push('<option value="' + s.id + '">' + label + '</option>');
+                });
+                sel.innerHTML = opts.join('');
+            }
+
+            function renderUsers(users) {
+                if (!userTableBody) return;
+                if (!users || users.length === 0) {
+                    userTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Chưa có tài khoản nào.</td></tr>';
+                    return;
+                }
+
+                var staffOptionsHtml = (function () {
+                    var opts = ['<option value="">-- Chưa gán --</option>'];
+                    staffOptionsCache.forEach(function (s) {
+                        if (!s || s.id == null) return;
+                        var label = (s.name || ('Staff #' + s.id)) + (s.phone ? (' · ' + s.phone) : '');
+                        opts.push('<option value="' + s.id + '">' + label + '</option>');
+                    });
+                    return opts.join('');
+                })();
+
+                var rows = users
+                    .filter(function (u) {
+                        var role = (u && u.role) ? String(u.role).toUpperCase() : '';
+                        return role && role !== 'CUSTOMER';
+                    })
+                    .map(function (u) {
+                        var safeUsername = u.username || '';
+                        var safeFullName = u.fullName || '';
+                        var safeEmail = u.email || '';
+                        var safePhone = u.phone || '';
+                        var safeRole = u.role || '';
+
+                        return '<tr data-id="' + u.id + '">' +
+                            '<td>' + safeUsername + '</td>' +
+                            '<td>' + safeFullName + '</td>' +
+                            '<td>' + safeEmail + '</td>' +
+                            '<td>' + safePhone + '</td>' +
+                            '<td>' + safeRole + '</td>' +
+                            '<td>' +
+                            '<div class="d-flex gap-2 align-items-center">' +
+                            '<select class="form-select form-select-sm user-staff-select" style="min-width: 220px;">' +
+                            staffOptionsHtml +
+                            '</select>' +
+                            '<button type="button" class="btn btn-sm btn-outline-primary btn-link-staff">Lưu</button>' +
+                            '</div>' +
+                            '</td>' +
+                            '<td>' +
+                            '<button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-edit-user">Sửa</button>' +
+                            '<button type="button" class="btn btn-sm btn-outline-danger btn-delete-user">Xóa</button>' +
+                            '</td>' +
+                            '</tr>';
+                    }).join('');
+
+                userTableBody.innerHTML = rows || '<tr><td colspan="7" class="text-center text-muted py-3">Chưa có tài khoản nào.</td></tr>';
+
+                userTableBody.querySelectorAll('tr[data-id]').forEach(function (tr) {
+                    var id = tr.getAttribute('data-id');
+                    var u = users.find(function (x) { return String(x.id) === String(id); });
+                    if (!u) return;
+                    var sel = tr.querySelector('.user-staff-select');
+                    if (!sel) return;
+                    sel.value = u.staffId != null ? String(u.staffId) : '';
+                });
+            }
+
+            function loadStaffOptions() {
+                return fetch('/api/staff')
+                    .then(function (res) { return res.ok ? res.json() : []; })
+                    .then(function (data) { staffOptionsCache = Array.isArray(data) ? data : []; })
+                    .catch(function () { staffOptionsCache = []; });
+            }
+
+            function loadUsers() {
+                if (!userTableBody) return;
+                fetch('/api/admin/users')
+                    .then(function (res) {
+                        if (!res.ok) throw new Error('Không thể tải danh sách tài khoản');
+                        return res.json();
+                    })
+                    .then(function (data) { renderUsers(Array.isArray(data) ? data : []); })
+                    .catch(function () {
+                        userTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Lỗi khi tải danh sách tài khoản.</td></tr>';
+                    });
+            }
+
+            if (userTableBody) {
+                loadStaffOptions().then(function () { loadUsers(); });
+                userTableBody.addEventListener('click', function (e) {
+                    var target = e.target;
+                    var row = target.closest('tr');
+                    if (!row) return;
+                    var id = row.getAttribute('data-id');
+                    if (!id) return;
+
+                    if (target.classList.contains('btn-link-staff')) {
+                        var sel = row.querySelector('.user-staff-select');
+                        var staffId = sel && sel.value ? Number(sel.value) : null;
+                        fetch('/api/admin/users/' + id + '/staff', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ staffId: staffId })
+                        })
+                            .then(function (res) {
+                                if (!res.ok) return res.text().then(function (t) { throw new Error(t || 'Lưu liên kết thất bại'); });
+                                return res.json();
+                            })
+                            .then(function () { loadUsers(); })
+                            .catch(function (err) { alert(err && err.message ? err.message : 'Không thể lưu liên kết nhân viên.'); });
+                        return;
+                    }
+
+                    if (target.classList.contains('btn-delete-user')) {
+                        if (!confirm('Bạn có chắc chắn muốn xóa tài khoản này?')) return;
+                        fetch('/api/admin/users/' + id, { method: 'DELETE' })
+                            .then(function (res) {
+                                if (!res.ok && res.status !== 204) throw new Error('Xóa tài khoản thất bại');
+                                loadUsers();
+                            })
+                            .catch(function () { alert('Không thể xóa tài khoản.'); });
+                    }
+                });
+            }
+
+            // Admin - tạo tài khoản nhân sự (chọn staff ngay lúc tạo)
+            if (btnOpenCreateUserModal && createUserModalEl) {
+                var createUserModal = new bootstrap.Modal(createUserModalEl);
+                btnOpenCreateUserModal.addEventListener('click', function () {
+                    Promise.all([
+                        loadStaffOptions(),
+                        fetch('/api/admin/users').then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })
+                    ]).then(function (res) {
+                        var users = Array.isArray(res[1]) ? res[1] : [];
+                        if (createUserForm) createUserForm.reset();
+                        renderCreateUserStaffOptions(users);
+                        createUserModal.show();
+                    }).catch(function () {
+                        alert('Không thể tải dữ liệu nhân viên/tài khoản.');
+                    });
+                });
+
+                if (createUserForm) {
+                    createUserForm.addEventListener('submit', function (e) {
+                        e.preventDefault();
+                        var username = (document.getElementById('userUsername')?.value || '').trim();
+                        var password = (document.getElementById('userPassword')?.value || '').trim();
+                        var fullName = (document.getElementById('userFullName')?.value || '').trim();
+                        var email = (document.getElementById('userEmail')?.value || '').trim();
+                        var phone = (document.getElementById('userPhone')?.value || '').trim();
+                        var role = document.getElementById('userRole')?.value;
+                        var staffIdRaw = document.getElementById('userStaffId')?.value;
+
+                        if (!username) return alert('Vui lòng nhập username.');
+                        if (!password) return alert('Vui lòng nhập mật khẩu.');
+                        if (!role) return alert('Vui lòng chọn vai trò.');
+                        if (!staffIdRaw) return alert('Vui lòng chọn nhân viên để gán.');
+
+                        var payload = {
+                            username: username,
+                            password: password,
+                            fullName: fullName || null,
+                            email: email || null,
+                            phone: phone || null,
+                            role: role,
+                            staffId: Number(staffIdRaw)
+                        };
+
+                        fetch('/api/admin/users', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        }).then(function (res) {
+                            if (!res.ok) return res.text().then(function (t) { throw new Error(t || 'Tạo tài khoản thất bại'); });
+                            return res.json();
+                        }).then(function () {
+                            alert('Đã tạo tài khoản và gán nhân viên thành công.');
+                            createUserModal.hide();
+                            loadStaffOptions().then(function () { loadUsers(); });
+                        }).catch(function (err) {
+                            alert(err && err.message ? err.message : 'Không thể tạo tài khoản.');
+                        });
+                    });
+                }
+            }
+
+            // Phân ca theo ngày (ai cũng xem, chỉ ADMIN sửa)
+            var shiftDateInput = document.getElementById('shiftDateInput');
+            var btnLoadShiftDate = document.getElementById('btnLoadShiftDate');
+            var shiftTableBody = document.getElementById('shiftTableBody');
+            var staffCache = [];
+            var assignmentsSet = new Set(); // key = staffId|shiftCode
+            var isAdminForShifts = !!document.getElementById('roleAdminFlag');
+
+            function todayIso() {
+                var d = new Date();
+                var m = String(d.getMonth() + 1).padStart(2, '0');
+                var day = String(d.getDate()).padStart(2, '0');
+                return d.getFullYear() + '-' + m + '-' + day;
+            }
+
+            function loadShiftScreen(dateStr) {
+                if (!shiftTableBody) return;
+                if (!dateStr) {
+                    shiftTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Chọn ngày để phân ca.</td></tr>';
+                    return;
+                }
+                shiftTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Đang tải...</td></tr>';
+                assignmentsSet = new Set();
+
+                Promise.all([
+                    fetch('/api/staff/basic').then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; }),
+                    fetch('/api/staff-shifts?date=' + encodeURIComponent(dateStr)).then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })
+                ]).then(function (res) {
+                    staffCache = Array.isArray(res[0]) ? res[0] : [];
+                    var assigns = Array.isArray(res[1]) ? res[1] : [];
+                    assigns.forEach(function (a) {
+                        if (!a || !a.staff || a.staff.id == null || !a.shiftCode) return;
+                        assignmentsSet.add(String(a.staff.id) + '|' + String(a.shiftCode));
+                    });
+
+                    var rows = staffCache.map(function (s) {
+                        var id = s.id;
+                        var name = s.name || '';
+                        var phone = s.phone ? (' · ' + s.phone) : '';
+                        function cell(code) {
+                            var key = String(id) + '|' + code;
+                            var checked = assignmentsSet.has(key) ? 'checked' : '';
+                            var disabled = isAdminForShifts ? '' : 'disabled';
+                            return '<input type="checkbox" class="form-check-input shift-toggle" data-staff="' + id + '" data-code="' + code + '" ' + checked + ' ' + disabled + ' />';
+                        }
+                        return '<tr>' +
+                            '<td><div class="fw-semibold">' + name + '</div><div class="text-muted small">' + phone + '</div></td>' +
+                            '<td class="text-center">' + cell('MORNING') + '</td>' +
+                            '<td class="text-center">' + cell('AFTERNOON') + '</td>' +
+                            '<td class="text-center">' + cell('EVENING') + '</td>' +
+                            '<td class="text-center">' + cell('FULL_DAY') + '</td>' +
+                            '</tr>';
+                    }).join('');
+
+                    shiftTableBody.innerHTML = rows || '<tr><td colspan="5" class="text-center text-muted py-3">Chưa có nhân viên.</td></tr>';
+                });
+            }
+
+            function toggleAssign(dateStr, staffId, code, checked) {
+                var url = checked ? '/api/staff-shifts/assign' : '/api/staff-shifts/unassign';
+                return fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ staffId: Number(staffId), workDate: dateStr, shiftCode: code })
+                }).then(function (r) {
+                    if (!r.ok) return r.json().catch(function () { return null; }).then(function (b) {
+                        throw new Error((b && b.error) ? b.error : 'Không lưu được phân ca');
+                    });
+                    return r.json().catch(function () { return {}; });
+                });
+            }
+
+            if (shiftDateInput && !shiftDateInput.value) {
+                shiftDateInput.value = todayIso();
+            }
+            if (btnLoadShiftDate) {
+                btnLoadShiftDate.addEventListener('click', function () {
+                    loadShiftScreen(shiftDateInput ? shiftDateInput.value : '');
+                });
+            }
+            if (shiftDateInput) {
+                shiftDateInput.addEventListener('change', function () {
+                    loadShiftScreen(shiftDateInput.value);
+                });
+            }
+            if (shiftTableBody) {
+                shiftTableBody.addEventListener('change', function (e) {
+                    var t = e.target;
+                    if (!t || !t.classList.contains('shift-toggle')) return;
+                    if (!isAdminForShifts) {
+                        t.checked = !t.checked;
+                        alert('Bạn chỉ có quyền xem lịch phân ca.');
+                        return;
+                    }
+                    var dateStr = shiftDateInput ? shiftDateInput.value : '';
+                    var staffId = t.getAttribute('data-staff');
+                    var code = t.getAttribute('data-code');
+                    var checked = !!t.checked;
+
+                    // Rule B (UI): FULL_DAY không chồng với MORNING/AFTERNOON/EVENING
+                    var row = t.closest('tr');
+                    function getToggle(code) {
+                        return row ? row.querySelector('.shift-toggle[data-code="' + code + '"]') : null;
+                    }
+                    var full = getToggle('FULL_DAY');
+                    var m = getToggle('MORNING');
+                    var a = getToggle('AFTERNOON');
+                    var ev = getToggle('EVENING');
+
+                    if (checked && code === 'FULL_DAY') {
+                        if ((m && m.checked) || (a && a.checked) || (ev && ev.checked)) {
+                            alert('Không thể chọn "Cả ngày" khi đã có ca khác trong ngày.');
+                            t.checked = false;
+                            return;
+                        }
+                    }
+                    if (checked && code !== 'FULL_DAY') {
+                        if (full && full.checked) {
+                            alert('Không thể chọn ca này khi đã chọn "Cả ngày" trong ngày.');
+                            t.checked = false;
+                            return;
+                        }
+                    }
+
+                    toggleAssign(dateStr, staffId, code, checked).catch(function (err) {
+                        alert(err && err.message ? err.message : 'Không lưu được phân ca');
+                        t.checked = !checked;
+                    });
+                });
+                // initial load
+                loadShiftScreen(shiftDateInput ? shiftDateInput.value : '');
+            }
+
             var addBtn = document.querySelector('.staff-add-btn');
             var modalEl = document.getElementById('createStaffModal');
             var detailModalEl = document.getElementById('staffDetailModal');
@@ -504,6 +978,7 @@
                     if (form) {
                         form.reset();
                     }
+                    bindMoneyInput(document.getElementById('staffSalary'));
                     modal.show();
                 });
 
@@ -540,7 +1015,7 @@
                             role: role,
                             status: status || 'ACTIVE',
                             shift: shift || null,
-                            salary: salaryValue ? Number(salaryValue) : null,
+                            salary: parseVnMoneyToInt(salaryValue),
                             avatarUrl: avatarUrl || null,
                             startDate: null
                         };
@@ -611,7 +1086,7 @@
                         document.getElementById('editStaffRole').value = role;
                         document.getElementById('editStaffStatus').value = status;
                         document.getElementById('editStaffShift').value = shift;
-                        document.getElementById('editStaffSalary').value = salary || '';
+                        document.getElementById('editStaffSalary').value = salary != null ? formatVnMoney(salary) : '';
                         document.getElementById('editStaffStartDate').value = startDate || '';
                         document.getElementById('editStaffAvatarUrl').value = avatarUrl || '';
 
@@ -654,7 +1129,7 @@
 
                         function updateCalculatedSalary() {
                             if (!calculatedSalaryInput || !salaryInputEl) return;
-                            var hourly = Number(salaryInputEl.value || 0);
+                            var hourly = parseVnMoneyToInt(salaryInputEl.value) || 0;
                             var total = currentTotalHours * hourly;
                             calculatedSalaryInput.value = total > 0
                                 ? total.toLocaleString('vi-VN') + ' đ'
@@ -679,7 +1154,7 @@
                                     totalHoursInput.value = currentTotalHours.toFixed(2) + ' giờ';
 
                                     if (salaryInputEl && !salaryInputEl.value && data.hourlyRate != null) {
-                                        salaryInputEl.value = data.hourlyRate;
+                                        salaryInputEl.value = formatVnMoney(data.hourlyRate);
                                     }
 
                                     updateCalculatedSalary();
@@ -692,6 +1167,7 @@
                         }
 
                         if (salaryInputEl) {
+                            bindMoneyInput(salaryInputEl);
                             salaryInputEl.addEventListener('input', updateCalculatedSalary);
                         }
 
@@ -725,7 +1201,7 @@
                             role: role,
                             status: status,
                             shift: shift || null,
-                            salary: salaryValue ? Number(salaryValue) : null,
+                            salary: parseVnMoneyToInt(salaryValue),
                             avatarUrl: avatarUrl || null,
                             startDate: startDate || null
                         };

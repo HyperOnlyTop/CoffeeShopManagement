@@ -13,10 +13,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.QuanLyQuanCafe.model.AppUser;
 import com.example.QuanLyQuanCafe.model.Attendance;
 import com.example.QuanLyQuanCafe.model.AttendanceStatus;
 import com.example.QuanLyQuanCafe.model.Staff;
 import com.example.QuanLyQuanCafe.model.StaffRole;
+import com.example.QuanLyQuanCafe.repository.AppUserRepository;
 import com.example.QuanLyQuanCafe.repository.AttendanceRepository;
 import com.example.QuanLyQuanCafe.repository.StaffRepository;
 
@@ -26,10 +28,22 @@ public class AttendanceController {
 
     private final AttendanceRepository attendanceRepository;
     private final StaffRepository staffRepository;
+    private final AppUserRepository appUserRepository;
 
-    public AttendanceController(AttendanceRepository attendanceRepository, StaffRepository staffRepository) {
+    public AttendanceController(AttendanceRepository attendanceRepository, StaffRepository staffRepository, AppUserRepository appUserRepository) {
         this.attendanceRepository = attendanceRepository;
         this.staffRepository = staffRepository;
+        this.appUserRepository = appUserRepository;
+    }
+
+    private Staff resolveStaff(Principal principal) {
+        if (principal == null) return null;
+        AppUser user = appUserRepository.findByUsername(principal.getName());
+        if (user != null && user.getStaffId() != null) {
+            return staffRepository.findById(user.getStaffId()).orElse(null);
+        }
+        // fallback legacy
+        return staffRepository.findByName(principal.getName());
     }
 
     @PostMapping("/check-in")
@@ -39,7 +53,7 @@ public class AttendanceController {
         }
 
         String username = principal.getName();
-        Staff staff = staffRepository.findByName(username);
+        Staff staff = resolveStaff(principal);
         
         if (staff == null) {
             staff = new Staff();
@@ -68,7 +82,7 @@ public class AttendanceController {
     @GetMapping("/today")
     public ResponseEntity<?> getTodayStatus(Principal principal) {
         if (principal == null) return ResponseEntity.badRequest().body(Map.of("error", "Not authenticated"));
-        Staff staff = staffRepository.findByName(principal.getName());
+        Staff staff = resolveStaff(principal);
         if (staff == null) return ResponseEntity.ok(Map.of("status", "NOT_STAFF"));
 
         LocalDate today = LocalDate.now();
@@ -86,7 +100,7 @@ public class AttendanceController {
     @PostMapping("/check-out")
     public ResponseEntity<?> checkOut(Principal principal) {
         if (principal == null) return ResponseEntity.badRequest().body("Not authenticated");
-        Staff staff = staffRepository.findByName(principal.getName());
+        Staff staff = resolveStaff(principal);
         if (staff == null) return ResponseEntity.badRequest().body("Không tìm thấy nhân viên");
 
         LocalDate today = LocalDate.now();
