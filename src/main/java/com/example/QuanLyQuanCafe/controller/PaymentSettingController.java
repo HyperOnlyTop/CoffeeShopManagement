@@ -47,10 +47,7 @@ public class PaymentSettingController {
         current.setBankName(incoming.getBankName());
         current.setBankAccount(incoming.getBankAccount());
         current.setBankOwnerName(incoming.getBankOwnerName());
-        current.setMomoPhone(incoming.getMomoPhone());
-        current.setMomoOwnerName(incoming.getMomoOwnerName());
         current.setBankEnabled(incoming.getBankEnabled());
-        current.setMomoEnabled(incoming.getMomoEnabled());
 
         PaymentSetting saved = paymentSettingService.save(current);
         return ResponseEntity.ok(saved);

@@ -29,7 +29,10 @@ import com.example.QuanLyQuanCafe.model.OrderItem;
 import com.example.QuanLyQuanCafe.model.OrderStatus;
 import com.example.QuanLyQuanCafe.model.AppUser;
 import com.example.QuanLyQuanCafe.model.TableBooking;
+import com.example.QuanLyQuanCafe.model.BookingStatus;
 import com.example.QuanLyQuanCafe.model.OrderType;
+import com.example.QuanLyQuanCafe.model.MenuItem;
+import com.example.QuanLyQuanCafe.model.MenuItemStatus;
 import com.example.QuanLyQuanCafe.service.MenuService;
 import com.example.QuanLyQuanCafe.service.OrderService;
 import com.example.QuanLyQuanCafe.service.StaffService;
@@ -167,19 +170,41 @@ public class ProductController {
 		model.addAttribute("recentOrders", recentOrders);
 		model.addAttribute("bestSellers", bestSellers);
 
-		return "dashboard";
+		return "admin/dashboard";
 	}
 
 	@GetMapping("/Menu")
 	public String menu(Model model) {
-		model.addAttribute("menuItems", menuService.getAllItems());
-		return "Menu";
+		List<MenuItem> menuItems = menuService.getAllItems();
+		model.addAttribute("menuItems", menuItems);
+		long menuTotal = menuItems.size();
+		long menuAvailable = menuItems.stream().filter(m -> m != null && m.getStatus() == MenuItemStatus.AVAILABLE).count();
+		long menuUnavailable = menuItems.stream().filter(m -> m != null && m.getStatus() == MenuItemStatus.UNAVAILABLE).count();
+		long menuCategoryCount = menuItems.stream()
+				.map(m -> m != null && m.getCategory() != null ? m.getCategory().getName() : "")
+				.filter(s -> !s.isBlank())
+				.distinct()
+				.count();
+		model.addAttribute("menuStatTotal", menuTotal);
+		model.addAttribute("menuStatAvailable", menuAvailable);
+		model.addAttribute("menuStatUnavailable", menuUnavailable);
+		model.addAttribute("menuStatCategories", menuCategoryCount);
+		return "admin/Menu";
 	}
 
 	@GetMapping("/Order")
 	public String order(Model model) {
-		model.addAttribute("orders", orderService.findAll());
-		return "Order";
+		List<CafeOrder> orders = orderService.findAll();
+		model.addAttribute("orders", orders);
+		long orderTotal = orders.size();
+		long orderPending = orders.stream().filter(o -> o != null && o.getStatus() == OrderStatus.PENDING).count();
+		long orderCompleted = orders.stream().filter(o -> o != null && o.getStatus() == OrderStatus.COMPLETED).count();
+		long orderCancelled = orders.stream().filter(o -> o != null && o.getStatus() == OrderStatus.CANCELLED).count();
+		model.addAttribute("orderStatTotal", orderTotal);
+		model.addAttribute("orderStatPending", orderPending);
+		model.addAttribute("orderStatCompleted", orderCompleted);
+		model.addAttribute("orderStatCancelled", orderCancelled);
+		return "admin/Order";
 	}
 
 	@GetMapping("/Booking")
@@ -190,7 +215,16 @@ public class ProductController {
 			Comparator.nullsLast(Comparator.naturalOrder())
 		).reversed());
 		model.addAttribute("bookings", bookings);
-		return "Booking";
+		long bookingTotal = bookings.size();
+		long bookingConfirmed = bookings.stream().filter(b -> b != null && b.getStatus() == BookingStatus.CONFIRMED).count();
+		long bookingCancelled = bookings.stream().filter(b -> b != null && b.getStatus() == BookingStatus.CANCELLED).count();
+		int bookingGuestsSum = bookings.stream().filter(b -> b != null).mapToInt(TableBooking::getGuests).sum();
+		model.addAttribute("bookingStatTotal", bookingTotal);
+		model.addAttribute("bookingStatConfirmed", bookingConfirmed);
+		model.addAttribute("bookingStatCancelled", bookingCancelled);
+		model.addAttribute("bookingStatGuestsSum", bookingGuestsSum);
+		model.addAttribute("bookingPageNow", LocalDateTime.now());
+		return "admin/Booking";
 	}
 
 	@GetMapping("/Tables")
@@ -275,12 +309,12 @@ public class ProductController {
 		model.addAttribute("totalTables", totalTables);
 		model.addAttribute("occupiedCount", occupiedCount);
 		model.addAttribute("reservedCount", reservedCount);
-		return "Tables";
+		return "admin/Tables";
 	}
 
 	@GetMapping("/Revenue")
 	public String revenue() {
-		return "Revenue";
+		return "admin/Revenue";
 	}
 
 	@GetMapping("/Staff")
@@ -331,22 +365,22 @@ public class ProductController {
 		model.addAttribute("staffWorking", working);
 		model.addAttribute("staffOnLeave", onLeave);
 		model.addAttribute("staffInactive", inactive);
-		return "Staff";
+		return "admin/Staff";
 	}
 
 	@GetMapping("/Inventory")
 	public String khoHang() {
-		return "Inventory";
+		return "admin/Inventory";
 	}
 
 	@GetMapping("/Setting")
 	public String caiDat() {
-		return "Setting";
+		return "admin/Setting";
 	}
 
 	@GetMapping("/Accounts")
 	public String quanLyTaiKhoan() {
-		return "Accounts";
+		return "admin/Accounts";
 	}
 
 	@GetMapping("/Customers")

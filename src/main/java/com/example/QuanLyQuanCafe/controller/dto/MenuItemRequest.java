@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 public class MenuItemRequest {
 
+    private Long id;
     private String name;
     private String description;
     private String categoryName;
@@ -11,6 +12,14 @@ public class MenuItemRequest {
     private BigDecimal cost;
     private String imageUrl;
     private String status;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public String getName() {
         return name;

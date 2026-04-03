@@ -1,0 +1,20 @@
+﻿.customer-stat-redeem-icon {
+  background-color: #EEF2FF;
+  color: #4F46E5;
+}
+
+.accounts-customer-table .customer-actions-cell {
+  min-width: 240px;
+  max-width: 320px;
+}
+
+.accounts-customer-table .customer-actions-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.accounts-customer-table .customer-actions-inner .btn-sm {
+  font-size: 12px;
+}

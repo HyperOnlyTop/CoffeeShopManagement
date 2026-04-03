@@ -37,17 +37,8 @@ public class PaymentSetting {
     @Column(name = "bank_owner_name", length = 100)
     private String bankOwnerName;
 
-    @Column(name = "momo_phone", length = 15)
-    private String momoPhone;
-
-    @Column(name = "momo_owner_name", length = 100)
-    private String momoOwnerName;
-
     @Column(name = "bank_enabled")
     private Boolean bankEnabled;
-
-    @Column(name = "momo_enabled")
-    private Boolean momoEnabled;
 
     public Long getId() {
         return id;
@@ -97,35 +88,11 @@ public class PaymentSetting {
         this.bankOwnerName = bankOwnerName;
     }
 
-    public String getMomoPhone() {
-        return momoPhone;
-    }
-
-    public void setMomoPhone(String momoPhone) {
-        this.momoPhone = momoPhone;
-    }
-
-    public String getMomoOwnerName() {
-        return momoOwnerName;
-    }
-
-    public void setMomoOwnerName(String momoOwnerName) {
-        this.momoOwnerName = momoOwnerName;
-    }
-
     public Boolean getBankEnabled() {
         return bankEnabled;
     }
 
     public void setBankEnabled(Boolean bankEnabled) {
         this.bankEnabled = bankEnabled;
-    }
-
-    public Boolean getMomoEnabled() {
-        return momoEnabled;
-    }
-
-    public void setMomoEnabled(Boolean momoEnabled) {
-        this.momoEnabled = momoEnabled;
     }
 }

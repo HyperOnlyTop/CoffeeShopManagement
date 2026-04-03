@@ -2,85 +2,91 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
   <nav class="sidebar" th:fragment="sidebar(activePage)">
-    <a th:href="@{/}" class="brand" style="text-decoration: none; color: inherit;">
-      <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo" class="brand-img">
-      <div class="brand-text">
-        <h5>Brew &amp; Co.</h5>
-        <p style="color: #d47633;">Coffee Management</p>
-      </div>
-    </a>
+    <div class="sidebar-top">
+      <a th:href="@{/}" class="brand" style="text-decoration: none; color: inherit;">
+        <img src="https://ui-avatars.com/api/?name=B&C&background=111&color=fff&rounded=true" alt="Logo" class="brand-img">
+        <div class="brand-text">
+          <h5>Brew &amp; Co.</h5>
+          <p style="color: #d47633;">Coffee Management</p>
+        </div>
+      </a>
 
-    <div class="user-profile" th:if="${currentUser != null}">
-      <img th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
-           alt="User" style="object-fit: cover;">
-      <div class="user-info">
-        <h6 th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">Tên tài khoản</h6>
-        <p th:text="${currentUser.email}">Email</p>
+      <div class="user-profile" th:if="${currentUser != null}">
+        <img th:src="${currentUser.avatarUrl != null && !currentUser.avatarUrl.isEmpty() ? currentUser.avatarUrl : 'https://ui-avatars.com/api/?name=' + (currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username) + '&background=C98D4D&color=fff'}"
+             alt="User" style="object-fit: cover;">
+        <div class="user-info">
+          <h6 th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">Tên tài khoản</h6>
+          <p th:text="${currentUser.email}">Email</p>
+        </div>
+        <div class="online-dot"></div>
       </div>
-      <div class="online-dot"></div>
     </div>
 
-    <ul class="nav-menu">
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/dashboard" class="nav-link" th:classappend="${activePage} == 'DASHBOARD' ? ' active'">
-          <i class="bi bi-grid-1x2"></i> Dashboard
-        </a>
-      </li>
+    <div class="sidebar-nav-scroll">
+      <ul class="nav-menu">
+        <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+          <a href="/dashboard" class="nav-link" th:classappend="${activePage} == 'DASHBOARD' ? ' active'">
+            <i class="bi bi-grid-1x2"></i> Dashboard
+          </a>
+        </li>
 
-      <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER','BARISTA')">
-        <a href="/Order" class="nav-link" th:classappend="${activePage} == 'ORDER' ? ' active'">
-          <i class="bi bi-bag"></i> Đơn hàng
-        </a>
-      </li>
+        <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+          <a href="/Revenue" class="nav-link" th:classappend="${activePage} == 'REVENUE' ? ' active'">
+            <i class="bi bi-bar-chart-fill"></i> Doanh thu
+          </a>
+        </li>
 
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/Menu" class="nav-link" th:classappend="${activePage} == 'MENU' ? ' active'">
-          <i class="bi bi-cup-hot"></i> Menu
-        </a>
-      </li>
+        <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+          <a href="/Menu" class="nav-link" th:classappend="${activePage} == 'MENU' ? ' active'">
+            <i class="bi bi-cup-hot"></i> Menu
+          </a>
+        </li>
 
-      <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER')">
-        <a href="/Tables" class="nav-link" th:classappend="${activePage} == 'TABLES' ? ' active'">
-          <i class="bi bi-grid-3x3-gap"></i> Quản lý bàn
-        </a>
-      </li>
+        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER','BARISTA')">
+          <a href="/Order" class="nav-link" th:classappend="${activePage} == 'ORDER' ? ' active'">
+            <i class="bi bi-bag"></i> Đơn hàng
+          </a>
+        </li>
 
-      <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER')">
-        <a href="/Booking" class="nav-link" th:classappend="${activePage} == 'BOOKING' ? ' active'">
-          <i class="bi bi-calendar-event"></i> Đặt bàn
-        </a>
-      </li>
+        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER')">
+          <a href="/Tables" class="nav-link" th:classappend="${activePage} == 'TABLES' ? ' active'">
+            <i class="bi bi-grid-3x3-gap"></i> Quản lý bàn
+          </a>
+        </li>
 
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/Inventory" class="nav-link" th:classappend="${activePage} == 'INVENTORY' ? ' active'">
-          <i class="bi bi-box-seam"></i> Kho hàng
-        </a>
-      </li>
+        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER')">
+          <a href="/Booking" class="nav-link" th:classappend="${activePage} == 'BOOKING' ? ' active'">
+            <i class="bi bi-calendar-event"></i> Đặt bàn
+          </a>
+        </li>
 
-      <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER','BARISTA','SECURITY')">
-        <a href="/Staff" class="nav-link" th:classappend="${activePage} == 'STAFF' ? ' active'">
-          <i class="bi bi-people"></i> Nhân viên
-        </a>
-      </li>
+        <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+          <a href="/Accounts" class="nav-link" th:classappend="${activePage} == 'ACCOUNTS' ? ' active'">
+            <i class="bi bi-people-fill"></i> Khách hàng
+          </a>
+        </li>
+        
+        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER','BARISTA','SECURITY')">
+          <a href="/Staff" class="nav-link" th:classappend="${activePage} == 'STAFF' ? ' active'">
+            <i class="bi bi-people"></i> Nhân viên
+          </a>
+        </li>
 
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/Revenue" class="nav-link" th:classappend="${activePage} == 'REVENUE' ? ' active'">
-          <i class="bi bi-bar-chart-fill"></i> Doanh thu
-        </a>
-      </li>
+        <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+          <a href="/Inventory" class="nav-link" th:classappend="${activePage} == 'INVENTORY' ? ' active'">
+            <i class="bi bi-box-seam"></i> Kho hàng
+          </a>
+        </li>
 
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/Accounts" class="nav-link" th:classappend="${activePage} == 'ACCOUNTS' ? ' active'">
-          <i class="bi bi-people-fill"></i> Tài khoản
-        </a>
-      </li>
+        
 
-      <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-        <a href="/Setting" class="nav-link" th:classappend="${activePage} == 'SETTING' ? ' active'">
-          <i class="bi bi-gear"></i> Cài đặt
-        </a>
-      </li>
-    </ul>
+        <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+          <a href="/Setting" class="nav-link" th:classappend="${activePage} == 'SETTING' ? ' active'">
+            <i class="bi bi-gear"></i> Cài đặt
+          </a>
+        </li>
+      </ul>
+    </div>
 
     <div class="logout-btn">
       <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
@@ -88,4 +94,3 @@
   </nav>
 </body>
 </html>
-

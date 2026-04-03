@@ -1,424 +1,16 @@
-<!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quản lý Đơn hàng | Quản lý quán cà phê</title>
-
-  <!-- Bootstrap 5 CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <!-- Bootstrap Icons -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-
-  <!-- Google Fonts - Inter -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-  <!-- Shared layout styles -->
-  <link rel="stylesheet" href="/css/doanhthu.css">
-
-  <style>
-    .table-picker-grid {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 8px;
-    }
-
-    @media (max-width: 576px) {
-      .table-picker-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+﻿document.addEventListener('DOMContentLoaded', function () {
+      var BS = typeof bootstrap !== 'undefined' ? bootstrap : (typeof window !== 'undefined' ? window.bootstrap : null);
+      if (!BS || typeof BS.Modal !== 'function') {
+        console.error('[order-page] Bootstrap Modal không khả dụng — kiểm tra CDN / thứ tự script.');
       }
-    }
-
-    .table-btn {
-      border-radius: 12px;
-      padding: 10px 6px;
-      font-weight: 700;
-      border: 1px solid rgba(30, 41, 59, 0.18);
-      background: #fff;
-      color: #111827;
-    }
-
-    .table-btn.table-available {
-      background: rgba(17, 24, 39, 0.02);
-      color: #111827;
-    }
-
-    .table-btn.table-reserved {
-      background: rgba(59, 130, 246, 0.14);
-      border-color: rgba(59, 130, 246, 0.35);
-      color: #1d4ed8;
-    }
-
-    .table-btn.table-occupied {
-      background: rgba(239, 68, 68, 0.14);
-      border-color: rgba(239, 68, 68, 0.35);
-      color: #b91c1c;
-    }
-
-    .table-btn.table-selected {
-      outline: 2px solid rgba(255, 159, 26, 0.85);
-      outline-offset: 1px;
-    }
-
-    /* Menu autocomplete dropdown (overlay, không đẩy layout) */
-    .menu-search-wrap {
-      position: relative;
-    }
-
-    .menu-search-results {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: calc(100% + 6px);
-      z-index: 1080; /* above modal content */
-      max-height: 240px;
-      overflow: auto;
-      display: none;
-    }
-
-    .menu-search-results .list-group-item.active {
-      background-color: #ffedd5;
-      border-color: rgba(255, 159, 26, 0.35);
-      color: #2a1704;
-    }
-
-    .menu-search-results.list-group {
-      background-color: #fff;
-    }
-
-    .menu-search-results .list-group-item {
-      background-color: #fff;
-    }
-  </style>
-</head>
-
-<body>
-
-  <!-- Sidebar -->
-  <div th:replace="~{fragments/sidebar :: sidebar('ORDER')}"></div>
-
-  <!-- Main content -->
-  <main class="main-content">
-
-    <!-- Header -->
-    <div class="header-row">
-      <div class="page-title">
-        <h2>Quản lý Đơn hàng</h2>
-        <p th:text="${#lists.size(orders)} + ' đơn trong hệ thống'">0 đơn trong hệ thống</p>
-      </div>
-      <span id="roleBaristaFlag" class="d-none" sec:authorize="hasRole('BARISTA')">1</span>
-      <div class="header-actions">
-        <button class="btn order-create-btn" type="button" sec:authorize="hasAnyRole('ADMIN','CASHIER')">
-          <i class="bi bi-plus-lg"></i> Tạo đơn mới
-        </button>
-      </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="order-filters mb-4">
-      <button class="order-filter active" type="button">Tất cả</button>
-      <button class="order-filter" type="button">Chờ xử lý</button>
-      <button class="order-filter" type="button">Hoàn thành</button>
-      <button class="order-filter" type="button">Đã hủy</button>
-    </div>
-
-    <!-- Orders table -->
-    <div class="custom-card">
-      <div class="table-responsive">
-        <table class="table align-middle orders-table">
-          <thead>
-            <tr>
-              <th scope="col">Mã đơn</th>
-              <th scope="col">Khách hàng</th>
-              <th scope="col">Loại</th>
-              <th scope="col">Bàn / Ghi chú</th>
-              <th scope="col">Tổng tiền</th>
-              <th scope="col">Giờ đặt</th>
-              <th scope="col">Trạng thái</th>
-              <th scope="col">Thanh toán</th>
-              <th scope="col">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr th:if="${#lists.isEmpty(orders)}">
-              <td colspan="9" class="text-center text-muted py-4">Chưa có đơn hàng nào.</td>
-            </tr>
-
-            <tr th:each="order : ${orders}">
-              <td class="order-code" th:text="${order.orderCode != null ? '#' + order.orderCode : '(Mới)'}">#ORD-0000
-              </td>
-              <td>
-                <div class="order-customer-name"
-                  th:text="${order.customerName != null ? order.customerName : 'Khách lẻ'}">Tên khách</div>
-                <div class="order-customer-phone" th:text="${order.customerPhone != null ? order.customerPhone : ''}">Số
-                  điện thoại</div>
-              </td>
-              <td>
-                <span class="order-type-badge"
-                  th:classappend="${order.type != null and order.type.name() == 'TAKEAWAY'} ? ' order-type-takeaway' : ' order-type-dinein'"
-                  th:text="${order.type != null and order.type.name() == 'TAKEAWAY'} ? 'Mang về' : 'Tại bàn'">Tại
-                  bàn</span>
-              </td>
-              <td
-                th:text="${order.tableName != null ? order.tableName : (order.type != null and order.type.name() == 'TAKEAWAY' ? '—' : '')}">
-                Bàn / Ghi chú</td>
-              <td class="orders-amount" th:text="${order.total != null ? order.total + ' đ' : '0 đ'}">0 đ</td>
-              <td th:text="${order.createdAt != null ? #temporals.format(order.createdAt, 'HH:mm') : '--:--'}">--:--
-              </td>
-              <td>
-                <span class="status-badge status-completed"
-                  th:if="${order.status != null and order.status.name() == 'COMPLETED'}">
-                  Hoàn thành
-                </span>
-                <span class="status-badge status-waiting"
-                  th:if="${order.status != null and order.status.name() == 'PENDING'}">
-                  Chờ xử lý
-                </span>
-                <span class="status-badge status-cancelled"
-                  th:if="${order.status != null and order.status.name() == 'CANCELLED'}">
-                  Đã hủy
-                </span>
-                <span class="status-badge" th:if="${order.status == null}">
-                  Không rõ
-                </span>
-              </td>
-              <td>
-                <span th:if="${order.paymentMethod != null and order.paymentMethod.name() == 'CASH'}"
-                  class="badge bg-secondary">Tiền mặt</span>
-                <span th:if="${order.paymentMethod != null and order.paymentMethod.name() == 'BANK_TRANSFER'}"
-                  class="badge bg-primary">Chuyển khoản</span>
-                <!-- Đã bỏ MoMo và Thẻ theo yêu cầu -->
-                <span th:if="${order.paymentMethod == null}" class="badge bg-secondary">Tiền mặt</span>
-              </td>
-              <td>
-                <div class="orders-actions">
-                  <button class="icon-circle-btn" type="button" aria-label="Xem chi tiết" title="Xem chi tiết"><i
-                      class="bi bi-eye"></i></button>
-                  <button class="icon-circle-btn edit-order-btn" type="button" aria-label="Sửa đơn" title="Sửa đơn"
-                    th:data-code="${order.orderCode}" sec:authorize="hasAnyRole('ADMIN','CASHIER')"><i class="bi bi-pencil"></i></button>
-                  <button class="icon-circle-btn barista-ready-btn" type="button" aria-label="Sẵn sàng phục vụ"
-                    title="Sẵn sàng phục vụ" th:data-code="${order.orderCode}"
-                    th:if="${order.status != null and order.status.name() == 'PENDING'}"
-                    sec:authorize="hasRole('BARISTA')"><i class="bi bi-check2-circle"></i></button>
-                  <button class="icon-circle-btn" type="button" aria-label="Hóa đơn" title="Hóa đơn"><i
-                      class="bi bi-receipt"></i></button>
-                  <button class="icon-circle-btn" type="button" aria-label="QR thanh toán" title="QR thanh toán"><i
-                      class="bi bi-qr-code"></i></button>
-                </div>
-              </td>
-            </tr>
-
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </main>
-
-  <!-- Modal: Tạo đơn hàng mới -->
-  <div class="modal fade" id="createOrderModal" tabindex="-1" aria-hidden="true" sec:authorize="hasAnyRole('ADMIN','CASHIER')">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content border-0 shadow-lg rounded-4">
-        <div class="modal-header border-0 pb-0 px-4 pt-4">
-          <h5 class="modal-title fw-semibold">Tạo đơn hàng mới</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-        </div>
-        <div class="modal-body px-4 pb-0">
-          <form id="createOrderForm">
-            <div class="row g-3 mb-3">
-              <div class="col-md-4">
-                <label class="form-label fw-medium">Mã đơn</label>
-                <input type="text" class="form-control" id="orderCode" placeholder="#ORD-xxxx" disabled>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label fw-medium">Giờ đặt</label>
-                <input type="time" class="form-control" id="orderTime">
-                <div class="small text-muted mt-1">Tự động lấy giờ hiện tại khi tạo đơn.</div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label fw-medium">Trạng thái</label>
-                <select class="form-select" id="orderStatus">
-                  <option value="PENDING" selected>Chờ xử lý</option>
-                  <option value="COMPLETED">Hoàn thành</option>
-                  <option value="CANCELLED">Đã hủy</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="row g-3 mb-3">
-              <div class="col-md-6">
-                <label class="form-label fw-medium">Khách hàng</label>
-                <input type="text" class="form-control" id="orderCustomerName" placeholder="VD: Nguyễn Văn An">
-                <div class="small text-muted mt-1">SĐT khách sẽ hiển thị ở dòng thứ 2.</div>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label fw-medium">Số điện thoại</label>
-                <input type="tel" class="form-control" id="orderCustomerPhone" placeholder="VD: 0901234567">
-              </div>
-            </div>
-
-            <!-- Chọn món từ Menu -->
-            <div class="mb-3">
-              <label class="form-label fw-medium">Chọn món trong menu</label>
-              <div class="row g-2 align-items-end">
-                <div class="col-md-5">
-                  <div class="menu-search-wrap">
-                    <input type="text" class="form-control form-control-sm" id="orderMenuSearchInput" placeholder="Tìm món..." autocomplete="off">
-                    <div class="list-group shadow-sm menu-search-results" id="orderMenuSearchResults"></div>
-                  </div>
-                </div>
-                <div class="col-md-2">
-                  <label class="form-label fw-medium">SL</label>
-                  <input type="number" class="form-control form-control-sm" id="orderItemQuantity" value="1" min="1">
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label fw-medium">Ghi chú món</label>
-                  <input type="text" class="form-control form-control-sm" id="orderItemNoteInput" placeholder="VD: ít đá, ít ngọt...">
-                </div>
-                <div class="col-md-2 d-grid">
-                  <button type="button" class="btn btn-outline-primary btn-sm" id="addOrderItemBtn">
-                    <i class="bi bi-plus-lg"></i> Thêm
-                  </button>
-                </div>
-              </div>
-              <div class="mt-3">
-                <table class="table table-sm align-middle mb-0">
-                  <thead>
-                    <tr>
-                      <th>Món</th>
-                      <th class="text-center" style="width: 80px;">SL</th>
-                      <th style="width: 220px;">Ghi chú</th>
-                      <th class="text-end" style="width: 120px;">Đơn giá</th>
-                      <th class="text-end" style="width: 120px;">Thành tiền</th>
-                      <th style="width: 40px;"></th>
-                    </tr>
-                  </thead>
-                  <tbody id="orderItemsBody">
-                    <tr class="text-muted" id="orderItemsEmptyRow">
-                      <td colspan="6">Chưa có món nào. Hãy tìm món và bấm Enter hoặc click để thêm.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div class="row g-3 mb-3">
-              <div class="col-md-3">
-                <label class="form-label fw-medium">Loại</label>
-                <select class="form-select" id="orderType">
-                  <option value="DINE_IN">Tại bàn</option>
-                  <option value="TAKEAWAY">Mang về</option>
-                </select>
-              </div>
-              <div class="col-md-3" id="selectedTableField">
-                <label class="form-label fw-medium">Bàn đã chọn</label>
-                <input type="text" class="form-control" id="selectedTableDisplay" placeholder="Chưa chọn bàn" readonly>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label fw-medium">Ghi chú đơn</label>
-                <input type="text" class="form-control" id="orderNote" placeholder="Ghi chú tổng cho đơn (nếu có)">
-              </div>
-            </div>
-
-            <!-- Chọn bàn (đồng bộ đặt bàn + đơn tại bàn) -->
-            <div class="mb-3" id="tablePickerSection">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="fw-medium">Chọn bàn</div>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="reloadTablesBtn">
-                  <i class="bi bi-arrow-clockwise"></i> Tải lại
-                </button>
-              </div>
-              <div class="small text-muted mb-2">Đỏ: có khách · Xanh: đã đặt (giữ trong cửa sổ 15 phút) · Đen: trống</div>
-              <div class="table-picker-grid" id="tablePickerGrid"></div>
-              <div class="small text-muted mt-2" id="tablePickerHint"></div>
-            </div>
-
-            <div class="row g-3 mb-3 align-items-end">
-              <div class="col-md-6">
-                <label class="form-label fw-medium">Tổng tiền (đ)</label>
-                <input type="number" class="form-control" id="orderTotalAmount" min="0" step="1000"
-                  placeholder="Tự tính từ món đã chọn" readonly>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label fw-medium">Thanh toán</label>
-                <select class="form-select" id="orderPaymentMethod">
-                  <option value="CASH">Tiền mặt</option>
-                  <option value="BANK_TRANSFER">Chuyển khoản</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- QR thanh toán khi chọn Chuyển khoản hoặc MoMo -->
-            <div class="mb-3" id="orderPaymentQrSection" style="display: none;">
-              <label class="form-label fw-medium">QR thanh toán</label>
-              <div class="d-flex align-items-center">
-                <div class="bg-white rounded-3 border me-3 d-flex align-items-center justify-content-center"
-                  style="width: 200px; height: 200px;">
-                  <img id="orderPaymentQrImage" src="" alt="QR thanh toán" class="img-fluid"
-                    style="max-width: 180px; max-height: 180px; display: none;">
-                </div>
-                <div class="small text-muted">
-                  <div id="orderPaymentAmountText">Số tiền: 0 đ</div>
-                  <div id="orderPaymentMethodText"></div>
-                </div>
-              </div>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-between">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-          <button type="submit" form="createOrderForm" class="btn btn-warning px-4">Tạo đơn</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: QR thanh toán cho đơn vừa tạo -->
-  <div class="modal fade" id="orderPaymentQrModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content border-0 shadow-lg rounded-4">
-        <div class="modal-header border-0 pb-0 px-4 pt-4">
-          <h5 class="modal-title fw-semibold">QR thanh toán đơn hàng</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-        </div>
-        <div class="modal-body px-4 pb-0">
-          <p class="small text-muted mb-3" id="qrOrderInfoText">Vui lòng quét QR để thanh toán.</p>
-          <div class="d-flex flex-column align-items-center mb-3">
-            <div class="bg-white rounded-3 border d-flex align-items-center justify-content-center"
-              style="width: 320px; height: 320px;">
-              <img id="qrOrderImage" src="" alt="QR thanh toán đơn hàng" class="img-fluid"
-                style="max-width: 300px; max-height: 300px; display: none;">
-            </div>
-            <div class="mt-3 text-center small text-muted">
-              <div id="qrOrderAmountText">Số tiền: 0 đ</div>
-              <div id="qrOrderMethodText"></div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-end">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Bootstrap 5 JS + simple logic for Order page -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <!-- Admin common JS (logout confirm, etc.) -->
-  <script src="/js/admin-common.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      if (!window.bootstrap) return;
 
       var createBtn = document.querySelector('.order-create-btn');
       var createModalEl = document.getElementById('createOrderModal');
       var orderPaymentQrModalEl = document.getElementById('orderPaymentQrModal');
 
-      if (createBtn && createModalEl) {
-        var createModal = new bootstrap.Modal(createModalEl);
-        var orderPaymentQrModal = orderPaymentQrModalEl ? new bootstrap.Modal(orderPaymentQrModalEl) : null;
+      if (createModalEl && BS && typeof BS.Modal === 'function') {
+        var createModal = new BS.Modal(createModalEl);
+        var orderPaymentQrModal = orderPaymentQrModalEl ? new BS.Modal(orderPaymentQrModalEl) : null;
         var createForm = document.getElementById('createOrderForm');
 
         // Elements for auto time, customer and items
@@ -1030,38 +622,40 @@
           // Đã chuyển sang search autocomplete -> không dùng nữa
         }
 
-        createBtn.addEventListener('click', function () {
-          editingOrderCode = null;
-          if (modalTitle) modalTitle.textContent = 'Tạo đơn hàng mới';
+        if (createBtn) {
+          createBtn.addEventListener('click', function () {
+            editingOrderCode = null;
+            if (modalTitle) modalTitle.textContent = 'Tạo đơn hàng mới';
 
-          if (createForm) {
-            createForm.reset();
-          }
-          selectedTableNumber = null;
-          if (tablePickerHint) tablePickerHint.textContent = '';
-          // Reset items state
-          currentOrderItems = [];
-          renderOrderItems();
+            if (createForm) {
+              createForm.reset();
+            }
+            selectedTableNumber = null;
+            if (tablePickerHint) tablePickerHint.textContent = '';
+            // Reset items state
+            currentOrderItems = [];
+            renderOrderItems();
 
-          // Auto-set current time and default status
-          setCurrentTime();
-          if (orderStatusSelect) {
-            orderStatusSelect.value = 'PENDING';
-          }
+            // Auto-set current time and default status
+            setCurrentTime();
+            if (orderStatusSelect) {
+              orderStatusSelect.value = 'PENDING';
+            }
 
-          hideMenuResults();
-          if (menuSearchInput) menuSearchInput.value = '';
+            hideMenuResults();
+            if (menuSearchInput) menuSearchInput.value = '';
 
-          // Tải cấu hình thanh toán (Ngân hàng + MoMo) cho QR
-          loadPaymentSettingsForOrder();
+            // Tải cấu hình VietQR (ngân hàng) cho đơn chuyển khoản
+            loadPaymentSettingsForOrder();
 
-          toggleTablePickerByType();
-          loadTableStatus();
+            toggleTablePickerByType();
+            loadTableStatus();
 
-          // Ẩn QR lúc mới mở
-          updateOrderPaymentQr();
-          createModal.show();
-        });
+            // Ẩn QR lúc mới mở
+            updateOrderPaymentQr();
+            createModal.show();
+          });
+        }
 
         // Xử lý nút Sửa đơn
         var editBtns = document.querySelectorAll('.edit-order-btn');
@@ -1274,7 +868,7 @@
                 // Ẩn form tạo đơn
                 createModal.hide();
 
-                // Hiển thị modal QR nếu đơn dùng chuyển khoản hoặc MoMo
+                // Hiển thị modal QR nếu đơn dùng chuyển khoản ngân hàng
                 try {
                   // Nếu chưa có paymentSettings (lỡ lỗi mạng trước đó) thì load lại rồi hiển thị
                   if (!paymentSettings) {
@@ -1338,76 +932,240 @@
             loadTableStatus();
           });
         }
+      } else if (createBtn) {
+        createBtn.addEventListener('click', function () {
+          alert('Không mở được form tạo đơn. Kiểm tra quyền ADMIN/Thu ngân hoặc tải lại trang.');
+        });
+      }
 
-        // Tab filtering logic
-        var filterBtns = document.querySelectorAll('.order-filter');
-        var tbodyEl = document.querySelector('.orders-table tbody');
-        var tableRows = document.querySelectorAll('.orders-table tbody tr');
+      // Lọc trạng thái + tìm kiếm + sắp xếp cột (giống trang Kho)
+      var filterBtns = document.querySelectorAll('.order-filter');
+      var tbodyEl = document.querySelector('.orders-table tbody');
+      var orderSearchInput = document.getElementById('orderSearchInput');
+      var orderStatusFilters = document.getElementById('orderStatusFilters');
+      var orderDateInput = document.getElementById('orderDateFilterInput');
+      var orderDateLabel = document.getElementById('orderDateFilterLabel');
+      var orderDateClear = document.getElementById('orderDateFilterClear');
+      var ordersTableHead = document.querySelector('.orders-table thead');
+      var orderSortKey = null;
+      var orderSortDir = 'asc';
 
-        function getRowStatusText(row) {
-          var statusEl = row ? row.querySelector('.status-badge') : null;
-          return statusEl ? statusEl.textContent.trim() : '';
-        }
+      function normalizeOrderText(text) {
+        return text ? text.toString().toLowerCase().trim() : '';
+      }
 
-        function isEmptyRow(row) {
-          return !!(row && row.querySelector('.text-muted.py-4'));
-        }
+      function getRowStatusText(row) {
+        var statusEl = row ? row.querySelector('.status-badge') : null;
+        return statusEl ? statusEl.textContent.trim() : '';
+      }
 
-        function sortPendingFirst() {
-          if (!tbodyEl) return;
-          var rows = Array.prototype.slice.call(tbodyEl.querySelectorAll('tr'));
-          var empty = rows.filter(isEmptyRow);
-          var normal = rows.filter(function (r) { return !isEmptyRow(r); });
+      function isEmptyRow(row) {
+        return !!(row && row.querySelector('.text-muted.py-4'));
+      }
 
-          normal.sort(function (a, b) {
-            var aIsPending = getRowStatusText(a) === 'Chờ xử lý' ? 1 : 0;
-            var bIsPending = getRowStatusText(b) === 'Chờ xử lý' ? 1 : 0;
-            if (aIsPending !== bIsPending) return bIsPending - aIsPending; // pending first
-            return 0;
-          });
-
-          normal.forEach(function (r) { tbodyEl.appendChild(r); });
-          empty.forEach(function (r) { tbodyEl.appendChild(r); });
-        }
-
-        if (filterBtns.length > 0) {
-          filterBtns.forEach(function (btn) {
-            btn.addEventListener('click', function () {
-              filterBtns.forEach(function (b) { b.classList.remove('active'); });
-              this.classList.add('active');
-
-              var filterText = this.textContent.trim();
-
-              // re-query rows (vì có thể đã reorder)
-              tableRows = document.querySelectorAll('.orders-table tbody tr');
-              tableRows.forEach(function (row) {
-                if (isEmptyRow(row)) return; // empty row
-
-                if (filterText === 'Tất cả') {
-                  row.style.display = '';
-                  return;
-                }
-
-                var statusText = getRowStatusText(row);
-                if (statusText === filterText) {
-                  row.style.display = '';
-                } else {
-                  row.style.display = 'none';
-                }
-              });
-            });
-          });
-
-          // BARISTA: ưu tiên hàng chờ pha (PENDING) và default filter = "Chờ xử lý"
-          var isBarista = !!document.getElementById('roleBaristaFlag');
-          if (isBarista) {
-            sortPendingFirst();
-            var pendingBtn = Array.prototype.slice.call(filterBtns).find(function (b) {
-              return b.textContent && b.textContent.trim() === 'Chờ xử lý';
-            });
-            if (pendingBtn) pendingBtn.click();
+      function getOrderSortValue(row, key) {
+        var cells = row.cells;
+        if (!cells || cells.length < 8) return '';
+        switch (key) {
+          case 'code':
+            return normalizeOrderText((cells[0] && cells[0].textContent || '').replace(/^#/, '').trim());
+          case 'customer':
+            return normalizeOrderText(cells[1] ? cells[1].textContent : '');
+          case 'type':
+            return normalizeOrderText(cells[2] ? cells[2].textContent : '');
+          case 'table':
+            return normalizeOrderText(cells[3] ? cells[3].textContent : '');
+          case 'total': {
+            var t = cells[4] ? cells[4].textContent : '';
+            var digits = String(t).replace(/\D/g, '');
+            var n = parseInt(digits, 10);
+            return isFinite(n) ? n : 0;
           }
+          case 'time':
+            return row.getAttribute('data-sort-time') || (cells[5] ? cells[5].textContent.trim() : '');
+          case 'status':
+            return normalizeOrderText(cells[6] ? cells[6].textContent : '');
+          case 'payment':
+            return normalizeOrderText(cells[7] ? cells[7].textContent : '');
+          default:
+            return '';
         }
+      }
+
+      function compareOrderSortValues(va, vb, key) {
+        if (key === 'total') {
+          return va - vb;
+        }
+        return String(va).localeCompare(String(vb), 'vi', { sensitivity: 'base', numeric: true });
+      }
+
+      function sortOrderDataRows() {
+        if (!tbodyEl || !orderSortKey) return;
+        var all = Array.prototype.slice.call(tbodyEl.querySelectorAll('tr'));
+        var emptyRows = all.filter(isEmptyRow);
+        var dataRows = all.filter(function (r) { return r.classList.contains('order-data-row'); });
+        dataRows.sort(function (ra, rb) {
+          var va = getOrderSortValue(ra, orderSortKey);
+          var vb = getOrderSortValue(rb, orderSortKey);
+          var c = compareOrderSortValues(va, vb, orderSortKey);
+          return orderSortDir === 'asc' ? c : -c;
+        });
+        dataRows.forEach(function (r) { tbodyEl.appendChild(r); });
+        emptyRows.forEach(function (r) { tbodyEl.appendChild(r); });
+      }
+
+      function updateOrderSortHeaders() {
+        if (!ordersTableHead) return;
+        ordersTableHead.querySelectorAll('.stock-th-sort').forEach(function (btn) {
+          var key = btn.getAttribute('data-sort');
+          var icon = btn.querySelector('.stock-sort-icon');
+          if (!icon) return;
+          if (orderSortKey === key) {
+            icon.className = 'bi stock-sort-icon ' + (orderSortDir === 'asc' ? 'bi-sort-up' : 'bi-sort-down');
+          } else {
+            icon.className = 'bi bi-arrow-down-up stock-sort-icon';
+          }
+        });
+      }
+
+      function getActiveOrderFilterKey() {
+        if (!orderStatusFilters) return 'ALL';
+        var active = orderStatusFilters.querySelector('.stock-filter.active');
+        return active ? (active.getAttribute('data-order-filter') || 'ALL') : 'ALL';
+      }
+
+      function rowMatchesOrderFilter(row, filterKey) {
+        if (filterKey === 'ALL') return true;
+        var st = row.getAttribute('data-order-status') || '';
+        return st === filterKey;
+      }
+
+      function rowMatchesOrderSearch(row, term) {
+        if (!term) return true;
+        return normalizeOrderText(row.textContent || '').indexOf(term) !== -1;
+      }
+
+      function rowMatchesOrderDate(row) {
+        var sel = orderDateInput && orderDateInput.value ? orderDateInput.value : '';
+        if (!sel) return true;
+        var d = row.getAttribute('data-order-date') || '';
+        return d === sel;
+      }
+
+      function refreshOrderDateLabel() {
+        if (!orderDateLabel) return;
+        var v = orderDateInput && orderDateInput.value ? orderDateInput.value : '';
+        if (!v) {
+          orderDateLabel.textContent = 'Mọi ngày';
+          return;
+        }
+        var p = v.split('-');
+        orderDateLabel.textContent = p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : v;
+      }
+
+      function updateOrderSubtitle() {
+        var el = document.getElementById('orderPageSubtitle');
+        if (!el) return;
+        var all = document.querySelectorAll('.orders-table tbody tr.order-data-row');
+        if (all.length === 0) {
+          el.textContent = 'Chưa có đơn hàng';
+          return;
+        }
+        var n = 0;
+        all.forEach(function (r) {
+          if (r.style.display !== 'none') n++;
+        });
+        el.textContent = n === 0 ? 'Không có đơn phù hợp bộ lọc' : n + ' đơn đang hiển thị';
+      }
+
+      function applyOrderFilters() {
+        var filterKey = getActiveOrderFilterKey();
+        var term = normalizeOrderText(orderSearchInput ? orderSearchInput.value : '');
+        var rows = document.querySelectorAll('.orders-table tbody tr.order-data-row');
+        rows.forEach(function (row) {
+          var show = rowMatchesOrderFilter(row, filterKey) && rowMatchesOrderSearch(row, term) && rowMatchesOrderDate(row);
+          row.style.display = show ? '' : 'none';
+        });
+        updateOrderSubtitle();
+      }
+
+      if (ordersTableHead) {
+        ordersTableHead.addEventListener('click', function (e) {
+          var btn = e.target.closest('.stock-th-sort');
+          if (!btn) return;
+          var key = btn.getAttribute('data-sort');
+          if (!key) return;
+          if (orderSortKey === key) {
+            orderSortDir = orderSortDir === 'asc' ? 'desc' : 'asc';
+          } else {
+            orderSortKey = key;
+            orderSortDir = 'asc';
+          }
+          sortOrderDataRows();
+          updateOrderSortHeaders();
+          applyOrderFilters();
+        });
+      }
+
+      function sortPendingFirst() {
+        if (!tbodyEl) return;
+        var rows = Array.prototype.slice.call(tbodyEl.querySelectorAll('tr'));
+        var empty = rows.filter(isEmptyRow);
+        var normal = rows.filter(function (r) { return r.classList.contains('order-data-row'); });
+
+        normal.sort(function (a, b) {
+          var aIsPending = getRowStatusText(a) === 'Chờ xử lý' ? 1 : 0;
+          var bIsPending = getRowStatusText(b) === 'Chờ xử lý' ? 1 : 0;
+          if (aIsPending !== bIsPending) return bIsPending - aIsPending;
+          return 0;
+        });
+
+        normal.forEach(function (r) { tbodyEl.appendChild(r); });
+        empty.forEach(function (r) { tbodyEl.appendChild(r); });
+      }
+
+      if (filterBtns.length > 0 && orderStatusFilters) {
+        orderStatusFilters.addEventListener('click', function (e) {
+          var btn = e.target.closest('.order-filter');
+          if (!btn) return;
+          filterBtns.forEach(function (b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          applyOrderFilters();
+        });
+      }
+
+      if (orderSearchInput) {
+        orderSearchInput.addEventListener('input', applyOrderFilters);
+      }
+
+      if (orderDateInput) {
+        orderDateInput.addEventListener('change', function () {
+          refreshOrderDateLabel();
+          applyOrderFilters();
+        });
+      }
+      if (orderDateClear) {
+        orderDateClear.addEventListener('click', function () {
+          if (orderDateInput) orderDateInput.value = '';
+          refreshOrderDateLabel();
+          applyOrderFilters();
+        });
+      }
+      refreshOrderDateLabel();
+
+      var isBarista = !!document.getElementById('roleBaristaFlag');
+      if (isBarista) {
+        sortPendingFirst();
+        var pendingBtn = Array.prototype.slice.call(filterBtns).find(function (b) {
+          return b.getAttribute('data-order-filter') === 'PENDING';
+        });
+        if (pendingBtn) {
+          filterBtns.forEach(function (b) { b.classList.remove('active'); });
+          pendingBtn.classList.add('active');
+        }
+        applyOrderFilters();
+      } else {
+        updateOrderSubtitle();
       }
 
       // Barista: nút "Sẵn sàng phục vụ" (chỉ đổi trạng thái PENDING -> COMPLETED)
@@ -1431,9 +1189,4 @@
             .catch(function () { alert('Không thể cập nhật trạng thái đơn.'); });
         });
       });
-    });
-  </script>
-
-</body>
-
-</html>
+});

@@ -44,6 +44,8 @@ src/main/resources/application.properties
 
 ### Uploaded files / user content ###
 uploads/
+src/main/resources/static/uploads/avatars/*
+!src/main/resources/static/uploads/avatars/.gitkeep
 
 ### Keys / certificates ###
 *.jks

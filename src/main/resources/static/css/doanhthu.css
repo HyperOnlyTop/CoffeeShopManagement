@@ -34,6 +34,32 @@ body {
   bottom: 0;
   left: 0;
   z-index: 1000;
+  overflow: hidden;
+}
+
+.sidebar-top {
+  flex-shrink: 0;
+}
+
+.sidebar-nav-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sidebar-nav-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+}
+
+.sidebar-nav-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .brand {
@@ -99,9 +125,8 @@ body {
 
 .nav-menu {
   list-style: none;
-  padding: 0 16px;
+  padding: 0 16px 12px;
   margin: 0;
-  flex-grow: 1;
 }
 
 .nav-item {
@@ -151,8 +176,9 @@ body {
 }
 
 .logout-btn {
-  padding: 24px;
-  margin-top: auto;
+  padding: 20px 24px 24px;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .logout-btn a {
@@ -568,6 +594,102 @@ body {
   font-size: 16px;
 }
 
+.menu-admin-table thead th {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  border-bottom-color: #f0f0f0;
+  white-space: nowrap;
+}
+
+.menu-admin-table tbody td {
+  vertical-align: middle;
+  font-size: 14px;
+}
+
+.menu-admin-thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  display: block;
+}
+
+.menu-admin-row.d-none {
+  display: none !important;
+}
+
+.menu-admin-table .menu-badge {
+  position: static;
+  display: inline-block;
+}
+
+/* Bảng quản lý menu: cột thẳng hàng, tiêu đề khớp căn lề với dữ liệu */
+.menu-admin-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.menu-admin-table .menu-th-thumb,
+.menu-admin-table .menu-td-thumb {
+  width: 3.75rem;
+  max-width: 3.75rem;
+  box-sizing: border-box;
+}
+
+.menu-admin-table .menu-th-category,
+.menu-admin-table .menu-category-cell {
+  width: 11%;
+  min-width: 5.25rem;
+}
+
+.menu-admin-table .menu-th-desc,
+.menu-admin-table .menu-desc-cell {
+  width: 26%;
+  min-width: 5rem;
+}
+
+.menu-admin-table .menu-desc-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-admin-table .menu-th-price,
+.menu-admin-table .menu-price,
+.menu-admin-table .menu-th-cost,
+.menu-admin-table .menu-cost {
+  width: 6.5rem;
+}
+
+.menu-admin-table .menu-th-status,
+.menu-admin-table .menu-td-status {
+  width: 7.25rem;
+}
+
+.menu-admin-table .menu-th-actions {
+  width: 2.75rem;
+}
+
+.menu-admin-table .menu-name-cell {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.stock-th-sort-end {
+  width: 100%;
+  justify-content: flex-end;
+  padding-left: 0.35rem;
+  padding-right: 0;
+}
+
+.stock-th-sort-center {
+  width: 100%;
+  justify-content: center;
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
+}
+
 .menu-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -817,6 +939,21 @@ body {
   justify-content: center;
   color: var(--text-muted);
   font-size: 13px;
+}
+
+a.icon-circle-btn:hover {
+  color: var(--text-muted);
+  background-color: #f9fafb;
+}
+
+.icon-circle-btn.icon-circle-btn-danger {
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #b91c1c;
+}
+
+a.icon-circle-btn.icon-circle-btn-danger:hover {
+  color: #991b1b;
+  background-color: rgba(239, 68, 68, 0.08);
 }
 
 /* STAFF PAGE */
@@ -1127,6 +1264,85 @@ body {
   text-transform: uppercase;
   color: var(--text-muted);
   border-bottom-color: #F0F0F0;
+  vertical-align: middle;
+}
+
+.stock-th-wrap {
+  white-space: nowrap;
+}
+
+.stock-th-actions {
+  width: 1%;
+}
+
+.stock-th-sort {
+  border: none;
+  background: transparent;
+  padding: 4px 4px 4px 0;
+  margin: 0;
+  width: auto;
+  max-width: 100%;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.stock-th-sort:hover {
+  color: #1a1a1a;
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.stock-th-sort:focus-visible {
+  outline: 2px solid rgba(249, 115, 22, 0.5);
+  outline-offset: 2px;
+}
+
+.stock-sort-icon {
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.stock-th-sort .bi-arrow-down-up {
+  opacity: 0.45;
+}
+
+.stock-th-sort .bi-sort-up,
+.stock-th-sort .bi-sort-down {
+  color: #ea580c;
+  opacity: 1;
+}
+
+@media (max-width: 991.98px) {
+  .menu-admin-table .menu-th-desc,
+  .menu-admin-table .menu-desc-cell {
+    width: auto;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .menu-admin-table .menu-th-category,
+  .menu-admin-table .menu-category-cell {
+    width: 24%;
+    min-width: 4.5rem;
+  }
+
+  .menu-admin-table .menu-th-price,
+  .menu-admin-table .menu-price,
+  .menu-admin-table .menu-th-cost,
+  .menu-admin-table .menu-cost {
+    width: 5.75rem;
+  }
 }
 
 .stock-table tbody td {
@@ -1288,4 +1504,15 @@ body {
 .settings-time-separator {
   font-size: 14px;
   color: var(--text-muted);
+}
+
+/* Lọc ngày (dropdown + input date) — Menu / Đơn hàng / Đặt bàn */
+.admin-date-filter .dropdown-toggle {
+  font-size: 13px;
+  border-color: #EBEBEB;
+}
+
+.admin-date-filter-panel {
+  min-width: 260px;
+  border-radius: 12px;
 }

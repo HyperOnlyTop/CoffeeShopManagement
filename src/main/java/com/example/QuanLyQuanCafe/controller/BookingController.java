@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.example.QuanLyQuanCafe.config.BookingPolicy;
 import com.example.QuanLyQuanCafe.model.BookingStatus;
 import com.example.QuanLyQuanCafe.model.TableBooking;
 import com.example.QuanLyQuanCafe.repository.TableBookingRepository;
@@ -55,9 +56,16 @@ public class BookingController {
             LocalTime time = LocalTime.parse(timeStr);
             LocalDateTime bookingTime = LocalDateTime.of(date, time);
 
+            LocalDateTime now = LocalDateTime.now();
+
             // Nếu đặt trong quá khứ (so với hiện tại) thì báo lỗi
-            if (bookingTime.isBefore(LocalDateTime.now())) {
+            if (bookingTime.isBefore(now)) {
                 return "redirect:/?bookingError=invalidTime#booking";
+            }
+
+            // Giờ đến phải cách hiện tại ít nhất MIN_LEAD_HOURS (đồng bộ với form trên landing)
+            if (bookingTime.isBefore(now.plusHours(BookingPolicy.MIN_LEAD_HOURS))) {
+                return "redirect:/?bookingError=tooSoon#booking";
             }
 
             // Nếu đã có đặt bàn trùng chính xác khung giờ này thì báo lỗi
@@ -89,7 +97,7 @@ public class BookingController {
         TableBooking booking = new TableBooking();
         booking.setGuests(2);
         model.addAttribute("booking", booking);
-        return "BookingForm";
+        return "admin/BookingForm";
     }
 
     @GetMapping("/Booking/edit/{id}")
@@ -99,7 +107,7 @@ public class BookingController {
             return "redirect:/Booking";
         }
         model.addAttribute("booking", optional.get());
-        return "BookingForm";
+        return "admin/BookingForm";
     }
 
     @PostMapping("/Booking/save")

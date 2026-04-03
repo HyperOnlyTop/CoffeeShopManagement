@@ -13,6 +13,8 @@ public class InventoryImportRequest {
     private String supplierName;
     private LocalDate importDate;
     private String note;
+    private BigDecimal minStock;
+    private BigDecimal maxStock;
 
     public String getName() {
         return name;
@@ -76,5 +78,21 @@ public class InventoryImportRequest {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public BigDecimal getMinStock() {
+        return minStock;
+    }
+
+    public void setMinStock(BigDecimal minStock) {
+        this.minStock = minStock;
+    }
+
+    public BigDecimal getMaxStock() {
+        return maxStock;
+    }
+
+    public void setMaxStock(BigDecimal maxStock) {
+        this.maxStock = maxStock;
     }
 }

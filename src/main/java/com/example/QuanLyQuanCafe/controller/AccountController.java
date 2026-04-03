@@ -14,9 +14,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+
+import com.example.QuanLyQuanCafe.config.UploadStorageConfig;
 import com.example.QuanLyQuanCafe.model.AppUser;
 import com.example.QuanLyQuanCafe.model.Staff;
 import com.example.QuanLyQuanCafe.repository.AppUserRepository;
@@ -29,13 +31,16 @@ public class AccountController {
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final StaffRepository staffRepository;
+    private final Path uploadStorageRoot;
 
     public AccountController(AppUserRepository userRepository,
                              PasswordEncoder passwordEncoder,
-                             StaffRepository staffRepository) {
+                             StaffRepository staffRepository,
+                             @Qualifier(UploadStorageConfig.UPLOAD_STORAGE_ROOT_BEAN) Path uploadStorageRoot) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.staffRepository = staffRepository;
+        this.uploadStorageRoot = uploadStorageRoot;
     }
 
     private void syncStaffAvatar(AppUser user) {
@@ -123,14 +128,10 @@ public class AccountController {
                 extension = originalName.substring(originalName.lastIndexOf("."));
             }
 
-            String uploadDir = "uploads/avatars";
-            Path uploadPath = Paths.get(uploadDir);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
+            Path avatarsDir = uploadStorageRoot.resolve("avatars");
 
             String fileName = UUID.randomUUID().toString() + extension;
-            Path filePath = uploadPath.resolve(fileName);
+            Path filePath = avatarsDir.resolve(fileName);
             Files.copy(file.getInputStream(), filePath);
 
             String avatarUrl = "/uploads/avatars/" + fileName;

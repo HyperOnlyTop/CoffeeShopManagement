@@ -10,6 +10,8 @@ public class InventoryUpdateRequest {
     private String unit;
     private BigDecimal unitCost;
     private String supplierName;
+    private BigDecimal minStock;
+    private BigDecimal maxStock;
 
     public String getName() {
         return name;
@@ -57,5 +59,21 @@ public class InventoryUpdateRequest {
 
     public void setSupplierName(String supplierName) {
         this.supplierName = supplierName;
+    }
+
+    public BigDecimal getMinStock() {
+        return minStock;
+    }
+
+    public void setMinStock(BigDecimal minStock) {
+        this.minStock = minStock;
+    }
+
+    public BigDecimal getMaxStock() {
+        return maxStock;
+    }
+
+    public void setMaxStock(BigDecimal maxStock) {
+        this.maxStock = maxStock;
     }
 }

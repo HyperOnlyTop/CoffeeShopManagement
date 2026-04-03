@@ -1,5 +1,6 @@
 package com.example.QuanLyQuanCafe.config;
 
+import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,6 +19,7 @@ public class SecurityConfig {
     http
         .csrf(csrf -> csrf.disable())
         .authorizeHttpRequests(authorize -> authorize
+            .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
             .requestMatchers(
                 "/css/**",
                 "/js/**",
@@ -25,6 +27,7 @@ public class SecurityConfig {
                 "/static/**",
                 "/uploads/**",
                 "/",
+                "/favicon.ico",
                 "/menu",
                 "/login",
                 "/register",
@@ -34,7 +37,12 @@ public class SecurityConfig {
             ).permitAll()
             .requestMatchers(HttpMethod.GET, "/api/menu/**").permitAll()
             .requestMatchers("/api/chat/**").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/public/bookings/me").authenticated()
+            .requestMatchers(HttpMethod.GET, "/api/public/bookings/lookup").permitAll()
+            .requestMatchers(HttpMethod.POST, "/api/public/bookings").permitAll()
+            .requestMatchers(HttpMethod.POST, "/api/public/reviews").permitAll()
             .requestMatchers("/api/admin/**").hasRole("ADMIN")
+            .requestMatchers("/api/inventory/**").hasRole("ADMIN")
             .requestMatchers("/api/loyalty/**").hasRole("ADMIN")
             .requestMatchers("/api/bookings/**").hasAnyRole("ADMIN", "CASHIER", "SERVER")
             .requestMatchers(HttpMethod.POST, "/api/menu/**").hasRole("ADMIN")
@@ -97,7 +105,7 @@ public class SecurityConfig {
         )
         .logout(logout -> logout
             .logoutUrl("/logout")
-            .logoutSuccessUrl("/login?logout")
+            .logoutSuccessUrl("/?logout=1")
             .permitAll()
         )
         .httpBasic(basic -> basic.disable())

@@ -18,9 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.QuanLyQuanCafe.model.MenuItem;
-import com.example.QuanLyQuanCafe.model.Staff;
 import com.example.QuanLyQuanCafe.service.MenuService;
-import com.example.QuanLyQuanCafe.service.StaffService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -31,7 +29,6 @@ public class ChatController {
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final MenuService menuService;
-    private final StaffService staffService;
 
     // Đọc từ environment/properties: GEMINI_API_KEY -> gemini.api.key, GEMINI_MODEL -> gemini.model
     @Value("${gemini.api.key:}")
@@ -41,11 +38,9 @@ public class ChatController {
     private String geminiModel;
 
     public ChatController(ObjectMapper objectMapper,
-                          MenuService menuService,
-                          StaffService staffService) {
+                          MenuService menuService) {
         this.objectMapper = objectMapper;
         this.menuService = menuService;
-        this.staffService = staffService;
     }
 
     @PostMapping("/ai")
@@ -90,24 +85,6 @@ public class ChatController {
                         })
                         .collect(Collectors.joining("\n"));
                 ctx.append(menuLines).append("\n\n");
-            }
-        }
-
-        // Nếu người dùng hỏi về nhân viên, thêm thông tin nhân viên
-        if (lower.contains("nhân viên") || lower.contains("staff")) {
-            List<Staff> staffList = staffService.findAll();
-            if (!staffList.isEmpty()) {
-                ctx.append("THÔNG TIN NHÂN VIÊN TRONG HỆ THỐNG (tối đa 20 người):\n");
-                String staffLines = staffList.stream()
-                        .limit(20)
-                        .map(s -> {
-                            String role = s.getRole() != null ? s.getRole().name() : "UNKNOWN";
-                            String status = s.getStatus() != null ? s.getStatus().name() : "UNKNOWN";
-                            String phone = s.getPhone() != null ? s.getPhone() : "không có";
-                            return "- " + s.getName() + " | vai trò: " + role + " | trạng thái: " + status + " | SĐT: " + phone;
-                        })
-                        .collect(Collectors.joining("\n"));
-                ctx.append(staffLines).append("\n\n");
             }
         }
 

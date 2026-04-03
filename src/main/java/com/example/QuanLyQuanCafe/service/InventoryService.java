@@ -47,10 +47,34 @@ public class InventoryService {
         return inventoryItemRepository.findByStatus(status);
     }
 
+    public List<InventoryCategory> findAllCategoriesOrdered() {
+        return inventoryCategoryRepository.findAllByOrderByNameAsc();
+    }
+
+    /**
+     * Đồng bộ trạng thái với tồn kho và ngưỡng min (nếu có).
+     */
+    private void applyStockStatus(InventoryItem item) {
+        BigDecimal stock = item.getCurrentStock() != null ? item.getCurrentStock() : BigDecimal.ZERO;
+        if (stock.compareTo(BigDecimal.ZERO) <= 0) {
+            item.setStatus(InventoryStatus.OUT_OF_STOCK);
+            return;
+        }
+        BigDecimal min = item.getMinStock();
+        if (min != null && min.compareTo(BigDecimal.ZERO) > 0 && stock.compareTo(min) <= 0) {
+            item.setStatus(InventoryStatus.LOW_STOCK);
+            return;
+        }
+        item.setStatus(InventoryStatus.IN_STOCK);
+    }
+
     @Transactional
     public InventoryItem importStock(InventoryImportRequest request) {
-        if (request == null || request.getName() == null || request.getQuantity() == null) {
-            throw new IllegalArgumentException("Invalid import request");
+        if (request == null || request.getName() == null || request.getName().isBlank()) {
+            throw new IllegalArgumentException("Tên nguyên liệu không hợp lệ");
+        }
+        if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Số lượng nhập phải lớn hơn 0");
         }
 
         // Tìm hoặc tạo danh mục theo tên đơn giản (nếu có)
@@ -98,11 +122,16 @@ public class InventoryService {
         item.setUnit(request.getUnit());
         item.setCurrentStock(stockAfter);
         item.setCostPerUnit(unitCost);
+        if (request.getMinStock() != null) {
+            item.setMinStock(request.getMinStock());
+        }
+        if (request.getMaxStock() != null) {
+            item.setMaxStock(request.getMaxStock());
+        }
 
-        // Cập nhật trạng thái & ngày cập nhật
-        item.setStatus(stockAfter.compareTo(BigDecimal.ZERO) > 0 ? InventoryStatus.IN_STOCK : InventoryStatus.OUT_OF_STOCK);
         LocalDate date = request.getImportDate() != null ? request.getImportDate() : LocalDate.now();
         item.setLastUpdated(date);
+        applyStockStatus(item);
 
         InventoryItem savedItem = inventoryItemRepository.save(item);
 
@@ -115,6 +144,9 @@ public class InventoryService {
         tx.setTotalCost(unitCost.multiply(quantity));
         tx.setStockBefore(stockBefore);
         tx.setStockAfter(stockAfter);
+        if (request.getNote() != null && !request.getNote().isBlank()) {
+            tx.setNote(request.getNote().trim());
+        }
         inventoryTransactionRepository.save(tx);
 
         return savedItem;
@@ -162,9 +194,14 @@ public class InventoryService {
         if (request.getUnitCost() != null) {
             item.setCostPerUnit(request.getUnitCost());
         }
+        if (request.getMinStock() != null) {
+            item.setMinStock(request.getMinStock());
+        }
+        if (request.getMaxStock() != null) {
+            item.setMaxStock(request.getMaxStock());
+        }
 
-        BigDecimal stock = item.getCurrentStock() != null ? item.getCurrentStock() : BigDecimal.ZERO;
-        item.setStatus(stock.compareTo(BigDecimal.ZERO) > 0 ? InventoryStatus.IN_STOCK : InventoryStatus.OUT_OF_STOCK);
+        applyStockStatus(item);
         item.setLastUpdated(LocalDate.now());
 
         return inventoryItemRepository.save(item);

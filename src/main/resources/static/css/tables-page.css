@@ -1,0 +1,68 @@
+﻿    .table-card {
+      border-radius: 18px;
+      background: #fff;
+      border: 1px solid rgba(30, 41, 59, 0.08);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.05);
+      padding: 14px 14px 12px;
+      height: 100%;
+    }
+
+    .table-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .table-card-title {
+      font-weight: 700;
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .table-badge {
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .table-badge-free {
+      background: rgba(16, 185, 129, 0.12);
+      color: #0f766e;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .table-badge-occupied {
+      background: rgba(245, 158, 11, 0.14);
+      color: #92400e;
+      border: 1px solid rgba(245, 158, 11, 0.28);
+    }
+
+    .table-badge-reserved {
+      background: rgba(59, 130, 246, 0.14);
+      color: #1d4ed8;
+      border: 1px solid rgba(59, 130, 246, 0.28);
+    }
+
+    .table-meta {
+      font-size: 13px;
+      color: rgba(55, 65, 81, 0.9);
+      margin-bottom: 0;
+    }
+
+    .table-meta small {
+      color: rgba(75, 85, 99, 0.8);
+    }
+
+    .table-card {
+      cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+
+    .table-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 38px rgba(0, 0, 0, 0.06);
+    }

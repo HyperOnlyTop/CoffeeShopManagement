@@ -1,141 +1,16 @@
-<!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Thành viên | Quản lý quán cà phê</title>
-
-  <!-- Bootstrap 5 CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <!-- Bootstrap Icons -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-
-  <!-- Google Fonts - Inter -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-  <!-- Shared layout styles -->
-  <link rel="stylesheet" href="/css/doanhthu.css">
-  <style>
-    .accounts-tabs .nav-link {
-      font-weight: 600;
-    }
-  </style>
-</head>
-
-<body>
-
-  <!-- Sidebar -->
-  <div th:replace="~{fragments/sidebar :: sidebar('ACCOUNTS')}"></div>
-
-  <!-- Main content -->
-  <main class="main-content">
-
-    <!-- Header -->
-    <div class="header-row">
-      <div class="page-title">
-        <h2>Thành viên</h2>
-        <p>Quản lý khách hàng theo SĐT, tích điểm theo ly, và lịch sử đặt bàn</p>
-      </div>
-      <div class="header-actions">
-        <!-- Quản lý tài khoản nhân sự đã chuyển sang trang Nhân viên -->
-      </div>
-    </div>
-
-    <div class="custom-card mb-4">
-      <div class="pt-3">
-          <div class="alert alert-light border rounded-3 small mb-3">
-            <div class="fw-semibold mb-1">Quy tắc tích điểm</div>
-            <div>- Tích điểm bằng <strong>SĐT</strong>.</div>
-            <div>- <strong>Mỗi ly nước = 1 điểm</strong>.</div>
-            <div>- <strong>Đủ 10 điểm</strong> đổi <strong>1 ly nước</strong> (giá <strong>&lt; 50.000 VNĐ</strong>).</div>
-          </div>
-
-          <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
-            <div class="input-group" style="max-width: 420px;">
-              <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
-              <input id="customerSearchInput" type="text" class="form-control" placeholder="Tìm theo tên / SĐT / email">
-            </div>
-            <button class="btn btn-outline-secondary btn-sm" type="button" id="btnReloadCustomers">
-              <i class="bi bi-arrow-clockwise me-1"></i> Tải lại
-            </button>
-          </div>
-
-          <div class="table-responsive">
-            <table class="table align-middle mb-0">
-              <thead>
-                <tr>
-                  <th style="width: 70px;">ID</th>
-                  <th>Họ tên</th>
-                  <th>SĐT</th>
-                  <th>Email</th>
-                  <th class="text-end" style="width: 120px;">Điểm</th>
-                  <th class="text-end" style="width: 120px;">Đã đổi</th>
-                  <th style="width: 240px;">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody id="customersTableBody">
-                <tr>
-                  <td colspan="7" class="text-center text-muted py-3">Đang tải danh sách khách hàng...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-    </div>
-
-  </main>
-
-  <!-- Quản lý tài khoản nhân sự đã chuyển sang trang Nhân viên -->
-
-  <!-- Modal: Lịch sử đặt bàn theo SĐT -->
-  <div class="modal fade" id="bookingHistoryModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title fw-semibold">Lịch sử đặt bàn</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-        </div>
-        <div class="modal-body">
-          <div class="small text-muted mb-2">SĐT: <strong id="bookingHistoryPhoneText">—</strong></div>
-          <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-              <thead>
-                <tr>
-                  <th>Thời gian đặt</th>
-                  <th class="text-center" style="width: 80px;">Số khách</th>
-                  <th>Ghi chú</th>
-                  <th style="width: 160px;">Thời gian gửi</th>
-                </tr>
-              </thead>
-              <tbody id="bookingHistoryBody">
-                <tr>
-                  <td colspan="4" class="text-center text-muted py-3">Đang tải...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <!-- Admin common JS (logout confirm, etc.) -->
-  <script src="/js/admin-common.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      // Customers (loyalty)
+﻿document.addEventListener('DOMContentLoaded', function () {
       const customersTableBody = document.getElementById('customersTableBody');
       const customerSearchInput = document.getElementById('customerSearchInput');
       const btnReloadCustomers = document.getElementById('btnReloadCustomers');
+      const customerSegmentFilters = document.getElementById('customerSegmentFilters');
+      const customerPageSubtitle = document.getElementById('customerPageSubtitle');
+      const customerStatTotal = document.getElementById('customerStatTotal');
+      const customerStatRedeemReady = document.getElementById('customerStatRedeemReady');
+      const customerStatAccumulating = document.getElementById('customerStatAccumulating');
+      const customerStatRedemptionsSum = document.getElementById('customerStatRedemptionsSum');
+
       let customersCache = [];
 
-      // Booking history modal
       const bookingHistoryModalEl = document.getElementById('bookingHistoryModal');
       const bookingHistoryPhoneText = document.getElementById('bookingHistoryPhoneText');
       const bookingHistoryBody = document.getElementById('bookingHistoryBody');
@@ -145,14 +20,83 @@
         bookingHistoryModalInstance = bootstrap.Modal.getOrCreateInstance(bookingHistoryModalEl);
       }
 
+      function num(v) {
+        const n = v != null ? Number(v) : 0;
+        return isFinite(n) ? n : 0;
+      }
+
       function normalize(text) {
         return text ? text.toString().toLowerCase().trim() : '';
+      }
+
+      function getActiveSegment() {
+        if (!customerSegmentFilters) return 'ALL';
+        const active = customerSegmentFilters.querySelector('.stock-filter.active');
+        return active ? (active.getAttribute('data-segment') || 'ALL') : 'ALL';
+      }
+
+      function matchesSegment(c, seg) {
+        const p = num(c.loyaltyPoints);
+        const r = num(c.loyaltyRedeemedCount);
+        switch (seg) {
+          case 'ALL':
+            return true;
+          case 'REDEEM_READY':
+            return p >= 10;
+          case 'ACCUMULATING':
+            return p >= 1 && p <= 9;
+          case 'NO_POINTS':
+            return p === 0;
+          case 'REDEEMED_BEFORE':
+            return r > 0;
+          default:
+            return true;
+        }
+      }
+
+      function updateCustomerStats() {
+        const list = customersCache;
+        const total = list.length;
+        let ready = 0;
+        let accumulating = 0;
+        let redemptionsSum = 0;
+        for (let i = 0; i < list.length; i++) {
+          const c = list[i];
+          const p = num(c.loyaltyPoints);
+          if (p >= 10) ready++;
+          if (p >= 1 && p <= 9) accumulating++;
+          redemptionsSum += num(c.loyaltyRedeemedCount);
+        }
+        if (customerStatTotal) customerStatTotal.textContent = String(total);
+        if (customerStatRedeemReady) customerStatRedeemReady.textContent = String(ready);
+        if (customerStatAccumulating) customerStatAccumulating.textContent = String(accumulating);
+        if (customerStatRedemptionsSum) customerStatRedemptionsSum.textContent = String(redemptionsSum);
+        if (customerPageSubtitle) {
+          customerPageSubtitle.textContent = total === 0
+            ? 'Chưa có khách hàng trong hệ thống'
+            : total + ' khách hàng trong hệ thống';
+        }
+      }
+
+      function applyCustomerFilters() {
+        const seg = getActiveSegment();
+        const term = normalize(customerSearchInput ? customerSearchInput.value : '');
+        const filtered = customersCache.filter(function (c) {
+          if (!matchesSegment(c, seg)) return false;
+          if (!term) return true;
+          const hay = normalize((c.name || '') + ' ' + (c.phone || '') + ' ' + (c.email || ''));
+          return hay.indexOf(term) !== -1;
+        });
+        renderCustomers(filtered);
       }
 
       function renderCustomers(customers) {
         if (!customersTableBody) return;
         if (!customers || customers.length === 0) {
-          customersTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Chưa có khách hàng nào.</td></tr>';
+          const emptyMsg = customersCache.length === 0
+            ? 'Chưa có khách hàng nào.'
+            : 'Không có khách hàng phù hợp bộ lọc hoặc từ khóa tìm kiếm.';
+          customersTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">' + emptyMsg + '</td></tr>';
           return;
         }
 
@@ -161,8 +105,8 @@
           const name = c.name || '';
           const phone = c.phone || '';
           const email = c.email || '';
-          const points = c.loyaltyPoints != null ? Number(c.loyaltyPoints) : 0;
-          const redeemed = c.loyaltyRedeemedCount != null ? Number(c.loyaltyRedeemedCount) : 0;
+          const points = num(c.loyaltyPoints);
+          const redeemed = num(c.loyaltyRedeemedCount);
           const canRedeem = points >= 10 && phone;
 
           return '<tr data-phone="' + phone + '">' +
@@ -172,38 +116,27 @@
             '<td>' + email + '</td>' +
             '<td class="text-end"><strong>' + points + '</strong></td>' +
             '<td class="text-end">' + redeemed + '</td>' +
-            '<td>' +
-            '<button type="button" class="btn btn-sm btn-outline-primary me-2 btn-booking-history" ' + (phone ? '' : 'disabled') + '>' +
-            '<i class="bi bi-clock-history me-1"></i> Lịch sử đặt bàn' +
+            '<td class="customer-actions-cell">' +
+            '<div class="customer-actions-inner">' +
+            '<button type="button" class="btn btn-sm btn-outline-primary btn-booking-history" ' + (phone ? '' : 'disabled') + '>' +
+            '<i class="bi bi-clock-history me-1"></i> Lịch sử' +
             '</button>' +
-            '<button type="button" class="btn btn-sm btn-warning me-2 btn-redeem" ' + (canRedeem ? '' : 'disabled') + '>' +
+            '<button type="button" class="btn btn-sm btn-warning btn-redeem" ' + (canRedeem ? '' : 'disabled') + '>' +
             '<i class="bi bi-gift me-1"></i> Đổi 10 điểm' +
             '</button>' +
             '<button type="button" class="btn btn-sm btn-outline-secondary btn-adjust" data-delta="1" ' + (phone ? '' : 'disabled') + '>+1</button>' +
-            '<button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-adjust" data-delta="-1" ' + (phone ? '' : 'disabled') + '>-1</button>' +
-            '</td>' +
+            '<button type="button" class="btn btn-sm btn-outline-secondary btn-adjust" data-delta="-1" ' + (phone ? '' : 'disabled') + '>-1</button>' +
+            '</div></td>' +
             '</tr>';
         }).join('');
 
         customersTableBody.innerHTML = rows;
       }
 
-      function applyCustomerSearch() {
-        const term = normalize(customerSearchInput ? customerSearchInput.value : '');
-        if (!term) {
-          renderCustomers(customersCache);
-          return;
-        }
-        const filtered = customersCache.filter(function (c) {
-          const hay = normalize((c.name || '') + ' ' + (c.phone || '') + ' ' + (c.email || ''));
-          return hay.indexOf(term) !== -1;
-        });
-        renderCustomers(filtered);
-      }
-
       function loadCustomers() {
         if (!customersTableBody) return;
         customersTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Đang tải danh sách khách hàng...</td></tr>';
+        if (customerPageSubtitle) customerPageSubtitle.textContent = 'Đang tải dữ liệu…';
 
         fetch('/api/loyalty/customers')
           .then(function (res) {
@@ -212,10 +145,12 @@
           })
           .then(function (data) {
             customersCache = Array.isArray(data) ? data : [];
-            applyCustomerSearch();
+            updateCustomerStats();
+            applyCustomerFilters();
           })
           .catch(function () {
             customersTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Lỗi khi tải khách hàng.</td></tr>';
+            if (customerPageSubtitle) customerPageSubtitle.textContent = 'Không tải được dữ liệu';
           });
       }
 
@@ -302,7 +237,18 @@
         btnReloadCustomers.addEventListener('click', loadCustomers);
       }
       if (customerSearchInput) {
-        customerSearchInput.addEventListener('input', applyCustomerSearch);
+        customerSearchInput.addEventListener('input', applyCustomerFilters);
+      }
+      if (customerSegmentFilters) {
+        customerSegmentFilters.addEventListener('click', function (e) {
+          const btn = e.target.closest('.stock-filter');
+          if (!btn) return;
+          customerSegmentFilters.querySelectorAll('.stock-filter').forEach(function (b) {
+            b.classList.remove('active');
+          });
+          btn.classList.add('active');
+          applyCustomerFilters();
+        });
       }
       if (customersTableBody) {
         customersTableBody.addEventListener('click', function (e) {
@@ -331,7 +277,3 @@
         });
       }
     });
-  </script>
-</body>
-
-</html>

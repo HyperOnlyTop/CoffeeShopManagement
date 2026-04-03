@@ -1,33 +1,19 @@
-.banner{
-
-height:400px;
-
-background:url("../images/banner.jpg");
-
-background-size:cover;
-
-color:white;
-
-display:flex;
-
-flex-direction:column;
-
-justify-content:center;
-
-align-items:center;
-
-text-align:center;
-
+.banner {
+    height: 400px;
+    background: url("../images/banner.jpg");
+    background-size: cover;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
 }
 
-.card{
-
-transition:0.3s;
-
+.card {
+    transition: 0.3s;
 }
 
-.card:hover{
-
-transform:scale(1.05);
-
+.card:hover {
+    transform: scale(1.05);
 }

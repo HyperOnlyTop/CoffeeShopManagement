@@ -49,6 +49,9 @@ public class InventoryTransaction {
     @Column(name = "stock_after", precision = 10, scale = 2)
     private BigDecimal stockAfter;
 
+    @Column(length = 500)
+    private String note;
+
     public Long getId() {
         return id;
     }
@@ -119,5 +122,13 @@ public class InventoryTransaction {
 
     public void setStockAfter(BigDecimal stockAfter) {
         this.stockAfter = stockAfter;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
     }
 }

@@ -1,0 +1,62 @@
+﻿        body {
+            background: #fff7ec;
+        }
+
+        .page-shell {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 36px 16px 56px;
+        }
+
+        .page-title {
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            color: #2b190a;
+        }
+
+        .text-muted-coffee {
+            color: #7b5a3a;
+        }
+
+        .testimonial-card {
+            background-color: #fff;
+            border-radius: 20px;
+            padding: 26px 26px 22px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.04);
+            height: 100%;
+        }
+
+        .btn-primary-gold {
+            border-radius: 999px;
+            padding: 8px 20px;
+            background-color: #ff9f1a;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            color: #2a1704;
+        }
+
+        .btn-primary-gold:hover {
+            background-color: #ffb341;
+            color: #2a1704;
+        }
+
+        .btn-outline-black-dark {
+            border-radius: 999px;
+            padding: 8px 20px;
+            border: 1px solid rgba(55, 36, 22, 0.25);
+            background: transparent;
+            color: #2b190a;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .btn-outline-black-dark:hover {
+            background: rgba(255, 159, 26, 0.12);
+            color: #2b190a;
+        }
+
+.reviews-page-eyebrow {
+    letter-spacing: 0.18em;
+    color: #c38b4b;
+}

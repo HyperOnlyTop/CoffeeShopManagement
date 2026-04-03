@@ -48,7 +48,7 @@ public class MenuDataSeeder {
         byName.put("Soda", upsertCategory("Soda", 7, true));
         byName.put("Sinh tố", upsertCategory("Sinh tố", 8, true));
         byName.put("Sữa chua", upsertCategory("Sữa chua", 9, true));
-        byName.put("Bánh", upsertCategory("Bánh", 10, true));
+        byName.put("Bánh ngọt", upsertCategory("Bánh ngọt", 10, true));
         byName.put("Thức ăn nhẹ", upsertCategory("Thức ăn nhẹ", 11, true));
 
         return byName;

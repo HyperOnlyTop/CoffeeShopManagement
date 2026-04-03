@@ -1,0 +1,7 @@
+﻿    .settings-tab-content {
+      display: none;
+    }
+
+    .settings-tab-content.active {
+      display: block;
+    }

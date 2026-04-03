@@ -1,0 +1,448 @@
+﻿<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Đơn hàng | Quản lý quán cà phê</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+  <!-- Google Fonts - Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Shared layout styles -->
+  <link rel="stylesheet" href="/css/doanhthu.css">
+  <link rel="stylesheet" th:href="@{/css/accounts-page.css}">
+  <link rel="stylesheet" th:href="@{/css/order-page.css}">
+</head>
+
+<body>
+
+  <!-- Sidebar -->
+  <div th:replace="~{fragments/sidebar :: sidebar('ORDER')}"></div>
+
+  <!-- Main content -->
+  <main class="main-content">
+
+    <!-- Header -->
+    <div class="header-row">
+      <div class="page-title">
+        <h2>Quản lý Đơn hàng</h2>
+        <p id="orderPageSubtitle" class="text-muted small mb-0" th:text="|${orderStatTotal} đơn trong hệ thống|">0 đơn trong hệ thống</p>
+      </div>
+      <span id="roleBaristaFlag" class="d-none" sec:authorize="hasRole('BARISTA')">1</span>
+      <div class="header-actions">
+        <button class="btn order-create-btn" type="button" sec:authorize="hasAnyRole('ADMIN','CASHIER')">
+          <i class="bi bi-plus-lg"></i> Tạo đơn mới
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="row g-3 mb-4 stock-summary-row">
+      <div class="col-md-3 col-sm-6">
+        <div class="custom-card stock-stat-card">
+          <div class="d-flex align-items-center gap-3">
+            <div class="stock-stat-icon stock-stat-total">
+              <i class="bi bi-receipt"></i>
+            </div>
+            <div>
+              <p class="stock-stat-label mb-1">Tổng đơn</p>
+              <p class="stock-stat-value mb-0" th:text="${orderStatTotal}">0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="custom-card stock-stat-card">
+          <div class="d-flex align-items-center gap-3">
+            <div class="stock-stat-icon stock-stat-low">
+              <i class="bi bi-hourglass-split"></i>
+            </div>
+            <div>
+              <p class="stock-stat-label mb-1">Chờ xử lý</p>
+              <p class="stock-stat-value mb-0" th:text="${orderStatPending}">0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="custom-card stock-stat-card">
+          <div class="d-flex align-items-center gap-3">
+            <div class="stock-stat-icon stock-stat-available">
+              <i class="bi bi-check-circle"></i>
+            </div>
+            <div>
+              <p class="stock-stat-label mb-1">Hoàn thành</p>
+              <p class="stock-stat-value mb-0" th:text="${orderStatCompleted}">0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="custom-card stock-stat-card">
+          <div class="d-flex align-items-center gap-3">
+            <div class="stock-stat-icon customer-stat-redeem-icon">
+              <i class="bi bi-x-circle"></i>
+            </div>
+            <div>
+              <p class="stock-stat-label mb-1">Đã hủy</p>
+              <p class="stock-stat-value mb-0" th:text="${orderStatCancelled}">0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Orders table -->
+    <div class="custom-card">
+      <div class="d-flex flex-wrap gap-3 align-items-center stock-toolbar mb-3">
+        <div class="stock-search">
+          <i class="bi bi-search"></i>
+          <input type="text" id="orderSearchInput" placeholder="Tìm mã đơn, khách, SĐT…" aria-label="Tìm đơn hàng">
+        </div>
+        <div class="dropdown admin-date-filter">
+          <button class="btn btn-sm btn-outline-secondary dropdown-toggle rounded-pill px-3 d-inline-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" id="orderDateFilterBtn">
+            <i class="bi bi-calendar3"></i>
+            <span id="orderDateFilterLabel">Mọi ngày</span>
+          </button>
+          <div class="dropdown-menu dropdown-menu-start p-3 shadow border-0 admin-date-filter-panel" aria-labelledby="orderDateFilterBtn">
+            <label class="form-label small fw-semibold mb-1" for="orderDateFilterInput">Lọc theo ngày tạo đơn</label>
+            <input type="date" class="form-control form-control-sm" id="orderDateFilterInput">
+            <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 mt-2" id="orderDateFilterClear">Xóa lọc ngày</button>
+          </div>
+        </div>
+        <div class="stock-filters ms-md-auto" id="orderStatusFilters">
+          <button class="stock-filter order-filter active" type="button" data-order-filter="ALL">Tất cả</button>
+          <button class="stock-filter order-filter" type="button" data-order-filter="PENDING">Chờ xử lý</button>
+          <button class="stock-filter order-filter" type="button" data-order-filter="COMPLETED">Hoàn thành</button>
+          <button class="stock-filter order-filter" type="button" data-order-filter="CANCELLED">Đã hủy</button>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle orders-table stock-table mb-0">
+          <thead>
+            <tr>
+              <th scope="col" class="stock-th-wrap">
+                <button type="button" class="stock-th-sort" data-sort="code" title="Sắp xếp theo mã đơn">
+                  <span>Mã đơn</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th scope="col" class="stock-th-wrap">
+                <button type="button" class="stock-th-sort" data-sort="customer" title="Sắp xếp theo khách hàng">
+                  <span>Khách hàng</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th scope="col" class="stock-th-wrap">
+                <button type="button" class="stock-th-sort" data-sort="type" title="Sắp xếp theo loại đơn">
+                  <span>Loại</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th scope="col" class="stock-th-wrap">
+                <button type="button" class="stock-th-sort" data-sort="table" title="Sắp xếp theo bàn / ghi chú">
+                  <span>Bàn / Ghi chú</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th scope="col" class="stock-th-wrap">
+                <button type="button" class="stock-th-sort" data-sort="total" title="Sắp xếp theo tổng tiền">
+                  <span>Tổng tiền</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th scope="col" class="stock-th-wrap">
+                <button type="button" class="stock-th-sort" data-sort="time" title="Sắp xếp theo giờ đặt">
+                  <span>Giờ đặt</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th scope="col" class="stock-th-wrap">
+                <button type="button" class="stock-th-sort" data-sort="status" title="Sắp xếp theo trạng thái">
+                  <span>Trạng thái</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th scope="col" class="stock-th-wrap">
+                <button type="button" class="stock-th-sort" data-sort="payment" title="Sắp xếp theo thanh toán">
+                  <span>Thanh toán</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th scope="col" class="stock-th-wrap stock-th-actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:if="${#lists.isEmpty(orders)}">
+              <td colspan="9" class="text-center text-muted py-4">Chưa có đơn hàng nào.</td>
+            </tr>
+
+            <tr th:each="order : ${orders}" class="order-data-row"
+                th:data-order-status="${order.status != null ? order.status.name() : 'UNKNOWN'}"
+                th:data-sort-time="${order.createdAt != null ? #temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm:ss') : ''}"
+                th:data-order-date="${order.createdAt != null ? #temporals.format(order.createdAt, 'yyyy-MM-dd') : ''}">
+              <td class="order-code" th:text="${order.orderCode != null ? '#' + order.orderCode : '(Mới)'}">#ORD-0000
+              </td>
+              <td>
+                <div class="order-customer-name"
+                  th:text="${order.customerName != null ? order.customerName : 'Khách lẻ'}">Tên khách</div>
+                <div class="order-customer-phone" th:text="${order.customerPhone != null ? order.customerPhone : ''}">Số
+                  điện thoại</div>
+              </td>
+              <td>
+                <span class="order-type-badge"
+                  th:classappend="${order.type != null and order.type.name() == 'TAKEAWAY'} ? ' order-type-takeaway' : ' order-type-dinein'"
+                  th:text="${order.type != null and order.type.name() == 'TAKEAWAY'} ? 'Mang về' : 'Tại bàn'">Tại
+                  bàn</span>
+              </td>
+              <td
+                th:text="${order.tableName != null ? order.tableName : (order.type != null and order.type.name() == 'TAKEAWAY' ? '—' : '')}">
+                Bàn / Ghi chú</td>
+              <td class="orders-amount" th:text="${order.total != null ? order.total + ' đ' : '0 đ'}">0 đ</td>
+              <td th:text="${order.createdAt != null ? #temporals.format(order.createdAt, 'HH:mm') : '--:--'}">--:--
+              </td>
+              <td>
+                <span class="status-badge status-completed"
+                  th:if="${order.status != null and order.status.name() == 'COMPLETED'}">
+                  Hoàn thành
+                </span>
+                <span class="status-badge status-waiting"
+                  th:if="${order.status != null and order.status.name() == 'PENDING'}">
+                  Chờ xử lý
+                </span>
+                <span class="status-badge status-cancelled"
+                  th:if="${order.status != null and order.status.name() == 'CANCELLED'}">
+                  Đã hủy
+                </span>
+                <span class="status-badge" th:if="${order.status == null}">
+                  Không rõ
+                </span>
+              </td>
+              <td>
+                <span th:if="${order.paymentMethod != null and order.paymentMethod.name() == 'CASH'}"
+                  class="badge bg-secondary">Tiền mặt</span>
+                <span th:if="${order.paymentMethod != null and order.paymentMethod.name() == 'BANK_TRANSFER'}"
+                  class="badge bg-primary">Chuyển khoản</span>
+                <!-- Chỉ hiển thị tiền mặt / chuyển khoản -->
+                <span th:if="${order.paymentMethod == null}" class="badge bg-secondary">Tiền mặt</span>
+              </td>
+              <td>
+                <div class="orders-actions">
+                  <button class="icon-circle-btn" type="button" aria-label="Xem chi tiết" title="Xem chi tiết"><i
+                      class="bi bi-eye"></i></button>
+                  <button class="icon-circle-btn edit-order-btn" type="button" aria-label="Sửa đơn" title="Sửa đơn"
+                    th:data-code="${order.orderCode}" sec:authorize="hasAnyRole('ADMIN','CASHIER')"><i class="bi bi-pencil"></i></button>
+                  <button class="icon-circle-btn barista-ready-btn" type="button" aria-label="Sẵn sàng phục vụ"
+                    title="Sẵn sàng phục vụ" th:data-code="${order.orderCode}"
+                    th:if="${order.status != null and order.status.name() == 'PENDING'}"
+                    sec:authorize="hasRole('BARISTA')"><i class="bi bi-check2-circle"></i></button>
+                  <button class="icon-circle-btn" type="button" aria-label="Hóa đơn" title="Hóa đơn"><i
+                      class="bi bi-receipt"></i></button>
+                  <button class="icon-circle-btn" type="button" aria-label="QR thanh toán" title="QR thanh toán"><i
+                      class="bi bi-qr-code"></i></button>
+                </div>
+              </td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal: Tạo đơn hàng mới -->
+  <div class="modal fade" id="createOrderModal" tabindex="-1" aria-hidden="true" sec:authorize="hasAnyRole('ADMIN','CASHIER')">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-header border-0 pb-0 px-4 pt-4">
+          <h5 class="modal-title fw-semibold">Tạo đơn hàng mới</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body px-4 pb-0">
+          <form id="createOrderForm">
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label class="form-label fw-medium">Mã đơn</label>
+                <input type="text" class="form-control" id="orderCode" placeholder="#ORD-xxxx" disabled>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-medium">Giờ đặt</label>
+                <input type="time" class="form-control" id="orderTime">
+                <div class="small text-muted mt-1">Tự động lấy giờ hiện tại khi tạo đơn.</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-medium">Trạng thái</label>
+                <select class="form-select" id="orderStatus">
+                  <option value="PENDING" selected>Chờ xử lý</option>
+                  <option value="COMPLETED">Hoàn thành</option>
+                  <option value="CANCELLED">Đã hủy</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-medium">Khách hàng</label>
+                <input type="text" class="form-control" id="orderCustomerName" placeholder="VD: Nguyễn Văn An">
+                <div class="small text-muted mt-1">SĐT khách sẽ hiển thị ở dòng thứ 2.</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-medium">Số điện thoại</label>
+                <input type="tel" class="form-control" id="orderCustomerPhone" placeholder="VD: 0901234567">
+              </div>
+            </div>
+
+            <!-- Chọn món từ Menu -->
+            <div class="mb-3">
+              <label class="form-label fw-medium">Chọn món trong menu</label>
+              <div class="row g-2 align-items-end">
+                <div class="col-md-5">
+                  <div class="menu-search-wrap">
+                    <input type="text" class="form-control form-control-sm" id="orderMenuSearchInput" placeholder="Tìm món..." autocomplete="off">
+                    <div class="list-group shadow-sm menu-search-results" id="orderMenuSearchResults"></div>
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label fw-medium">SL</label>
+                  <input type="number" class="form-control form-control-sm" id="orderItemQuantity" value="1" min="1">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label fw-medium">Ghi chú món</label>
+                  <input type="text" class="form-control form-control-sm" id="orderItemNoteInput" placeholder="VD: ít đá, ít ngọt...">
+                </div>
+                <div class="col-md-2 d-grid">
+                  <button type="button" class="btn btn-outline-primary btn-sm" id="addOrderItemBtn">
+                    <i class="bi bi-plus-lg"></i> Thêm
+                  </button>
+                </div>
+              </div>
+              <div class="mt-3">
+                <table class="table table-sm align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Món</th>
+                      <th class="text-center" style="width: 80px;">SL</th>
+                      <th style="width: 220px;">Ghi chú</th>
+                      <th class="text-end" style="width: 120px;">Đơn giá</th>
+                      <th class="text-end" style="width: 120px;">Thành tiền</th>
+                      <th style="width: 40px;"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="orderItemsBody">
+                    <tr class="text-muted" id="orderItemsEmptyRow">
+                      <td colspan="6">Chưa có món nào. Hãy tìm món và bấm Enter hoặc click để thêm.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-3">
+                <label class="form-label fw-medium">Loại</label>
+                <select class="form-select" id="orderType">
+                  <option value="DINE_IN">Tại bàn</option>
+                  <option value="TAKEAWAY">Mang về</option>
+                </select>
+              </div>
+              <div class="col-md-3" id="selectedTableField">
+                <label class="form-label fw-medium">Bàn đã chọn</label>
+                <input type="text" class="form-control" id="selectedTableDisplay" placeholder="Chưa chọn bàn" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-medium">Ghi chú đơn</label>
+                <input type="text" class="form-control" id="orderNote" placeholder="Ghi chú tổng cho đơn (nếu có)">
+              </div>
+            </div>
+
+            <!-- Chọn bàn (đồng bộ đặt bàn + đơn tại bàn) -->
+            <div class="mb-3" id="tablePickerSection">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="fw-medium">Chọn bàn</div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="reloadTablesBtn">
+                  <i class="bi bi-arrow-clockwise"></i> Tải lại
+                </button>
+              </div>
+              <div class="small text-muted mb-2">Đỏ: có khách · Xanh: đã đặt (giữ trong cửa sổ 15 phút) · Đen: trống</div>
+              <div class="table-picker-grid" id="tablePickerGrid"></div>
+              <div class="small text-muted mt-2" id="tablePickerHint"></div>
+            </div>
+
+            <div class="row g-3 mb-3 align-items-end">
+              <div class="col-md-6">
+                <label class="form-label fw-medium">Tổng tiền (đ)</label>
+                <input type="number" class="form-control" id="orderTotalAmount" min="0" step="1000"
+                  placeholder="Tự tính từ món đã chọn" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-medium">Thanh toán</label>
+                <select class="form-select" id="orderPaymentMethod">
+                  <option value="CASH">Tiền mặt</option>
+                  <option value="BANK_TRANSFER">Chuyển khoản</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- QR VietQR khi chọn chuyển khoản -->
+            <div class="mb-3" id="orderPaymentQrSection" style="display: none;">
+              <label class="form-label fw-medium">QR thanh toán</label>
+              <div class="d-flex align-items-center">
+                <div class="bg-white rounded-3 border me-3 d-flex align-items-center justify-content-center"
+                  style="width: 200px; height: 200px;">
+                  <img id="orderPaymentQrImage" src="" alt="QR thanh toán" class="img-fluid"
+                    style="max-width: 180px; max-height: 180px; display: none;">
+                </div>
+                <div class="small text-muted">
+                  <div id="orderPaymentAmountText">Số tiền: 0 đ</div>
+                  <div id="orderPaymentMethodText"></div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-between">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" form="createOrderForm" class="btn btn-warning px-4">Tạo đơn</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: QR thanh toán cho đơn vừa tạo -->
+  <div class="modal fade" id="orderPaymentQrModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-header border-0 pb-0 px-4 pt-4">
+          <h5 class="modal-title fw-semibold">QR thanh toán đơn hàng</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body px-4 pb-0">
+          <p class="small text-muted mb-3" id="qrOrderInfoText">Vui lòng quét QR để thanh toán.</p>
+          <div class="d-flex flex-column align-items-center mb-3">
+            <div class="bg-white rounded-3 border d-flex align-items-center justify-content-center"
+              style="width: 320px; height: 320px;">
+              <img id="qrOrderImage" src="" alt="QR thanh toán đơn hàng" class="img-fluid"
+                style="max-width: 300px; max-height: 300px; display: none;">
+            </div>
+            <div class="mt-3 text-center small text-muted">
+              <div id="qrOrderAmountText">Số tiền: 0 đ</div>
+              <div id="qrOrderMethodText"></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-end">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS + simple logic for Order page -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Admin common JS (logout confirm, etc.) -->
+  <script src="/js/admin-common.js"></script>
+  <script th:src="@{/js/order-page.js}"></script>
+
+</body>
+
+</html>

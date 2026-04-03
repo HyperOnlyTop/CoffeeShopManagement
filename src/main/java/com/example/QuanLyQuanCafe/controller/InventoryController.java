@@ -3,6 +3,7 @@ package com.example.QuanLyQuanCafe.controller;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.QuanLyQuanCafe.model.InventoryCategory;
 import com.example.QuanLyQuanCafe.model.InventoryImportRequest;
 import com.example.QuanLyQuanCafe.model.InventoryItem;
 import com.example.QuanLyQuanCafe.model.InventoryStatus;
@@ -25,6 +27,11 @@ public class InventoryController {
 
     public InventoryController(InventoryService inventoryService) {
         this.inventoryService = inventoryService;
+    }
+
+    @GetMapping("/categories")
+    public List<InventoryCategory> getCategories() {
+        return inventoryService.findAllCategoriesOrdered();
     }
 
     @GetMapping("/items")
@@ -48,5 +55,10 @@ public class InventoryController {
             @RequestBody InventoryUpdateRequest request) {
         InventoryItem item = inventoryService.updateItem(id, request);
         return ResponseEntity.ok(item);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<String> handleBadRequest(IllegalArgumentException ex) {
+        return ResponseEntity.badRequest().body(ex.getMessage());
     }
 }

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
@@ -125,13 +126,30 @@ public class MenuService {
     }
 
     public MenuItem saveFromRequest(MenuItemRequest request) {
-        if (request == null || request.getName() == null) {
+        if (request == null || request.getName() == null || request.getName().isBlank()) {
             throw new IllegalArgumentException("Tên món không được để trống");
         }
 
-        MenuItem item = menuItemRepository.findByName(request.getName()).orElseGet(MenuItem::new);
+        String trimmedName = request.getName().trim();
+        MenuItem item;
 
-        item.setName(request.getName());
+        if (request.getId() != null) {
+            item = menuItemRepository.findById(request.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy món id=" + request.getId()));
+            if (!trimmedName.equals(item.getName())) {
+                Optional<MenuItem> sameName = menuItemRepository.findByName(trimmedName);
+                if (sameName.isPresent() && !sameName.get().getId().equals(item.getId())) {
+                    throw new IllegalArgumentException("Tên món đã tồn tại: " + trimmedName);
+                }
+            }
+        } else {
+            menuItemRepository.findByName(trimmedName).ifPresent(existing -> {
+                throw new IllegalArgumentException("Tên món đã tồn tại: " + trimmedName);
+            });
+            item = new MenuItem();
+        }
+
+        item.setName(trimmedName);
         item.setDescription(request.getDescription());
         item.setPrice(request.getPrice());
         item.setCost(request.getCost());
@@ -143,12 +161,12 @@ public class MenuService {
         }
 
         String statusStr = request.getStatus();
-        if (statusStr != null) {
+        if (statusStr != null && !statusStr.isBlank()) {
             String normalized = statusStr.trim().toUpperCase(Locale.ROOT);
             try {
                 item.setStatus(MenuItemStatus.valueOf(normalized));
             } catch (IllegalArgumentException ex) {
-                // ignore invalid status, keep current or default below
+                // giữ trạng thái hiện tại
             }
         }
 
@@ -156,6 +174,19 @@ public class MenuService {
             item.setStatus(MenuItemStatus.AVAILABLE);
         }
 
+        return menuItemRepository.save(item);
+    }
+
+    public MenuItem updateItemStatus(Long id, MenuItemStatus status) {
+        if (id == null) {
+            throw new IllegalArgumentException("id món không được để trống");
+        }
+        if (status == null) {
+            throw new IllegalArgumentException("Trạng thái không hợp lệ");
+        }
+        MenuItem item = menuItemRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy món id=" + id));
+        item.setStatus(status);
         return menuItemRepository.save(item);
     }
 

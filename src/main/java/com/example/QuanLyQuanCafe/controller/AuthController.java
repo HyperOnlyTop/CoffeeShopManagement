@@ -3,6 +3,7 @@ package com.example.QuanLyQuanCafe.controller;
 import java.math.BigDecimal;
 import java.security.Principal;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
@@ -45,12 +46,29 @@ public class AuthController {
     }
 
     @GetMapping("/")
-    public String landingPage(Model model) {
+    public String landingPage(Model model, Principal principal) {
         List<MenuItem> bestSellerItems = menuService.getBestSellerAvailableItems(12);
         model.addAttribute("menuItems", bestSellerItems);
         List<CustomerReview> customerReviews = customerReviewRepository.findTop3ByOrderByCreatedAtDesc();
         model.addAttribute("customerReviews", customerReviews);
-        return "index"; // trang giới thiệu công khai
+
+        AppUser loggedInUser = null;
+        if (principal != null) {
+            loggedInUser = userRepository.findByUsername(principal.getName());
+            model.addAttribute("currentUser", loggedInUser);
+        }
+
+        Integer landingLoyaltyPoints = null;
+        if (loggedInUser != null && loggedInUser.getPhone() != null && !loggedInUser.getPhone().isBlank()) {
+            Optional<Customer> cust = customerRepository.findByPhone(loggedInUser.getPhone().trim());
+            if (cust.isPresent()) {
+                Integer p = cust.get().getLoyaltyPoints();
+                landingLoyaltyPoints = p != null ? p : 0;
+            }
+        }
+        model.addAttribute("landingLoyaltyPoints", landingLoyaltyPoints);
+
+        return "public/index";
     }
 
     @GetMapping("/menu")
@@ -80,7 +98,7 @@ public class AuthController {
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", menuPage.getTotalPages());
 
-        return "public-menu"; // trang xem toàn bộ thực đơn cho khách
+        return "public/public-menu";
     }
 
     @GetMapping("/reviews")
@@ -99,17 +117,20 @@ public class AuthController {
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", reviewsPage.getTotalPages());
 
-        return "reviews";
+        return "public/reviews";
     }
 
     @GetMapping("/login")
-    public String loginPage() {
-        return "login"; // templates/login.html
+    public String loginPage(Principal principal) {
+        if (principal != null) {
+            return "redirect:/";
+        }
+        return "auth/login";
     }
 
     @GetMapping("/register")
     public String registerPage() {
-        return "register"; // templates/register.html
+        return "auth/register";
     }
 
     @PostMapping("/register")
@@ -124,17 +145,17 @@ public class AuthController {
         
         if (!password.equals(confirmPassword)) {
             model.addAttribute("error", "Mật khẩu nhập lại không khớp.");
-            return "register";
+            return "auth/register";
         }
         
         if (userRepository.findByUsername(username) != null) {
             model.addAttribute("error", "Tên đăng nhập đã tồn tại.");
-            return "register";
+            return "auth/register";
         }
 
         if (customerRepository.findByPhone(phone).isPresent()) {
             model.addAttribute("error", "Số điện thoại đã được đăng ký.");
-            return "register";
+            return "auth/register";
         }
         
         AppUser user = new AppUser();

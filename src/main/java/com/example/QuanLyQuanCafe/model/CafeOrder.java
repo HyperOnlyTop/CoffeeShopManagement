@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -56,7 +57,7 @@ public class CafeOrder {
     @Column(name = "total", precision = 15, scale = 0)
     private BigDecimal total;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = PaymentMethodAttributeConverter.class)
     @Column(name = "payment_method", length = 20)
     private PaymentMethod paymentMethod;
 

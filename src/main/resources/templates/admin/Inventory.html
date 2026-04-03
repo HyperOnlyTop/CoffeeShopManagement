@@ -1,0 +1,242 @@
+﻿<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Kho hàng | Quản lý quán cà phê</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+  <!-- Google Fonts - Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Shared layout styles -->
+  <link rel="stylesheet" href="/css/doanhthu.css">
+</head>
+
+<body>
+
+  <!-- Sidebar -->
+  <div th:replace="~{fragments/sidebar :: sidebar('INVENTORY')}"></div>
+
+  <!-- Main content -->
+  <main class="main-content">
+
+    <!-- Header -->
+    <div class="header-row">
+      <div class="page-title">
+        <h2>Quản lý Kho hàng</h2>
+        <p id="stockPageSubtitle" class="text-muted small mb-0">Đang tải thống kê…</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn stock-import-btn" type="button">
+          <i class="bi bi-plus-lg"></i> Nhập hàng
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="row g-3 mb-4 stock-summary-row">
+      <div class="col-md-3 col-sm-6">
+        <div class="custom-card stock-stat-card">
+          <div class="d-flex align-items-center gap-3">
+            <div class="stock-stat-icon stock-stat-total">
+              <i class="bi bi-archive"></i>
+            </div>
+            <div>
+              <p class="stock-stat-label mb-1">Tổng mặt hàng</p>
+              <p class="stock-stat-value mb-0" id="stockTotalItems">0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="custom-card stock-stat-card">
+          <div class="d-flex align-items-center gap-3">
+            <div class="stock-stat-icon stock-stat-available">
+              <i class="bi bi-check-circle"></i>
+            </div>
+            <div>
+              <p class="stock-stat-label mb-1">Còn hàng</p>
+              <p class="stock-stat-value mb-0" id="stockInStock">0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="custom-card stock-stat-card">
+          <div class="d-flex align-items-center gap-3">
+            <div class="stock-stat-icon stock-stat-low">
+              <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div>
+              <p class="stock-stat-label mb-1">Sắp hết / Hết</p>
+              <p class="stock-stat-value mb-0" id="stockLowOut">0 / 0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="custom-card stock-stat-card">
+          <div class="d-flex align-items-center gap-3">
+            <div class="stock-stat-icon stock-stat-value">
+              <i class="bi bi-cash-coin"></i>
+            </div>
+            <div>
+              <p class="stock-stat-label mb-1">Giá trị tồn kho</p>
+              <p class="stock-stat-value mb-0" id="stockInventoryValue">0 đ</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar + Stock table trong cùng custom card -->
+    <div class="custom-card">
+      <div class="d-flex flex-wrap gap-3 align-items-center stock-toolbar mb-3">
+        <div class="stock-search">
+          <i class="bi bi-search"></i>
+          <input type="text" placeholder="Tìm kiếm nguyên liệu..." aria-label="Tìm kiếm nguyên liệu">
+        </div>
+        <div class="stock-filters" id="stockCategoryFilters">
+          <button class="stock-filter active" type="button" data-category="ALL">Tất cả</button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table align-middle stock-table mb-0">
+          <thead>
+            <tr>
+              <th scope="col" class="stock-th-wrap">
+                <button type="button" class="stock-th-sort" data-sort="name" title="Sắp xếp theo tên">
+                  <span>Tên nguyên liệu</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th scope="col" class="stock-th-wrap">
+                <button type="button" class="stock-th-sort" data-sort="category" title="Sắp xếp theo danh mục">
+                  <span>Danh mục</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th scope="col" class="stock-th-wrap">
+                <button type="button" class="stock-th-sort" data-sort="stock" title="Sắp xếp theo tồn kho">
+                  <span>Tồn kho</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th scope="col" class="stock-th-wrap">
+                <button type="button" class="stock-th-sort" data-sort="level" title="Sắp xếp theo mức tồn %">
+                  <span>Mức tồn</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th scope="col" class="stock-th-wrap">
+                <button type="button" class="stock-th-sort" data-sort="cost" title="Sắp xếp theo giá đơn vị">
+                  <span>Giá/Đơn vị</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th scope="col" class="stock-th-wrap">
+                <button type="button" class="stock-th-sort" data-sort="supplier" title="Sắp xếp theo nhà cung cấp">
+                  <span>Nhà cung cấp</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th scope="col" class="stock-th-wrap">
+                <button type="button" class="stock-th-sort" data-sort="status" title="Sắp xếp theo trạng thái">
+                  <span>Trạng thái</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                </button>
+              </th>
+              <th scope="col" class="stock-th-wrap stock-th-actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Dữ liệu sẽ được render bằng JavaScript từ API /api/inventory/items -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal: Nhập hàng -->
+  <div class="modal fade" id="stockImportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-header border-0 pb-0 px-4 pt-4">
+          <h5 class="modal-title fw-semibold">Phiếu nhập hàng</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body px-4 pb-0">
+          <form id="stockImportForm">
+            <input type="hidden" id="importItemId">
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-medium">Tên nguyên liệu</label>
+                <input type="text" class="form-control" id="importItemName" placeholder="VD: Cà phê rang xay" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-medium">Danh mục</label>
+                <select class="form-select" id="importCategory">
+                  <option value="" selected>Đang tải danh mục…</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label class="form-label fw-medium">Số lượng nhập</label>
+                <input type="number" class="form-control" id="importQuantity" min="0" step="0.1" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-medium">Đơn vị</label>
+                <input type="text" class="form-control" id="importUnit" placeholder="VD: kg, lít, lon" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-medium">Giá / Đơn vị (đ)</label>
+                <input type="number" class="form-control" id="importCost" min="0" step="1000">
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label class="form-label fw-medium">Tồn tối thiểu (cảnh báo)</label>
+                <input type="number" class="form-control" id="importMinStock" min="0" step="0.1" placeholder="VD: 5">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-medium">Tồn tối đa (mức tồn %)</label>
+                <input type="number" class="form-control" id="importMaxStock" min="0" step="0.1" placeholder="VD: 100">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-medium">Ngày nhập</label>
+                <input type="date" class="form-control" id="importDate">
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-medium">Nhà cung cấp</label>
+                <input type="text" class="form-control" id="importSupplier" placeholder="VD: Trung Nguyên, Vinamilk">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-medium">Ghi chú</label>
+              <textarea class="form-control" id="importNote" rows="2" placeholder="Ghi chú thêm (nếu có)"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-between">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" form="stockImportForm" class="btn btn-warning px-4">Lưu phiếu nhập</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS + logic for Inventory page -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Admin common JS (logout confirm, etc.) -->
+  <script src="/js/admin-common.js"></script>
+  <script th:src="@{/js/inventory-page.js}"></script>
+
+</html>

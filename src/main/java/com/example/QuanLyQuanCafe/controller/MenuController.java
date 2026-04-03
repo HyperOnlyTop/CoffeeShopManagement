@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.QuanLyQuanCafe.controller.dto.MenuItemIdStatus;
 import com.example.QuanLyQuanCafe.controller.dto.MenuItemRequest;
 import com.example.QuanLyQuanCafe.model.MenuCategory;
 import com.example.QuanLyQuanCafe.model.MenuItem;
@@ -45,8 +46,20 @@ public class MenuController {
         return menuService.saveFromRequest(request);
     }
 
+    @PostMapping("/items/status")
+    public MenuItem setItemStatus(@RequestBody MenuItemIdStatus body) {
+        if (body == null || body.id() == null || body.status() == null || body.status().isBlank()) {
+            throw new IllegalArgumentException("Cần id và status");
+        }
+        MenuItemStatus st = MenuItemStatus.valueOf(body.status().trim().toUpperCase());
+        return menuService.updateItemStatus(body.id(), st);
+    }
+
     @PostMapping("/items/hide")
     public MenuItem hideItem(@RequestBody MenuItemRequest request) {
+        if (request != null && request.getId() != null) {
+            return menuService.updateItemStatus(request.getId(), MenuItemStatus.UNAVAILABLE);
+        }
         String name = request != null ? request.getName() : null;
         return menuService.updateStatusByName(name, MenuItemStatus.UNAVAILABLE);
     }

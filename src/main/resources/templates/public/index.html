@@ -1,0 +1,537 @@
+﻿<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brew &amp; Co. | Nơi mỗi tách cà phê kể một câu chuyện</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Reuse base style so font & colors khớp hệ thống -->
+    <link rel="stylesheet" href="/css/doanhthu.css">
+    <link rel="stylesheet" th:href="@{/css/landing.css}">
+</head>
+<body class="landing-page">
+
+<div class="landing-wrapper">
+    <div class="landing-bg"></div>
+    <div class="landing-overlay"></div>
+
+    <div class="landing-content">
+        <div th:if="${param.logout}" class="alert alert-success py-2 px-3 small mb-2 mx-auto text-center landing-alert-logout" role="alert">
+            Bạn đã đăng xuất.
+        </div>
+        <!-- Top navigation -->
+        <header class="landing-navbar d-flex align-items-center justify-content-between">
+            <a th:href="@{/}" class="d-flex align-items-center gap-2 landing-logo text-decoration-none">
+                <span>Brew &amp; Co.</span>
+                <span>Coffee Studio</span>
+            </a>
+
+            <nav class="landing-menu d-flex align-items-center">
+                <a href="#about">Về chúng tôi</a>
+                <a href="#why">Dịch vụ</a>
+                <a href="#menu">Thực đơn</a>
+                <a href="#testimonials">Đánh giá</a>
+                <a href="#space">Không gian</a>
+                <a href="#booking">Đặt bàn</a>
+            </nav>
+
+            <div class="d-flex align-items-center gap-3">
+                <div th:if="${currentUser != null}" class="d-flex align-items-center gap-2">
+                    <span class="text-white small">Xin chào, <strong th:text="${currentUser.fullName}">Tên</strong>!</span>
+                    <a sec:authorize="hasRole('ADMIN')" th:href="@{/dashboard}" class="btn btn-primary-gold btn-sm">Quản lý</a>
+                    <a sec:authorize="hasAnyRole('CASHIER','SERVER','BARISTA','SECURITY')" th:href="@{/Staff}" class="btn btn-primary-gold btn-sm">Quản lý</a>
+                    <form th:action="@{/logout}" method="post" class="m-0">
+                        <button type="submit" class="btn btn-outline-light-soft btn-sm">Đăng xuất</button>
+                    </form>
+                </div>
+                <div th:unless="${currentUser != null}" class="d-flex align-items-center gap-2">
+                    <a th:href="@{/login}" class="btn btn-outline-light-soft">Đăng nhập</a>
+                    <a th:href="@{/register}" class="btn btn-primary-gold">Đăng ký</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Hero -->
+        <section class="landing-hero">
+            <div class="landing-badge">
+                <i class="bi bi-cup-hot"></i>
+                <span>Since 2026 · TP.Hồ Chí Minh </span>
+            </div>
+
+            <h1 class="landing-title-main mb-2">
+                Nơi mỗi tách cà phê<br>
+                <span class="highlight">kể một câu chuyện</span>
+            </h1>
+
+            <p class="landing-subtitle">
+                Brew &amp; Co. - không gian cà phê đặc sản giữa lòng thành phố,
+                nơi chất lượng và nghệ thuật giao thoa trong từng khoảnh khắc.
+            </p>
+
+            <div class="landing-cta d-flex flex-wrap justify-content-center gap-3">
+                <a href="#menu" class="btn btn-primary-gold">
+                    <i class="bi bi-book-half me-1"></i>
+                    Xem thực đơn
+                </a>
+                <a href="#booking" class="btn btn-outline-light-soft">
+                    <i class="bi bi-calendar-check me-1"></i>
+                    Đặt bàn ngay
+                </a>
+            </div>
+        </section>
+
+        <div class="landing-scroll text-center">
+            SCROLL
+        </div>
+    </div>
+</div>
+
+<!-- Các section nội dung phía dưới -->
+<div class="section-wrapper">
+    <!-- About -->
+    <section id="about" class="section-inner">
+        <div class="row g-4 align-items-center">
+            <div class="col-lg-6">
+                <img src="https://images.pexels.com/photos/4109744/pexels-photo-4109744.jpeg?auto=compress&cs=tinysrgb&w=1200"
+                     alt="Barista pouring latte"
+                     class="img-fluid rounded-4 shadow-sm">
+            </div>
+            <div class="col-lg-6">
+                <div class="about-card">
+                    <div class="section-title-eyebrow">Về Brew &amp; Co.</div>
+                    <h2 class="section-title-main">Nghệ thuật cà phê được chắt lọc qua năm tháng</h2>
+                    <p class="text-muted-coffee mb-3">
+                        Ra đời năm 2026, Brew &amp; Co. được xây dựng từ niềm đam mê thuần túy
+                        với hạt cà phê Việt Nam. Chúng tôi tin rằng một tách cà phê ngon không chỉ đến từ máy móc
+                        hiện đại, mà từ sự tỉ mỉ trong từng công đoạn — từ lúc chọn hạt, rang xay cho đến thời điểm
+                        ly cà phê đến tay bạn.
+                    </p>
+                    <p class="text-muted-coffee mb-4">
+                        Đội ngũ barista của chúng tôi được đào tạo bởi World Barista Champion và nắm giữ chứng chỉ SCA
+                        quốc tế — đảm bảo mỗi ly đều là tác phẩm nghệ thuật thực sự.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3 small text-muted-coffee">
+                        <div>
+                            <div class="fw-semibold">Giờ mở cửa</div>
+                            <div>07:00 — 22:00</div>
+                        </div>
+                        <div>
+                            <div class="fw-semibold">Địa chỉ</div>
+                            <div>Thủ Đức, TP.HCM</div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <span class="badge-soft-gold">
+                            <i class="bi bi-award"></i>
+                            Chứng nhận SCA • Specialty Coffee
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why us -->
+    <section id="why" class="why-section">
+        <div class="section-inner">
+            <div class="text-center mb-5">
+                <div class="section-title-eyebrow">Tại sao chọn chúng tôi</div>
+                <h2 class="section-title-main text-white mb-2">Trải nghiệm khác biệt hoàn toàn</h2>
+                <p class="text-light mb-0">Không chỉ là cà phê — Brew &amp; Co. là không gian để bạn tìm lại bản thân giữa
+                    nhịp sống hối hả.</p>
+            </div>
+            <div class="row g-4 text-start">
+                <div class="col-md-3">
+                    <div class="why-feature-icon"><i class="bi bi-tree" aria-hidden="true"></i></div>
+                    <div class="why-feature-title">Nguyên liệu tươi 100%</div>
+                    <p class="small text-light-50">Tất cả nguyên liệu được chọn lọc từ các trang trại uy tín, nhập khẩu trực tiếp.</p>
+                </div>
+                <div class="col-md-3">
+                    <div class="why-feature-icon"><i class="bi bi-heart"></i></div>
+                    <div class="why-feature-title">Tâm huyết từng tách</div>
+                    <p class="small text-light-50">Mỗi ly được pha thủ công bởi barista có chứng chỉ quốc tế với đam mê thực sự.</p>
+                </div>
+                <div class="col-md-3">
+                    <div class="why-feature-icon"><i class="bi bi-wifi"></i></div>
+                    <div class="why-feature-title">Không gian làm việc</div>
+                    <p class="small text-light-50">WiFi tốc độ cao, ổ cắm điện tại mọi bàn, lý tưởng cho cả nghiên cứu và làm việc.</p>
+                </div>
+                <div class="col-md-3">
+                    <div class="why-feature-icon"><i class="bi bi-geo-alt"></i></div>
+                    <div class="why-feature-title">Vị trí trung tâm</div>
+                    <p class="small text-light-50">Ngay trung tâm thành phố, dễ dàng di chuyển bằng mọi phương tiện.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured menu -->
+    <section id="menu" class="section-inner section-large">
+        <div class="text-center mb-5 section-heading-offset">
+            <div class="section-title-eyebrow">Best seller</div>
+            <h2 class="section-title-main featured-menu-title">Thực đơn nổi bật</h2>
+            <p class="text-muted-coffee mb-0">Mỗi món đều là kết quả của sự thử nghiệm và cải tiến không ngừng nghỉ từ đội
+                ngũ barista tâm huyết.</p>
+        </div>
+
+        <div class="featured-menu-shell">
+            <div class="featured-menu-actions">
+                <a th:href="@{/menu}" class="section-corner-link" aria-label="Xem tất cả thực đơn">
+                    Xem tất cả
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+            <button type="button" class="featured-menu-nav prev" id="featuredMenuPrev" aria-label="Trước">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <button type="button" class="featured-menu-nav next" id="featuredMenuNext" aria-label="Sau">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+
+            <div class="featured-menu-track" id="featuredMenuTrack">
+                <div th:if="${menuItems == null or #lists.isEmpty(menuItems)}" class="w-100">
+                    <p class="text-center text-muted-coffee mb-0">Thực đơn đang được cập nhật. Vui lòng quay lại sau.</p>
+                </div>
+
+                <div class="featured-menu-item" th:each="item : ${menuItems}">
+                    <div class="menu-card h-100">
+                        <img th:src="${item.imageUrl != null ? item.imageUrl : 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=600&h=400&fit=crop'}"
+                             class="img-fluid" th:alt="${item.name}" alt="Món">
+                        <h6 class="fw-semibold mb-1">
+                            <span th:text="${item.name}">Tên món</span>
+                            <span class="menu-tag" th:if="${item.category != null}" th:text="${item.category.name}">Danh mục</span>
+                        </h6>
+                        <p class="small text-muted-coffee mb-1" th:text="${item.description}">Mô tả món</p>
+                        <div class="price-label" th:text="${item.price != null ? #numbers.formatInteger(item.price, 0, 'POINT') + ' đ' : '0 đ'}">0 đ</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="loyalty-strip-wrap" aria-label="Chương trình tích điểm">
+        <div class="loyalty-strip">
+            <div class="loyalty-strip-icon" aria-hidden="true"><i class="bi bi-stars"></i></div>
+            <div class="loyalty-strip-body flex-grow-1 min-w-0">
+                <div class="loyalty-strip-title">Tích điểm – Đổi quà tại quán</div>
+                <p class="loyalty-strip-text mb-0" th:if="${currentUser == null}">
+                    Chào mừng bạn đến với Brew &amp; Co - nơi hương vị và cảm xúc hòa quyện.
+                    Mỗi ly nước bạn thưởng thức là một điểm tích lũy 💛 - <strong>10 điểm</strong> có thể đổi <strong>1 ly miễn phí</strong>.<br>
+                    <a th:href="@{/login}" class="loyalty-strip-link">Đăng nhập</a>
+                    hoặc
+                    <a th:href="@{/register}" class="loyalty-strip-link">đăng ký</a>
+                    để theo dõi điểm và nhận thêm ưu đãi dành cho thành viên!
+                </p>
+                <p class="loyalty-strip-text mb-0" th:if="${currentUser != null and landingLoyaltyPoints != null}">
+                    Cảm ơn bạn đã đồng hành cùng Brew &amp; Co. Mỗi ly nước bạn thưởng thức là một điểm tích lũy 💛. Chỉ cần tích lũy đủ <strong>10 điểm</strong> bạn có thể đổi <strong>1 ly nước miễn phí</strong>.<br>
+                    Hiện tại bạn đang có <strong th:text="${landingLoyaltyPoints}">0</strong> điểm. Hãy ghé quán và bắt đầu tích điểm ngay thôi!
+                </p>
+                <p class="loyalty-strip-text mb-0" th:if="${currentUser != null and landingLoyaltyPoints == null}">
+                    Chương trình tích điểm: <strong>10 điểm đổi 1 ly nước</strong> (theo đơn hoàn tất tại quán). Điểm được gắn với số điện thoại khi mua hàng —
+                    hãy dùng cùng SĐT với tài khoản của bạn hoặc cập nhật SĐT trong hồ sơ để đồng bộ điểm tự động.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section id="testimonials" class="section-inner section-large">
+        <div class="text-center mb-3 section-heading-offset">
+            <div class="section-title-eyebrow">Khách hàng nói gì</div>
+            <h2 class="section-title-main">Lời từ trái tim khách hàng</h2>
+            <p class="text-muted-coffee mb-2">Chia sẻ cảm nhận của bạn về Brew &amp; Co. để chúng tôi phục vụ tốt hơn.</p>
+        </div>
+
+        <div class="featured-review-shell mb-4" th:if="${customerReviews != null and !#lists.isEmpty(customerReviews)}">
+            <div class="featured-review-actions">
+                <a th:href="@{/reviews}" class="section-corner-link section-corner-link--reviews" aria-label="Xem tất cả đánh giá">
+                    Xem tất cả
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <button type="button" class="featured-review-nav prev" id="featuredReviewPrev" aria-label="Trước">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <button type="button" class="featured-review-nav next" id="featuredReviewNext" aria-label="Sau">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+
+            <div class="featured-review-track" id="featuredReviewTrack">
+                <div class="featured-review-item"
+                     th:each="review, iter : ${customerReviews}"
+                     th:if="${iter.index < 9}">
+                    <div class="testimonial-card">
+                        <div class="text-warning mb-2">
+                            <span th:each="i : ${#numbers.sequence(1, review.rating)}">★</span>
+                        </div>
+                        <p class="small text-muted-coffee mb-3" th:text="${review.comment}">Nội dung đánh giá</p>
+                        <div class="fw-semibold" th:text="${review.customerName}">Tên khách</div>
+                        <div class="small text-muted-coffee" th:text="${review.customerRole}">Vai trò</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-5" th:if="${customerReviews == null or #lists.isEmpty(customerReviews)}">
+            <div class="col-12">
+                <p class="text-center text-muted-coffee mb-0">Hiện chưa có đánh giá nào. Hãy là người đầu tiên để lại cảm nhận về Brew &amp; Co.</p>
+            </div>
+        </div>
+
+        <!-- Form gửi đánh giá -->
+        <div class="row g-4 align-items-start" id="reviewFormSection">
+            <div class="col-lg-6">
+                <div class="section-title-eyebrow mb-2">Đánh giá</div>
+                <h3 class="booking-left-title mb-3">Gửi đánh giá của bạn</h3>
+                <p class="text-muted-coffee small mb-3">Chúng tôi rất trân trọng mọi góp ý từ bạn. Đánh giá của bạn sẽ giúp Brew &amp; Co. hoàn thiện trải nghiệm tốt hơn.</p>
+                <p class="text-muted-coffee small mb-0">Một số đánh giá nổi bật sẽ được hiển thị công khai tại đây.</p>
+            </div>
+            <div class="col-lg-6">
+                <div class="booking-card">
+                    <div id="reviewAjaxAlert" class="alert py-2 small mb-3 d-none" role="status"></div>
+                    <form id="landingReviewForm" class="row g-3 small" action="#" method="post">
+                        <div class="col-md-6">
+                            <label class="form-label" for="reviewName">Họ tên *</label>
+                            <input id="reviewName" name="name" type="text" class="form-control" placeholder="Nguyễn Văn A" required
+                                   th:value="${(currentUser != null && currentUser.fullName != null) ? currentUser.fullName : ''}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="reviewPhone">Số điện thoại *</label>
+                            <input id="reviewPhone" name="phone" type="text" class="form-control" placeholder="0901 234 567" required
+                                   th:value="${(currentUser != null && currentUser.phone != null) ? currentUser.phone : ''}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="reviewRole">Bạn là</label>
+                            <input id="reviewRole" name="role" type="text" class="form-control" placeholder="Sinh viên, Freelancer, ...">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="reviewRating">Số sao *</label>
+                            <select id="reviewRating" name="rating" class="form-select" required>
+                                <option value="5" selected>5 ★ - Tuyệt vời</option>
+                                <option value="4">4 ★ - Rất tốt</option>
+                                <option value="3">3 ★ - Bình thường</option>
+                                <option value="2">2 ★ - Tạm ổn</option>
+                                <option value="1">1 ★ - Chưa hài lòng</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label" for="reviewComment">Cảm nhận của bạn *</label>
+                            <textarea id="reviewComment" name="comment" class="form-control" rows="3" placeholder="Hãy chia sẻ đôi điều về đồ uống, không gian, nhân viên..." required></textarea>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <button type="submit" class="btn btn-primary-gold w-100">
+                                <i class="bi bi-chat-heart me-1"></i>
+                                Gửi đánh giá
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="space" class="section-inner section-large space-collage-section" aria-label="Không gian quán">
+        <div class="space-collage-head">
+            <div class="section-title-eyebrow">Không gian</div>
+            <h2 class="section-title-main mb-2">Một góc nhỏ giữa lòng phố</h2>
+            <p class="text-muted-coffee small mb-0">Ánh sáng ấm, bàn làm việc và những ly cà phê đặc sản cùng bạn tận hưởng từng khoảnh khắc.<br> Ghé quán trực tiếp hoặc <a href="#booking" class="space-collage-inline-link text-decoration-none">đặt bàn trước</a> để có trải nghiệm trọn vẹn hơn.</p>
+        </div>
+        <div class="space-collage-row">
+            <div class="space-collage-cell">
+                <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&amp;fit=crop&amp;w=1200&amp;h=400&amp;q=82"
+                     alt="Không gian quầy bar và khu pha chế Brew &amp; Co."
+                     width="1200" height="400" loading="lazy">
+            </div>
+            <div class="space-collage-cell">
+                <img src="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&amp;fit=crop&amp;w=900&amp;h=400&amp;q=82"
+                     alt="Góc ngồi ấm cúng trong quán"
+                     width="900" height="400" loading="lazy">
+            </div>
+        </div>
+        <p class="text-center small text-muted-coffee mt-2 mb-0">* Hình ảnh minh họa không gian quán — ảnh thật chụp thực tế.</p>
+    </section>
+
+    <!-- Booking -->
+    <section id="booking" class="section-inner section-large pt-0 pb-5" th:attr="data-user-logged-in=${#authorization.expression('isAuthenticated()')}">
+        <div class="row g-4 align-items-start">
+            <div class="col-lg-5">
+                <div class="section-title-eyebrow">Đặt bàn</div>
+                <h2 class="booking-left-title">Giữ chỗ cho khoảnh khắc đặc biệt</h2>
+                <p class="text-muted-coffee mb-2">Dù là buổi hẹn hò, họp nhóm hay chỉ đơn giản là muốn có một góc yên tĩnh,
+                    chúng tôi luôn sẵn sàng chuẩn bị cho bạn.</p>
+                <div class="booking-left-contact-wrap mb-2">
+                    <div class="booking-contact-bar small text-muted-coffee">
+                        <span class="d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-telephone-outbound"></i>
+                            <span class="fw-semibold text-nowrap">Hotline đặt bàn:</span>
+                            <span>0901 234 567</span>
+                        </span>
+                        <span class="d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-envelope"></i>
+                            <span class="fw-semibold text-nowrap">Email:</span>
+                            <span>hello@brewandco.vn</span>
+                        </span>
+                    </div>
+                    <button type="button" class="btn btn-primary-gold btn-sm booking-lookup-cta mt-1" id="bookingLookupToggle" aria-expanded="false" aria-controls="bookingLookupPanel">
+                        <i class="bi bi-search me-1"></i> Tra cứu đặt bàn
+                    </button>
+                    <div id="bookingAjaxAlert" class="mt-2 d-none" role="status"></div>
+                    <div id="bookingLookupPanel" class="mt-2 d-none border rounded-3 p-3 bg-white bg-opacity-75">
+                        <div id="bookingLookupLoggedHint" class="small text-muted-coffee mb-2" th:if="${currentUser != null}">
+                            Lịch sử đặt bàn theo số điện thoại và email trong tài khoản của bạn.
+                        </div>
+                        <div id="bookingLookupGuestBlock" th:if="${currentUser == null}">
+                            <p class="small text-muted-coffee mb-2 mb-md-3">Nhập số điện thoại hoặc email để tra cứu lịch sử đặt bàn.</p>
+                            <div id="lookupGuestError" class="alert alert-danger py-2 px-3 small mb-2 d-none" role="alert"></div>
+                            <div class="booking-lookup-inputs-row">
+                                <div class="booking-lookup-field-phone">
+                                    <label class="form-label small mb-0" for="lookupPhone">Số điện thoại</label>
+                                    <input type="text" class="form-control form-control-sm" id="lookupPhone" placeholder="0901 234 567" autocomplete="tel" maxlength="16">
+                                </div>
+                                <div class="booking-lookup-field-email">
+                                    <label class="form-label small mb-0" for="lookupEmail">Email</label>
+                                    <input type="email" class="form-control form-control-sm" id="lookupEmail" placeholder="email@example.com" autocomplete="email">
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-primary-gold btn-sm w-100 mt-2 booking-lookup-cta" id="lookupGuestBtn">Tra cứu</button>
+                        </div>
+                        <div id="bookingLookupResults" class="small mt-3"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="booking-card">
+                    <form id="landingBookingForm" class="row g-3 small" action="#" method="post">
+                        <div class="col-md-6">
+                            <label class="form-label" for="bookingName">Họ tên *</label>
+                            <input id="bookingName" name="name" type="text" class="form-control" placeholder="Nguyễn Văn A" required
+                                   th:value="${(currentUser != null && currentUser.fullName != null) ? currentUser.fullName : ''}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="bookingPhone">Số điện thoại *</label>
+                            <input id="bookingPhone" name="phone" type="text" class="form-control" placeholder="0901 234 567" required
+                                   th:value="${(currentUser != null && currentUser.phone != null) ? currentUser.phone : ''}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="bookingEmail">Email</label>
+                            <input id="bookingEmail" name="email" type="email" class="form-control" placeholder="email@example.com"
+                                   th:value="${(currentUser != null && currentUser.email != null) ? currentUser.email : ''}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="bookingDate">Ngày *</label>
+                            <input id="bookingDate" name="date" type="date" class="form-control" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="bookingTime">Giờ *</label>
+                            <select id="bookingTime" name="time" class="form-select" required>
+                                <option value="" selected disabled>Chọn giờ</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="bookingGuests">Số khách *</label>
+                            <input id="bookingGuests" name="guests" type="number" class="form-control" min="1" value="2" required>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label" for="bookingNote">Ghi chú</label>
+                            <input id="bookingNote" name="note" type="text" class="form-control" placeholder="Yêu cầu đặc biệt (nếu có)">
+                        </div>
+                        <div class="col-12 mt-2">
+                            <button type="submit" class="btn btn-primary-gold w-100">
+                                <i class="bi bi-calendar-heart me-1"></i>
+                                Gửi yêu cầu đặt bàn
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Map + Footer -->
+<div class="footer-map">
+    <iframe
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3919.405949373199!2d106.69918047579687!3d10.778746259187436!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752f480c9d7c1d%3A0xa3b3f31c52a4da41!2zTmjDoCBUaMOhbmggVGjhu4sgVGjDrG5nIELDuWkgxJDhuqFp!5e0!3m2!1svi!2svi!4v1700000000000!5m2!1svi!2svi"
+        allowfullscreen title="Bản đồ vị trí Brew &amp; Co."></iframe>
+</div>
+
+<footer class="footer-wrapper">
+    <div class="footer-inner">
+        <div class="row g-4">
+            <div class="col-md-5">
+                <div class="footer-brand-title">Brew &amp; Co.</div>
+                <div class="small text-muted-coffee mb-2">Specialty Coffee Since 2026</div>
+                <p class="small mb-3">Nơi mỗi tách cà phê là một câu chuyện được kể bằng đam mê và sự tỉ mỉ.</p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm rounded-circle" type="button" aria-label="Instagram">
+                        <i class="bi bi-instagram"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm rounded-circle" type="button" aria-label="Facebook">
+                        <i class="bi bi-facebook"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm rounded-circle" type="button" aria-label="TikTok">
+                        <i class="bi bi-tiktok"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <h6 class="mb-2">Liên kết nhanh</h6>
+                <div class="footer-links small">
+                    <a href="#about">Về chúng tôi</a>
+                    <a href="#menu">Thực đơn</a>
+                    <a href="#why">Dịch vụ</a>
+                    <a href="#testimonials">Đánh giá</a>
+                    <a href="#space">Không gian</a>
+                    <a href="#booking">Đặt bàn</a>
+                    <a th:href="@{/menu}">Menu đầy đủ</a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <h6 class="mb-2">Liên hệ</h6>
+                <div class="small mb-1"><i class="bi bi-geo-alt me-1"></i>Thủ Đức, TP.HCM</div>
+                <div class="small mb-1"><i class="bi bi-telephone me-1"></i>0818687047</div>
+                <div class="small mb-3"><i class="bi bi-envelope me-1"></i>bnhb648@gmail.com</div>
+            </div>
+        </div>
+        <div class="footer-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span>© 2026 Brew &amp; Co. Tất cả quyền được bảo lưu.</span>
+            <span class="small">
+                <a th:href="@{/login}" class="me-3 text-decoration-none">Đăng nhập</a>
+                <a th:href="@{/register}" class="text-decoration-none">Đăng ký</a>
+            </span>
+        </div>
+    </div>
+</footer>
+
+<!-- Chat widget -->
+<button type="button" class="chat-widget-toggle" id="chatWidgetToggle" aria-label="Chat">
+        <i class="bi bi-chat-dots"></i>
+    </button>
+
+<div class="chat-widget-panel" id="chatWidget">
+        <div class="chat-widget-header">
+                <div>
+                        <div class="chat-widget-header-title">Trợ lý AI Brew &amp; Co.</div>
+                        <div class="chat-widget-header-sub">Hỗ trợ bằng Gemini — hỏi về menu, quán hoặc gợi ý đồ uống</div>
+                </div>
+                <button type="button" class="chat-widget-close" id="chatWidgetClose" aria-label="Đóng">×</button>
+        </div>
+        <div class="chat-widget-messages" id="chatMessages"></div>
+        <div class="chat-widget-input">
+                <input type="text" id="chatInput" placeholder="Nhập tin nhắn của bạn..." autocomplete="off">
+                <button type="button" id="chatSendBtn"><i class="bi bi-send"></i></button>
+        </div>
+    </div>
+
+    <script th:src="@{/js/landing.js}"></script>
+</body>
+</html>
