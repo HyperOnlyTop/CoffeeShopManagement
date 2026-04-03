@@ -120,8 +120,8 @@ Dự án tuân theo mô hình **Layered Architecture**:
   - Form public: `/booking` (trên landing page) gửi dữ liệu vào `BookingController`
   - Admin: `Booking.html` + `BookingForm.html`, controller `BookingController`
 - **Cài đặt hệ thống**
-  - REST: `/api/settings/shop`, `/api/settings/payment` – thông tin quán & cấu hình thanh toán (VietQR / ngân hàng)
-  - UI: `Setting.html` – tab Thông tin quán / Thanh toán QR / Tài khoản
+  - REST: `/api/settings/shop`, `/api/settings/payment` – thông tin quán & cấu hình thanh toán (ngân hàng, MoMo)
+  - UI: `Setting.html` – tab Thông tin quán / Hoạt động / Thông báo / Thanh toán QR / Tài khoản
 - **Chat & AI**
   - REST: `/api/chat/ai` – nhận câu hỏi, build context từ DB, gọi Gemini, trả lời tiếng Việt
   - Widget chat trên `index.html` cho phép chuyển giữa "Nhắn cho nhân viên" và "Hỏi AI Gemini"
@@ -197,7 +197,7 @@ Một số đường dẫn chính:
 
 Một số ý tưởng mở rộng:
 - Bổ sung phân quyền chi tiết hơn (theo chức danh nhân viên, chi nhánh)
-- Mở rộng thêm tab cài đặt (thông báo, nhật ký hoạt động) nếu cần
+- Hoàn thiện cấu hình thông báo, hoạt động trong trang Cài đặt
 - Tối ưu hóa logic tính lương, thêm bảng chấm công chi tiết theo ca
 - Tích hợp gửi email / SMS xác nhận đặt bàn
 - Bổ sung caching, phân trang & filter nâng cao cho các bảng dữ liệu lớn

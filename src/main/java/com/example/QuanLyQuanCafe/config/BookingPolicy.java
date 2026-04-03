@@ -9,4 +9,3 @@ public final class BookingPolicy {
     /** Thời điểm đến phải cách lúc đặt ít nhất bấy nhiêu giờ (tránh đặt sát giờ quán không kịp xử lý). */
     public static final int MIN_LEAD_HOURS = 2;
 }
-

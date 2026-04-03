@@ -202,4 +202,3 @@ public class MenuDataSeeder {
         return base;
     }
 }
-
