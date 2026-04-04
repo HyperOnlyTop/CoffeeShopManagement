@@ -61,6 +61,8 @@ public class SecurityConfig {
             .requestMatchers("/api/staff/me").hasAnyRole("CASHIER", "SERVER", "BARISTA", "SECURITY")
             .requestMatchers("/api/staff/me/**").hasAnyRole("CASHIER", "SERVER", "BARISTA", "SECURITY")
             .requestMatchers("/api/staff/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.GET, "/api/attendance/report").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.GET, "/api/attendance/my-records").hasAnyRole("CASHIER", "SERVER", "BARISTA", "SECURITY")
             .requestMatchers("/api/attendance/**").hasAnyRole("CASHIER", "SERVER", "BARISTA", "SECURITY")
             // Staff shifts: ai cũng xem được, chỉ ADMIN sửa
             .requestMatchers(HttpMethod.GET, "/api/staff-shifts/**").hasAnyRole("ADMIN", "CASHIER", "SERVER", "BARISTA", "SECURITY")

@@ -1,5 +1,7 @@
 package com.example.QuanLyQuanCafe.config;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -53,6 +55,12 @@ public class DatabaseInitializer {
         seedStaffUser("phache", "Nhân viên pha chế", "phache@cafe.com", "0912345680", "BARISTA", StaffRole.PHA_CHE, null);
         seedStaffUser("baove", "Nhân viên bảo vệ", "baove@cafe.com", "0912345681", "SECURITY", StaffRole.BAO_VE, "FULL_DAY");
 
+        // Thêm NV: 2 phục vụ, 1 pha chế, 1 thu ngân (role khớp {@link StaffRole} + Spring role SERVER/BARISTA/CASHIER).
+        seedStaffUser("phucvu2", "Trần Thị Lan", "lan.pv2@cafe.com", "0912345682", "SERVER", StaffRole.PHUC_VU, null);
+        seedStaffUser("phucvu3", "Lê Văn Hùng", "hung.pv3@cafe.com", "0912345683", "SERVER", StaffRole.PHUC_VU, null);
+        seedStaffUser("phache2", "Phạm Thu Hà", "ha.pc2@cafe.com", "0912345684", "BARISTA", StaffRole.PHA_CHE, null);
+        seedStaffUser("thungan2", "Đỗ Minh Tuấn", "tuan.tn2@cafe.com", "0912345685", "CASHIER", StaffRole.THU_NGAN, null);
+
         if (customerReviewRepository.count() == 0) {
             CustomerReview r1 = new CustomerReview();
             r1.setCustomerName("Minh Anh");
@@ -101,6 +109,8 @@ public class DatabaseInitializer {
             staff.setRole(staffRole);
             staff.setStatus(StaffStatus.ACTIVE);
             staff.setShift(shiftCode); // ca mặc định (tuỳ chọn)
+            staff.setSalary(defaultSalaryForStaffRole(staffRole));
+            staff.setStartDate(LocalDate.of(2025, 6, 1));
             staff = staffRepository.save(staff);
         }
 
@@ -134,5 +144,19 @@ public class DatabaseInitializer {
         if (changed) {
             userRepository.save(user);
         }
+    }
+
+    /** Lương gợi ý seed (VNĐ, cột {@code salary} scale 0). */
+    private static BigDecimal defaultSalaryForStaffRole(StaffRole role) {
+        if (role == null) {
+            return BigDecimal.valueOf(7_500_000L);
+        }
+        return switch (role) {
+            case PHA_CHE -> BigDecimal.valueOf(9_000_000L);
+            case THU_NGAN -> BigDecimal.valueOf(8_500_000L);
+            case PHUC_VU -> BigDecimal.valueOf(7_500_000L);
+            case BAO_VE -> BigDecimal.valueOf(6_500_000L);
+            case QUAN_LY -> BigDecimal.valueOf(12_000_000L);
+        };
     }
 }

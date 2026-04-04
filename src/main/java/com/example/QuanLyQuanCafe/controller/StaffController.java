@@ -118,8 +118,14 @@ public class StaffController {
         AppUser appUser = appUserRepository.findByUsername(username);
 
         Staff staff = null;
-        if (appUser != null && appUser.getFullName() != null && !appUser.getFullName().isBlank()) {
+        if (appUser != null && appUser.getStaffId() != null) {
+            staff = staffRepository.findById(appUser.getStaffId()).orElse(null);
+        }
+        if (staff == null && appUser != null && appUser.getFullName() != null && !appUser.getFullName().isBlank()) {
             staff = staffRepository.findByName(appUser.getFullName());
+        }
+        if (staff == null && appUser != null) {
+            staff = staffRepository.findByName(appUser.getUsername());
         }
         if (staff == null) {
             staff = staffRepository.findByName(username);

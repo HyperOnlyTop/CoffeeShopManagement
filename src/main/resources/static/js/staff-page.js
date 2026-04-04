@@ -1,33 +1,129 @@
 ﻿        document.addEventListener('DOMContentLoaded', function () {
+            function formatIsoDateVi(iso) {
+                if (!iso) return '—';
+                var p = String(iso).split('-');
+                if (p.length !== 3) return iso;
+                return p[2] + '/' + p[1] + '/' + p[0];
+            }
+
+            function formatTimeShort(s) {
+                if (s == null || s === '') return '—';
+                return String(s).substring(0, 5);
+            }
+
+            function escHtml(s) {
+                if (s == null || s === '') return '';
+                return String(s)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
+
+            /** Mã StaffRole từ API /api/staff/basic → nhãn tiếng Việt (tab phân ca). */
+            function staffRoleLabelVi(roleCode) {
+                if (!roleCode) return 'Chưa thiết lập';
+                var map = {
+                    PHA_CHE: 'Pha chế',
+                    PHUC_VU: 'Phục vụ',
+                    THU_NGAN: 'Thu ngân',
+                    QUAN_LY: 'Quản lý',
+                    BAO_VE: 'Bảo vệ'
+                };
+                if (map[roleCode]) return map[roleCode];
+                return String(roleCode).replace(/_/g, ' ');
+            }
+
             let attendanceStatus = 'NOT_CHECKED_IN';
             var checkinBtn = document.getElementById('checkinBtn');
+            var selfRoot = document.getElementById('staffPageSelfService');
+            var hasStaffProfile = !selfRoot || selfRoot.getAttribute('data-has-profile') === 'true';
+
+            function updateSelfTodayCards(data) {
+                var titleEl = document.getElementById('staffSelfTodayTitle');
+                var detailEl = document.getElementById('staffSelfTodayDetail');
+                if (!titleEl) return;
+                var st = (data && data.status) ? data.status : 'NOT_CHECKED_IN';
+                if (st === 'NOT_STAFF') {
+                    titleEl.textContent = 'Chưa có hồ sơ nhân viên';
+                    if (detailEl) detailEl.textContent = 'Liên hệ quản lý để gán tài khoản.';
+                    return;
+                }
+                if (st === 'NOT_CHECKED_IN') {
+                    titleEl.textContent = 'Chưa chấm giờ vào';
+                    if (detailEl) detailEl.textContent = 'Bấm nút bên phải khi bắt đầu ca.';
+                } else if (st === 'CHECKED_IN') {
+                    titleEl.textContent = 'Đang trong ca';
+                    var t = data.checkInTime ? String(data.checkInTime).substring(0, 5) : '';
+                    if (detailEl) detailEl.textContent = t ? ('Giờ vào: ' + t) : '';
+                } else if (st === 'COMPLETED') {
+                    titleEl.textContent = 'Đã chấm đủ hôm nay';
+                    var h = data.workHours != null ? data.workHours : 0;
+                    if (detailEl) detailEl.textContent = 'Tổng ' + h + ' giờ làm hôm nay.';
+                } else {
+                    titleEl.textContent = '—';
+                    if (detailEl) detailEl.textContent = '';
+                }
+            }
+
+            function loadSelfMonthSummary() {
+                var hEl = document.getElementById('staffSelfMonthHours');
+                var sEl = document.getElementById('staffSelfMonthSalary');
+                if (!hEl && !sEl) return;
+                fetch('/api/staff/me/salary')
+                    .then(function (res) { return res.ok ? res.json() : null; })
+                    .then(function (data) {
+                        if (!data) return;
+                        var totalHours = Number(data.totalHours || 0);
+                        var totalSalary = Number(data.totalSalary || 0);
+                        if (hEl) hEl.textContent = totalHours.toFixed(2) + ' giờ';
+                        if (sEl) sEl.textContent = totalSalary.toLocaleString('vi-VN') + ' đ';
+                    })
+                    .catch(function () { });
+            }
+
             if (checkinBtn) {
+                if (selfRoot && !hasStaffProfile) {
+                    checkinBtn.style.display = 'none';
+                } else {
                 fetch('/api/attendance/today')
                     .then(function (res) { return res.json(); })
                     .then(function (data) {
                         attendanceStatus = data.status || 'NOT_CHECKED_IN';
+                        updateSelfTodayCards(data);
                         var textSpan = document.getElementById('checkinText');
+                        if (attendanceStatus === 'NOT_STAFF') {
+                            if (textSpan) textSpan.textContent = 'Không thể chấm công';
+                            checkinBtn.disabled = true;
+                            checkinBtn.style.display = 'inline-block';
+                            return;
+                        }
                         if (attendanceStatus === 'NOT_CHECKED_IN') {
-                            textSpan.textContent = 'Chấm công (Giờ vào)';
+                            if (textSpan) textSpan.textContent = 'Chấm công (Giờ vào)';
                             checkinBtn.classList.add('btn-primary');
                             checkinBtn.style.display = 'inline-block';
                         } else if (attendanceStatus === 'CHECKED_IN') {
-                            textSpan.textContent = 'Chấm công ra (Giờ ra)';
+                            if (textSpan) textSpan.textContent = 'Chấm công ra (Giờ ra)';
                             checkinBtn.classList.remove('btn-primary');
                             checkinBtn.classList.add('btn-warning');
                             checkinBtn.style.display = 'inline-block';
                         } else if (attendanceStatus === 'COMPLETED') {
-                            textSpan.textContent = 'Đã hoàn thành (' + data.workHours + ' giờ)';
+                            if (textSpan) textSpan.textContent = 'Đã hoàn thành (' + data.workHours + ' giờ)';
                             checkinBtn.classList.remove('btn-primary', 'btn-warning');
                             checkinBtn.classList.add('btn-success');
                             checkinBtn.disabled = true;
                             checkinBtn.style.display = 'inline-block';
                         }
+                        if (selfRoot && hasStaffProfile) {
+                            loadSelfMonthSummary();
+                        }
                     })
                     .catch(function (err) { console.error(err); });
+                }
             }
 
             window.staffCheckInOut = function () {
+                if (attendanceStatus === 'NOT_STAFF') return;
                 var url = attendanceStatus === 'NOT_CHECKED_IN' ? '/api/attendance/check-in' : '/api/attendance/check-out';
                 fetch(url, { method: 'POST' })
                     .then(async res => {
@@ -331,7 +427,10 @@
                     var rows = staffCache.map(function (s) {
                         var id = s.id;
                         var name = s.name || '';
-                        var phone = s.phone ? (' · ' + s.phone) : '';
+                        var roleVi = staffRoleLabelVi(s.role);
+                        var nameLine = '<div class="fw-semibold">' + escHtml(name || '—') +
+                            ' <span class="text-muted fw-normal">- ' + escHtml(roleVi) + '</span></div>';
+                        var phone = s.phone ? (' · ' + escHtml(s.phone)) : '';
                         function cell(code) {
                             var key = String(id) + '|' + code;
                             var checked = assignmentsSet.has(key) ? 'checked' : '';
@@ -339,7 +438,7 @@
                             return '<input type="checkbox" class="form-check-input shift-toggle" data-staff="' + id + '" data-code="' + code + '" ' + checked + ' ' + disabled + ' />';
                         }
                         return '<tr>' +
-                            '<td><div class="fw-semibold">' + name + '</div><div class="text-muted small">' + phone + '</div></td>' +
+                            '<td>' + nameLine + '<div class="text-muted small">' + phone + '</div></td>' +
                             '<td class="text-center">' + cell('MORNING') + '</td>' +
                             '<td class="text-center">' + cell('AFTERNOON') + '</td>' +
                             '<td class="text-center">' + cell('EVENING') + '</td>' +
@@ -424,6 +523,157 @@
                 });
                 // initial load
                 loadShiftScreen(shiftDateInput ? shiftDateInput.value : '');
+            }
+
+            // Báo cáo chấm công (chỉ ADMIN — tab chỉ render khi có quyền)
+            var attendanceReportFrom = document.getElementById('attendanceReportFrom');
+            var attendanceReportTo = document.getElementById('attendanceReportTo');
+            var btnLoadAttendanceReport = document.getElementById('btnLoadAttendanceReport');
+            var attendanceReportTableBody = document.getElementById('attendanceReportTableBody');
+            var tabAttendanceReport = document.getElementById('tab-attendance-report');
+
+            function loadAttendanceReport() {
+                if (!attendanceReportTableBody) return;
+                var fromVal = attendanceReportFrom ? attendanceReportFrom.value : '';
+                var toVal = attendanceReportTo ? attendanceReportTo.value : '';
+                if (!fromVal || !toVal) {
+                    attendanceReportTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Vui lòng chọn đủ từ ngày và đến ngày.</td></tr>';
+                    return;
+                }
+                if (fromVal > toVal) {
+                    attendanceReportTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3">Từ ngày không được sau đến ngày.</td></tr>';
+                    return;
+                }
+                attendanceReportTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Đang tải...</td></tr>';
+                var q = '?from=' + encodeURIComponent(fromVal) + '&to=' + encodeURIComponent(toVal);
+                fetch('/api/attendance/report' + q)
+                    .then(function (r) {
+                        if (r.status === 403) throw new Error('Bạn không có quyền xem báo cáo này.');
+                        if (!r.ok) return r.json().catch(function () { return null; }).then(function (b) {
+                            throw new Error((b && b.error) ? b.error : 'Không tải được dữ liệu');
+                        });
+                        return r.json();
+                    })
+                    .then(function (rows) {
+                        if (!Array.isArray(rows) || rows.length === 0) {
+                            attendanceReportTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Không có bản ghi chấm công trong khoảng này.</td></tr>';
+                            return;
+                        }
+                        attendanceReportTableBody.innerHTML = rows.map(function (row) {
+                            var wh = row.workHours;
+                            var whText = '—';
+                            if (wh != null && wh !== '') {
+                                var n = Number(wh);
+                                if (!isNaN(n)) {
+                                    whText = (Math.round(n * 100) / 100).toString();
+                                }
+                            }
+                            return '<tr>' +
+                                '<td>' + formatIsoDateVi(row.workDate) + '</td>' +
+                                '<td><span class="fw-medium">' + (row.staffName || '—') + '</span></td>' +
+                                '<td>' + formatTimeShort(row.checkIn) + '</td>' +
+                                '<td>' + formatTimeShort(row.checkOut) + '</td>' +
+                                '<td class="text-end">' + whText + '</td>' +
+                                '</tr>';
+                        }).join('');
+                    })
+                    .catch(function (err) {
+                        attendanceReportTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3">' +
+                            (err && err.message ? err.message : 'Lỗi tải dữ liệu') + '</td></tr>';
+                    });
+            }
+
+            if (attendanceReportFrom && attendanceReportTo) {
+                if (!attendanceReportFrom.value || !attendanceReportTo.value) {
+                    var now = new Date();
+                    var y = now.getFullYear();
+                    var m = String(now.getMonth() + 1).padStart(2, '0');
+                    var d = String(now.getDate()).padStart(2, '0');
+                    var todayIso = y + '-' + m + '-' + d;
+                    attendanceReportFrom.value = y + '-' + m + '-01';
+                    attendanceReportTo.value = todayIso;
+                }
+            }
+            if (btnLoadAttendanceReport) {
+                btnLoadAttendanceReport.addEventListener('click', function () {
+                    loadAttendanceReport();
+                });
+            }
+            if (tabAttendanceReport) {
+                tabAttendanceReport.addEventListener('shown.bs.tab', function () {
+                    loadAttendanceReport();
+                });
+            }
+
+            var myAttendanceFrom = document.getElementById('myAttendanceFrom');
+            var myAttendanceTo = document.getElementById('myAttendanceTo');
+            var btnLoadMyAttendance = document.getElementById('btnLoadMyAttendance');
+            var myAttendanceTableBody = document.getElementById('myAttendanceTableBody');
+
+            function loadMyPersonalAttendance() {
+                if (!myAttendanceTableBody) return;
+                var fromVal = myAttendanceFrom ? myAttendanceFrom.value : '';
+                var toVal = myAttendanceTo ? myAttendanceTo.value : '';
+                if (!fromVal || !toVal) {
+                    myAttendanceTableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Vui lòng chọn đủ từ ngày và đến ngày.</td></tr>';
+                    return;
+                }
+                if (fromVal > toVal) {
+                    myAttendanceTableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-3">Từ ngày không được sau đến ngày.</td></tr>';
+                    return;
+                }
+                myAttendanceTableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Đang tải...</td></tr>';
+                var q = '?from=' + encodeURIComponent(fromVal) + '&to=' + encodeURIComponent(toVal);
+                fetch('/api/attendance/my-records' + q)
+                    .then(function (r) {
+                        if (!r.ok) {
+                            return r.json().catch(function () { return {}; }).then(function (b) {
+                                throw new Error((b && b.error) ? b.error : 'Không tải được dữ liệu');
+                            });
+                        }
+                        return r.json();
+                    })
+                    .then(function (rows) {
+                        if (!Array.isArray(rows) || rows.length === 0) {
+                            myAttendanceTableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Không có bản ghi trong khoảng này.</td></tr>';
+                            return;
+                        }
+                        myAttendanceTableBody.innerHTML = rows.map(function (row) {
+                            var wh = row.workHours;
+                            var whText = '—';
+                            if (wh != null && wh !== '') {
+                                var n = Number(wh);
+                                if (!isNaN(n)) whText = (Math.round(n * 100) / 100).toString();
+                            }
+                            return '<tr>' +
+                                '<td>' + formatIsoDateVi(row.workDate) + '</td>' +
+                                '<td>' + formatTimeShort(row.checkIn) + '</td>' +
+                                '<td>' + formatTimeShort(row.checkOut) + '</td>' +
+                                '<td class="text-end">' + whText + '</td>' +
+                                '</tr>';
+                        }).join('');
+                    })
+                    .catch(function (err) {
+                        myAttendanceTableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-3">' +
+                            (err && err.message ? err.message : 'Lỗi tải dữ liệu') + '</td></tr>';
+                    });
+            }
+
+            if (myAttendanceFrom && myAttendanceTo && btnLoadMyAttendance) {
+                if (!myAttendanceFrom.value || !myAttendanceTo.value) {
+                    var now2 = new Date();
+                    var y2 = now2.getFullYear();
+                    var m2 = String(now2.getMonth() + 1).padStart(2, '0');
+                    var d2 = String(now2.getDate()).padStart(2, '0');
+                    myAttendanceFrom.value = y2 + '-' + m2 + '-01';
+                    myAttendanceTo.value = y2 + '-' + m2 + '-' + d2;
+                }
+                btnLoadMyAttendance.addEventListener('click', function () {
+                    loadMyPersonalAttendance();
+                });
+                if (document.getElementById('staffPageSelfService')) {
+                    loadMyPersonalAttendance();
+                }
             }
 
             var addBtn = document.querySelector('.staff-add-btn');
@@ -761,37 +1011,11 @@
                 }
             }
 
-            // Hiển thị lương và tổng giờ làm cho nhân viên đang đăng nhập (chỉ xem)
-            (function loadMySalarySummary() {
+            // Hiển thị lương & giờ làm trên thẻ nhân viên (chỉ trang admin)
+            (function loadAllSalarySummaryForAdmin() {
+                if (!document.getElementById('roleAdminFlag')) return;
                 var cards = document.querySelectorAll('.staff-card-clickable');
                 if (!cards.length) return;
-
-                // Với tài khoản nhân viên, trang Staff chỉ hiển thị đúng 1 thẻ
-                var card = cards.length === 1 ? cards[0] : null;
-                if (!card) return;
-
-                var hoursSpan = card.querySelector('.staff-hours-month-text');
-                var salarySpan = card.querySelector('.staff-salary-month-text');
-                if (!hoursSpan || !salarySpan) return;
-
-                fetch('/api/staff/me/salary')
-                    .then(function (res) { return res.ok ? res.json() : null; })
-                    .then(function (data) {
-                        if (!data) return;
-
-                        var totalHours = Number(data.totalHours || 0);
-                        var totalSalary = Number(data.totalSalary || 0);
-
-                        hoursSpan.textContent = 'Giờ làm tháng này: ' + totalHours.toFixed(2) + ' giờ';
-                        salarySpan.textContent = 'Lương tạm tính: ' + totalSalary.toLocaleString('vi-VN') + ' đ';
-                    })
-                    .catch(function () { });
-            })();
-
-            // Hiển thị lương & giờ làm cho tất cả nhân viên khi admin xem danh sách
-            (function loadAllSalarySummaryForAdmin() {
-                var cards = document.querySelectorAll('.staff-card-clickable');
-                if (!cards.length || cards.length === 1) return; // 1 thẻ thường là nhân viên tự xem
 
                 cards.forEach(function (card) {
                     var id = card.getAttribute('data-id');

@@ -310,6 +310,7 @@ public class ProductController {
 			.anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
 		List<Staff> staffList;
+		Staff selfStaff = null;
 		if (isAdmin) {
 			staffList = staffService.findAll();
 		} else {
@@ -317,20 +318,18 @@ public class ProductController {
 			if (principal != null) {
 				AppUser appUser = appUserRepository.findByUsername(principal.getName());
 				if (appUser != null) {
-					Staff staff = null;
-					if (appUser.getFullName() != null && !appUser.getFullName().isBlank()) {
-						staff = staffRepository.findByName(appUser.getFullName());
+					if (appUser.getStaffId() != null) {
+						selfStaff = staffRepository.findById(appUser.getStaffId()).orElse(null);
 					}
-					if (staff == null) {
-						staff = new Staff();
-						staff.setName(appUser.getFullName() != null && !appUser.getFullName().isBlank()
-								? appUser.getFullName()
-								: appUser.getUsername());
-						staff.setPhone(appUser.getPhone());
+					if (selfStaff == null && appUser.getFullName() != null && !appUser.getFullName().isBlank()) {
+						selfStaff = staffRepository.findByName(appUser.getFullName());
 					}
-					// Đồng bộ avatar từ tài khoản đăng nhập cho view nhân viên tự xem
-					staff.setAvatarUrl(appUser.getAvatarUrl());
-					staffList = Collections.singletonList(staff);
+					if (selfStaff == null) {
+						selfStaff = staffRepository.findByName(appUser.getUsername());
+					}
+					if (selfStaff != null) {
+						staffList = Collections.singletonList(selfStaff);
+					}
 				}
 			}
 		}
@@ -347,6 +346,7 @@ public class ProductController {
 			.count();
 
 		model.addAttribute("staffList", staffList);
+		model.addAttribute("selfStaff", selfStaff);
 		model.addAttribute("staffTotal", total);
 		model.addAttribute("staffWorking", working);
 		model.addAttribute("staffOnLeave", onLeave);

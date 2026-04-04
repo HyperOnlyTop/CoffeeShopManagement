@@ -4,13 +4,21 @@ import java.security.Principal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.QuanLyQuanCafe.model.AppUser;
@@ -120,5 +128,73 @@ public class AttendanceController {
         
         attendanceRepository.save(att);
         return ResponseEntity.ok("Chấm công ra thành công! Tổng giờ làm: " + hours + " giờ");
+    }
+
+    /** Lịch sử chấm công của chính người đăng nhập (theo khoảng ngày). */
+    @GetMapping("/my-records")
+    public ResponseEntity<?> myRecords(
+            Principal principal,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Staff staff = resolveStaff(principal);
+        if (staff == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Chưa có hồ sơ nhân viên liên kết."));
+        }
+        if (from == null || to == null || from.isAfter(to)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Khoảng ngày không hợp lệ"));
+        }
+
+        List<Attendance> list = attendanceRepository.findByStaffAndWorkDateBetween(staff, from, to);
+        list.sort(Comparator.comparing(Attendance::getWorkDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+
+        List<Map<String, Object>> rows = list.stream().map(a -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("workDate", a.getWorkDate());
+            m.put("checkIn", a.getCheckIn() != null ? a.getCheckIn().toString() : null);
+            m.put("checkOut", a.getCheckOut() != null ? a.getCheckOut().toString() : null);
+            m.put("workHours", a.getWorkHours());
+            m.put("status", a.getStatus() != null ? a.getStatus().name() : null);
+            return m;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(rows);
+    }
+
+    /** Báo cáo chấm công theo khoảng ngày — chỉ ADMIN (xem SecurityConfig). */
+    @GetMapping("/report")
+    public ResponseEntity<?> attendanceReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        if (from == null || to == null || from.isAfter(to)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Khoảng ngày không hợp lệ"));
+        }
+
+        List<Map<String, Object>> rows = attendanceRepository.findReportByWorkDateRange(from, to).stream()
+                .map(a -> {
+                    Staff s = a.getStaff();
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("id", a.getId());
+                    m.put("staffId", s != null ? s.getId() : null);
+                    m.put("staffName", s != null ? s.getName() : null);
+                    m.put("workDate", a.getWorkDate());
+                    m.put("checkIn", a.getCheckIn() != null ? a.getCheckIn().toString() : null);
+                    m.put("checkOut", a.getCheckOut() != null ? a.getCheckOut().toString() : null);
+                    m.put("workHours", a.getWorkHours());
+                    m.put("status", a.getStatus() != null ? a.getStatus().name() : null);
+                    return m;
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(rows);
     }
 }
