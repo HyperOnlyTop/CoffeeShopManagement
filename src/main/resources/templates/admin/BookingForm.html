@@ -14,6 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- Shared layout styles -->
   <link rel="stylesheet" href="/css/doanhthu.css">
+  <link rel="stylesheet" href="/css/order-page.css">
 </head>
 
 <body>
@@ -35,6 +36,7 @@
     </div>
 
     <div class="custom-card">
+      <div th:if="${errorMessage}" class="alert alert-danger mb-3" role="alert" th:text="${errorMessage}">Lỗi</div>
       <form th:action="@{/Booking/save}" th:object="${booking}" method="post" class="row g-3 small">
         <input type="hidden" th:field="*{id}">
 
@@ -69,13 +71,22 @@
                placeholder="Yêu cầu đặc biệt (nếu có)" title="Ghi chú thêm cho đặt bàn">
         </div>
 
-        <div class="col-md-4">
-             <label class="form-label" for="reservedTableNumber">Giữ bàn (tuỳ chọn)</label>
-             <select id="reservedTableNumber" class="form-select" th:field="*{reservedTableNumber}">
-               <option th:value="${null}">-- Chưa gán bàn --</option>
-               <option th:each="n : ${#numbers.sequence(1,20)}" th:value="${n}" th:text="${'Bàn ' + n}">Bàn 1</option>
-             </select>
-             <div class="form-text">Bàn sẽ hiển thị màu xanh trong cửa sổ giữ 15 phút.</div>
+        <div class="col-12">
+          <label class="form-label">Giữ bàn (tuỳ chọn)</label>
+          <input type="hidden" th:field="*{reservedTableNumber}" id="bookingReservedTableNumber">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+            <div class="fw-medium mb-0">Chọn bàn</div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="bookingClearTableBtn">Bỏ gán bàn</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="bookingReloadTablesBtn">
+                <i class="bi bi-arrow-clockwise"></i> Tải lại
+              </button>
+            </div>
+          </div>
+          <div class="small text-muted mb-2">Đỏ: có khách · Xanh: đã đặt (giữ trong cửa sổ 15 phút, theo thời điểm hiện tại) · Đen: trống. Giống màn hình Quản lý bàn / tạo đơn.</div>
+          <div class="table-picker-grid" id="bookingTablePickerGrid"></div>
+          <div class="small text-muted mt-2" id="bookingTablePickerHint"></div>
+          <div class="form-text">Bàn có khách không thể chọn. Trùng giờ với đặt khác cùng bàn sẽ bị từ chối khi Lưu.</div>
         </div>
 
         <div class="col-12 d-flex justify-content-end mt-4 pt-2 border-top">
@@ -90,6 +101,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="/js/admin-common.js"></script>
+  <script src="/js/booking-form-tables.js"></script>
 </body>
 
 </html>

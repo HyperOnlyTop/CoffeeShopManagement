@@ -6,80 +6,55 @@
 
       var createBtn = document.querySelector('.order-create-btn');
       var createModalEl = document.getElementById('createOrderModal');
-      var orderPaymentQrModalEl = document.getElementById('orderPaymentQrModal');
+      var orderInvoiceModalEl = document.getElementById('orderInvoiceModal');
+      var orderPrepDetailModalEl = document.getElementById('orderPrepDetailModal');
 
-      if (createModalEl && BS && typeof BS.Modal === 'function') {
-        var createModal = new BS.Modal(createModalEl);
-        var orderPaymentQrModal = orderPaymentQrModalEl ? new BS.Modal(orderPaymentQrModalEl) : null;
-        var createForm = document.getElementById('createOrderForm');
+      function markOrderStatusCompletedThenReload(code) {
+        if (!code) return Promise.resolve();
+        return fetch('/api/orders/' + encodeURIComponent(code) + '/status', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'COMPLETED' })
+        })
+          .then(function (res) {
+            if (!res.ok) throw new Error('failed');
+            return res.json();
+          })
+          .then(function () {
+            window.location.reload();
+          })
+          .catch(function () {
+            alert('Không thể cập nhật trạng thái đơn.');
+          });
+      }
 
-        // Elements for auto time, customer and items
-        var orderTimeInput = document.getElementById('orderTime');
-        var orderStatusSelect = document.getElementById('orderStatus');
-        var orderTotalAmountInput = document.getElementById('orderTotalAmount');
-        var menuSearchInput = document.getElementById('orderMenuSearchInput');
-        var menuSearchResults = document.getElementById('orderMenuSearchResults');
-        var quantityInput = document.getElementById('orderItemQuantity');
-        var orderItemNoteInput = document.getElementById('orderItemNoteInput');
-        var addItemBtn = document.getElementById('addOrderItemBtn');
-        var itemsBody = document.getElementById('orderItemsBody');
-        var itemsEmptyRow = document.getElementById('orderItemsEmptyRow');
-        var customerNameInput = document.getElementById('orderCustomerName');
-        var customerPhoneInput = document.getElementById('orderCustomerPhone');
-        var orderTypeSelectEl = document.getElementById('orderType');
-        var orderNoteInput = document.getElementById('orderNote');
-        var selectedTableField = document.getElementById('selectedTableField');
-        var selectedTableDisplay = document.getElementById('selectedTableDisplay');
-        var tablePickerSection = document.getElementById('tablePickerSection');
-        var tablePickerGrid = document.getElementById('tablePickerGrid');
-        var reloadTablesBtn = document.getElementById('reloadTablesBtn');
-        var tablePickerHint = document.getElementById('tablePickerHint');
-
-        var selectedTableNumber = null;
-
-        // QR thanh toán
-        var orderPaymentMethodSelect = document.getElementById('orderPaymentMethod');
-        var orderPaymentQrSection = document.getElementById('orderPaymentQrSection');
-        var orderPaymentQrImage = document.getElementById('orderPaymentQrImage');
-        var orderPaymentAmountText = document.getElementById('orderPaymentAmountText');
-        var orderPaymentMethodText = document.getElementById('orderPaymentMethodText');
+      if (BS && typeof BS.Modal === 'function') {
+        var invoiceModal = orderInvoiceModalEl ? new BS.Modal(orderInvoiceModalEl) : null;
+        var prepDetailModal = orderPrepDetailModalEl ? new BS.Modal(orderPrepDetailModalEl) : null;
+        var serverPickupNotifyModalEl = document.getElementById('serverPickupNotifyModal');
+        var serverPickupNotifyModal = serverPickupNotifyModalEl ? new BS.Modal(serverPickupNotifyModalEl) : null;
         var paymentSettings = null;
 
-        // Elements for QR modal sau khi tạo đơn
-        var qrOrderImage = document.getElementById('qrOrderImage');
-        var qrOrderAmountText = document.getElementById('qrOrderAmountText');
-        var qrOrderMethodText = document.getElementById('qrOrderMethodText');
-        var qrOrderInfoText = document.getElementById('qrOrderInfoText');
+        var invOrderCodeLabel = document.getElementById('invOrderCodeLabel');
+        var invMetaLine = document.getElementById('invMetaLine');
+        var invItemsBody = document.getElementById('invItemsBody');
+        var invTotalLine = document.getElementById('invTotalLine');
+        var invQrBlock = document.getElementById('invQrBlock');
+        var invQrPlaceholder = document.getElementById('invQrPlaceholder');
+        var invQrImage = document.getElementById('invQrImage');
+        var invQrCaption = document.getElementById('invQrCaption');
+        var invPaidAlert = document.getElementById('invPaidAlert');
+        var invMarkPaidBtn = document.getElementById('invMarkPaidBtn');
+        var invMarkUnpaidBtn = document.getElementById('invMarkUnpaidBtn');
+        var currentInvoiceOrderCode = null;
 
-        var modalTitle = document.querySelector('#createOrderModal .modal-title');
-        var editingOrderCode = null;
-
-        var currentOrderItems = []; // {id, name, price, quantity, note}
-
-        function lookupCustomerByPhone() {
-          if (!customerPhoneInput || !customerNameInput) return;
-          var rawPhone = customerPhoneInput.value.trim();
-          if (!rawPhone) return;
-
-          fetch('/api/customers/phone/' + encodeURIComponent(rawPhone))
-            .then(function (res) {
-              if (!res.ok) {
-                return null;
-              }
-              return res.json();
-            })
-            .then(function (customer) {
-              if (customer && customer.name && !customerNameInput.value.trim()) {
-                customerNameInput.value = customer.name;
-              }
-            })
-            .catch(function () { /* bỏ qua lỗi tra cứu */ });
-        }
-
-        if (customerPhoneInput) {
-          customerPhoneInput.addEventListener('blur', lookupCustomerByPhone);
-          customerPhoneInput.addEventListener('change', lookupCustomerByPhone);
-        }
+        var prepOrderCodeLabel = document.getElementById('prepOrderCodeLabel');
+        var prepMetaLine = document.getElementById('prepMetaLine');
+        var prepStatusLine = document.getElementById('prepStatusLine');
+        var prepItemsBody = document.getElementById('prepItemsBody');
+        var prepHintLine = document.getElementById('prepHintLine');
+        var prepMarkCompletedBtn = document.getElementById('prepMarkCompletedBtn');
+        var currentPrepOrderCode = null;
 
         function formatCurrencyVND(amount) {
           var num = Number(amount || 0);
@@ -87,14 +62,6 @@
             return '0 đ';
           }
           return num.toLocaleString('vi-VN') + ' đ';
-        }
-
-        function setCurrentTime() {
-          if (!orderTimeInput) return;
-          var now = new Date();
-          var hours = String(now.getHours()).padStart(2, '0');
-          var minutes = String(now.getMinutes()).padStart(2, '0');
-          orderTimeInput.value = hours + ':' + minutes;
         }
 
         function loadPaymentSettingsForOrder() {
@@ -107,85 +74,47 @@
             })
             .then(function (data) {
               paymentSettings = data || null;
-              updateOrderPaymentQr();
             })
             .catch(function () {
               paymentSettings = null;
-              updateOrderPaymentQr();
             });
         }
 
-        function updateOrderPaymentQr() {
-          if (!orderPaymentQrSection || !orderPaymentAmountText || !orderPaymentMethodSelect || !orderTotalAmountInput) {
+        function formatInvoiceDateTime(iso) {
+          if (!iso) return '';
+          var d = new Date(iso);
+          if (!isFinite(d.getTime())) return String(iso);
+          return d.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function orderStatusLabelVi(st) {
+          if (st === 'COMPLETED') return 'Hoàn thành (pha chế)';
+          if (st === 'PENDING') return 'Chờ xử lý';
+          if (st === 'CANCELLED') return 'Đã hủy';
+          return st || '—';
+        }
+
+        function refreshInvoicePaymentButtons(order) {
+          var canMark = !!document.getElementById('orderPageMarkPaidAllowed');
+          if (invMarkPaidBtn) {
+            invMarkPaidBtn.classList.add('d-none');
+            invMarkPaidBtn.disabled = false;
+          }
+          if (invMarkUnpaidBtn) {
+            invMarkUnpaidBtn.classList.add('d-none');
+            invMarkUnpaidBtn.disabled = false;
+          }
+          if (!canMark || !order) {
             return;
           }
-
-          var method = orderPaymentMethodSelect.value;
-          var rawAmount = Number(orderTotalAmountInput.value || 0);
-
-          // Chỉ hiển thị khi có số tiền và phương thức là Chuyển khoản
-          if (!rawAmount || rawAmount <= 0 || (method !== 'BANK_TRANSFER')) {
-            orderPaymentQrSection.style.display = 'none';
-            if (orderPaymentQrImage) {
-              orderPaymentQrImage.style.display = 'none';
-            }
+          if (order.status === 'CANCELLED') {
             return;
           }
-
-          if (!paymentSettings) {
-            orderPaymentQrSection.style.display = 'none';
-            return;
+          if (order.paidAt) {
+            if (invMarkUnpaidBtn) invMarkUnpaidBtn.classList.remove('d-none');
+          } else {
+            if (invMarkPaidBtn) invMarkPaidBtn.classList.remove('d-none');
           }
-
-          var amount = Math.round(rawAmount);
-          orderPaymentAmountText.textContent = 'Số tiền: ' + formatCurrencyVND(amount);
-          if (orderPaymentMethodText) {
-            orderPaymentMethodText.textContent = 'Phương thức: Chuyển khoản ngân hàng';
-          }
-
-          var qrUrl = null;
-
-          if (method === 'BANK_TRANSFER') {
-            var bankCode = paymentSettings.bankCode || null;
-            var bankAccount = paymentSettings.bankAccount || null;
-            var bankOwnerName = paymentSettings.bankOwnerName || null;
-
-            // Nếu backend chưa lưu bankCode, suy ra từ bankName giống trang Cài đặt
-            if (!bankCode && paymentSettings.bankName) {
-              var bankCodeMap = {
-                'Vietcombank (VCB)': 'vietcombank',
-                'ACB': 'acb',
-                'Techcombank': 'techcombank',
-                'VPBank': 'vpbank',
-                'BIDV': 'bidv'
-              };
-              bankCode = bankCodeMap[paymentSettings.bankName] || null;
-            }
-
-            if (!bankCode || !bankAccount || !bankOwnerName || paymentSettings.bankEnabled === false) {
-              orderPaymentQrSection.style.display = 'none';
-              if (orderPaymentQrImage) {
-                orderPaymentQrImage.style.display = 'none';
-              }
-              return;
-            }
-
-            var addInfo = 'Thanh toan don tai quan ca phe';
-            qrUrl = 'https://img.vietqr.io/image/'
-              + bankCode + '-' + encodeURIComponent(bankAccount)
-              + '-compact2.png?amount=' + amount
-              + '&addInfo=' + encodeURIComponent(addInfo)
-              + '&accountName=' + encodeURIComponent(bankOwnerName);
-          }
-
-          if (!qrUrl || !orderPaymentQrImage) {
-            orderPaymentQrSection.style.display = 'none';
-            return;
-          }
-
-          orderPaymentQrImage.src = qrUrl;
-          orderPaymentQrImage.style.display = 'block';
-          orderPaymentQrSection.style.display = 'block';
         }
 
         function buildQrUrlForOrder(order) {
@@ -231,35 +160,561 @@
           return null;
         }
 
-        function showQrModalForOrder(order) {
-          if (!orderPaymentQrModal || !qrOrderImage || !qrOrderAmountText) {
+        function openInvoiceModal(orderCode) {
+          if (!invoiceModal || !orderCode) return;
+          currentInvoiceOrderCode = orderCode;
+
+          function ensurePaymentSettings() {
+            if (paymentSettings) return Promise.resolve();
+            return fetch('/api/settings/payment')
+              .then(function (r) { return r.ok ? r.json() : null; })
+              .then(function (d) { paymentSettings = d || null; });
+          }
+
+          Promise.all([
+            ensurePaymentSettings(),
+            fetch('/api/orders/' + encodeURIComponent(orderCode)).then(function (r) {
+              if (!r.ok) throw new Error('Không tải được đơn.');
+              return r.json();
+            }),
+            fetch('/api/orders/' + encodeURIComponent(orderCode) + '/items').then(function (r) {
+              if (!r.ok) throw new Error('Không tải được chi tiết món.');
+              return r.json();
+            })
+          ]).then(function (parts) {
+            var order = parts[1];
+            var items = Array.isArray(parts[2]) ? parts[2] : [];
+
+            if (invOrderCodeLabel) invOrderCodeLabel.textContent = order.orderCode ? ('#' + order.orderCode) : '';
+
+            var cust = (order.customerName || 'Khách lẻ') + (order.customerPhone ? (' · ' + order.customerPhone) : '');
+            var tableNote = order.tableNumber != null ? ('Bàn ' + order.tableNumber) : (order.orderNote || '—');
+            var pm = order.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' : 'Tiền mặt';
+            if (invMetaLine) {
+              invMetaLine.textContent = cust + ' · ' + tableNote + ' · ' + orderStatusLabelVi(order.status) + ' · ' + pm;
+            }
+
+            if (invItemsBody) {
+              invItemsBody.innerHTML = '';
+              items.forEach(function (it) {
+                var tr = document.createElement('tr');
+                var nameTd = document.createElement('td');
+                nameTd.textContent = it.itemName || '—';
+                var qtyTd = document.createElement('td');
+                qtyTd.className = 'text-center';
+                qtyTd.textContent = it.quantity != null ? String(it.quantity) : '0';
+                var subTd = document.createElement('td');
+                subTd.className = 'text-end';
+                var price = Number(it.itemPrice != null ? it.itemPrice : 0);
+                var q = Number(it.quantity != null ? it.quantity : 0);
+                var line = (isFinite(price) && isFinite(q)) ? price * q : 0;
+                subTd.textContent = line.toLocaleString('vi-VN') + ' đ';
+                tr.appendChild(nameTd);
+                tr.appendChild(qtyTd);
+                tr.appendChild(subTd);
+                invItemsBody.appendChild(tr);
+              });
+            }
+
+            var tot = order.total != null ? Number(order.total) : 0;
+            if (invTotalLine) invTotalLine.textContent = 'Tổng cộng: ' + formatCurrencyVND(tot);
+
+            var qrUrl = buildQrUrlForOrder(order);
+            if (invQrBlock && invQrPlaceholder && invQrImage && invQrCaption) {
+              if (qrUrl) {
+                invQrBlock.classList.remove('d-none');
+                invQrPlaceholder.classList.add('d-none');
+                invQrImage.src = qrUrl;
+                invQrImage.style.display = 'block';
+                invQrCaption.textContent = 'Số tiền: ' + formatCurrencyVND(tot) + ' — quét để chuyển khoản.';
+              } else {
+                invQrBlock.classList.add('d-none');
+                invQrPlaceholder.classList.remove('d-none');
+                invQrImage.style.display = 'none';
+                invQrImage.src = '';
+                if (order.paymentMethod === 'BANK_TRANSFER') {
+                  invQrPlaceholder.textContent = 'Chưa cấu hình VietQR trong Cài đặt, hoặc thiếu thông tin ngân hàng.';
+                } else {
+                  invQrPlaceholder.textContent = 'Đơn tiền mặt: thu tiền trực tiếp, không hiển thị QR.';
+                }
+              }
+            }
+
+            if (invPaidAlert) {
+              if (order.status === 'CANCELLED') {
+                invPaidAlert.className = 'alert alert-secondary border mt-3 mb-0 small';
+                invPaidAlert.textContent = 'Đơn đã hủy — không cập nhật thanh toán.';
+              } else if (order.paidAt) {
+                invPaidAlert.className = 'alert alert-success border mt-3 mb-0 small';
+                invPaidAlert.textContent = 'Đã ghi nhận thu tiền lúc ' + formatInvoiceDateTime(order.paidAt) + '.';
+              } else {
+                invPaidAlert.className = 'alert alert-warning border mt-3 mb-0 small';
+                invPaidAlert.textContent = 'Chưa ghi nhận thu tiền — sau khi nhận tiền từ khách, bấm “Xác nhận đã thu tiền”.';
+              }
+            }
+
+            refreshInvoicePaymentButtons(order);
+            invoiceModal.show();
+          }).catch(function (err) {
+            alert(err && err.message ? err.message : 'Không mở được hóa đơn.');
+          });
+        }
+
+        function openPrepDetailModal(orderCode) {
+          if (!prepDetailModal || !orderCode) return;
+          currentPrepOrderCode = orderCode;
+
+          Promise.all([
+            fetch('/api/orders/' + encodeURIComponent(orderCode)).then(function (r) {
+              if (!r.ok) throw new Error('Không tải được đơn.');
+              return r.json();
+            }),
+            fetch('/api/orders/' + encodeURIComponent(orderCode) + '/items').then(function (r) {
+              if (!r.ok) throw new Error('Không tải được chi tiết món.');
+              return r.json();
+            })
+          ]).then(function (parts) {
+            var order = parts[0];
+            var items = Array.isArray(parts[1]) ? parts[1] : [];
+
+            if (prepOrderCodeLabel) prepOrderCodeLabel.textContent = order.orderCode ? ('#' + order.orderCode) : '';
+
+            var typeLabel = order.type === 'TAKEAWAY' ? 'Mang về' : 'Tại bàn';
+            var tablePart = order.tableNumber != null ? (' · Bàn ' + order.tableNumber) : '';
+            var notePart = (order.orderNote && String(order.orderNote).trim()) ? (' · Ghi chú đơn: ' + order.orderNote) : '';
+            var cust = (order.customerName || 'Khách lẻ') + (order.customerPhone ? (' · ' + order.customerPhone) : '');
+            if (prepMetaLine) {
+              prepMetaLine.textContent = typeLabel + tablePart + notePart + ' · ' + cust;
+            }
+
+            if (prepStatusLine) {
+              prepStatusLine.innerHTML = '<span class="fw-medium">Trạng thái đơn:</span> ' + orderStatusLabelVi(order.status);
+            }
+
+            if (prepItemsBody) {
+              prepItemsBody.innerHTML = '';
+              items.forEach(function (it) {
+                var tr = document.createElement('tr');
+                var nameTd = document.createElement('td');
+                nameTd.textContent = it.itemName || '—';
+                var qtyTd = document.createElement('td');
+                qtyTd.className = 'text-center';
+                qtyTd.textContent = it.quantity != null ? String(it.quantity) : '0';
+                var noteTd = document.createElement('td');
+                noteTd.className = 'small text-break';
+                noteTd.textContent = (it.note && String(it.note).trim()) ? it.note : '—';
+                tr.appendChild(nameTd);
+                tr.appendChild(qtyTd);
+                tr.appendChild(noteTd);
+                prepItemsBody.appendChild(tr);
+              });
+            }
+
+            var canMarkPrep = !!document.getElementById('orderPageCanMarkPrepComplete');
+            if (prepMarkCompletedBtn) {
+              if (canMarkPrep && order.status === 'PENDING') {
+                prepMarkCompletedBtn.classList.remove('d-none');
+              } else {
+                prepMarkCompletedBtn.classList.add('d-none');
+              }
+            }
+
+            if (prepHintLine) {
+              prepHintLine.classList.remove('d-none');
+              if (canMarkPrep && order.status === 'PENDING') {
+                prepHintLine.textContent = 'Kiểm tra đủ món và ghi chú, sau đó bấm « Hoàn thành pha chế » — đồng bộ với bảng đơn.';
+              } else if (canMarkPrep) {
+                prepHintLine.textContent = 'Đơn không còn ở trạng thái chờ pha chế.';
+              } else {
+                prepHintLine.textContent = 'Chỉ xem nội dung pha chế (Thu ngân / Phục vụ không đánh dấu hoàn thành pha chế).';
+              }
+            }
+
+            prepDetailModal.show();
+          }).catch(function (err) {
+            alert(err && err.message ? err.message : 'Không mở được chi tiết đơn.');
+          });
+        }
+
+        function submitInvoicePayment(paid) {
+          if (!currentInvoiceOrderCode) return;
+          var code = currentInvoiceOrderCode;
+          fetch('/api/orders/' + encodeURIComponent(code) + '/payment', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paid: paid })
+          })
+            .then(function (res) {
+              if (!res.ok) {
+                return res.json().catch(function () { return {}; }).then(function (body) {
+                  throw new Error((body && body.error) ? body.error : 'Cập nhật thanh toán thất bại');
+                });
+              }
+              return res.json();
+            })
+            .then(function () {
+              window.location.reload();
+            })
+            .catch(function (e) {
+              alert(e && e.message ? e.message : 'Lỗi cập nhật thanh toán.');
+            });
+        }
+
+        if (invMarkPaidBtn) {
+          invMarkPaidBtn.addEventListener('click', function () {
+            if (!confirm('Xác nhận đã thu tiền cho đơn ' + currentInvoiceOrderCode + '?')) return;
+            submitInvoicePayment(true);
+          });
+        }
+        if (invMarkUnpaidBtn) {
+          invMarkUnpaidBtn.addEventListener('click', function () {
+            if (!confirm('Hủy trạng thái đã thu tiền cho đơn này?')) return;
+            submitInvoicePayment(false);
+          });
+        }
+
+        if (prepMarkCompletedBtn) {
+          prepMarkCompletedBtn.addEventListener('click', function () {
+            var c = currentPrepOrderCode;
+            if (!c) return;
+            if (!confirm('Đánh dấu đơn ' + c + ' đã hoàn thành pha chế (sẵn sàng phục vụ)?')) return;
+            markOrderStatusCompletedThenReload(c);
+          });
+        }
+
+        var invoiceTableBody = document.querySelector('.orders-table tbody');
+        if (invoiceTableBody) {
+          invoiceTableBody.addEventListener('click', function (e) {
+            var db = e.target.closest('.order-detail-btn');
+            if (db) {
+              var oc = db.getAttribute('data-code');
+              if (oc) openPrepDetailModal(oc);
+              return;
+            }
+            var ib = e.target.closest('.invoice-order-btn');
+            if (ib) {
+              var oc2 = ib.getAttribute('data-code');
+              if (oc2) openInvoiceModal(oc2);
+            }
+          });
+        }
+
+        if (document.getElementById('orderPageServerPickupPoll') && serverPickupNotifyModal) {
+          var serverPickupNotifyBody = document.getElementById('serverPickupNotifyBody');
+          var STORAGE_PREP_AFTER = 'serverOrderPrepAfter';
+          var STORAGE_PREP_CODES = 'serverPrepAnnouncedCodes';
+
+          function localIsoNoMs(d) {
+            function p(n) { return String(n).padStart(2, '0'); }
+            return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' +
+              p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+          }
+
+          function escapeHtmlText(s) {
+            var d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+          }
+
+          function loadAnnouncedCodes() {
+            try {
+              var raw = sessionStorage.getItem(STORAGE_PREP_CODES);
+              var arr = raw ? JSON.parse(raw) : [];
+              return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+              return [];
+            }
+          }
+
+          function saveAnnouncedCodes(arr) {
+            try {
+              sessionStorage.setItem(STORAGE_PREP_CODES, JSON.stringify(arr.slice(-100)));
+            } catch (e) { /* ignore */ }
+          }
+
+          var announcedPrepCodes = loadAnnouncedCodes();
+          if (!sessionStorage.getItem(STORAGE_PREP_AFTER)) {
+            sessionStorage.setItem(STORAGE_PREP_AFTER, localIsoNoMs(new Date(Date.now() - 180000)));
+          }
+
+          function maxIso(a, b) {
+            if (!a) return b;
+            if (!b) return a;
+            return a > b ? a : b;
+          }
+
+          function pollPreparedSince() {
+            var after = sessionStorage.getItem(STORAGE_PREP_AFTER);
+            if (!after) return;
+            fetch('/api/orders/prepared-since?after=' + encodeURIComponent(after))
+              .then(function (r) {
+                if (!r.ok) throw new Error('poll');
+                return r.json();
+              })
+              .then(function (list) {
+                if (!Array.isArray(list) || list.length === 0) return;
+                var newestAfter = after;
+                list.forEach(function (row) {
+                  if (row && row.preparedAt) newestAfter = maxIso(newestAfter, String(row.preparedAt));
+                });
+                var toShow = [];
+                list.forEach(function (row) {
+                  var code = row && row.orderCode;
+                  if (!code) return;
+                  if (announcedPrepCodes.indexOf(code) >= 0) return;
+                  announcedPrepCodes.push(code);
+                  toShow.push(row);
+                });
+                if (newestAfter && newestAfter !== after) {
+                  sessionStorage.setItem(STORAGE_PREP_AFTER, newestAfter);
+                }
+                saveAnnouncedCodes(announcedPrepCodes);
+                if (toShow.length && serverPickupNotifyBody) {
+                  var html = '<ul class="mb-0 ps-3">';
+                  toShow.forEach(function (row) {
+                    var line = '<strong>#' + escapeHtmlText(String(row.orderCode)) + '</strong>';
+                    if (row.type === 'TAKEAWAY') line += ' · Mang về';
+                    else if (row.tableNumber != null && row.tableNumber !== '') line += ' · Bàn ' + escapeHtmlText(String(row.tableNumber));
+                    var name = row.customerName ? String(row.customerName).trim() : '';
+                    if (name) line += ' · ' + escapeHtmlText(name);
+                    if (row.orderNote && String(row.orderNote).trim()) {
+                      line += ' <span class="text-muted">(' + escapeHtmlText(String(row.orderNote).trim()) + ')</span>';
+                    }
+                    html += '<li class="mb-1">' + line + '</li>';
+                  });
+                  html += '</ul>';
+                  serverPickupNotifyBody.innerHTML = html;
+                  serverPickupNotifyModal.show();
+                }
+              })
+              .catch(function () { /* im lặng — poll nền */ });
+          }
+
+          pollPreparedSince();
+          setInterval(pollPreparedSince, 10000);
+        }
+
+        if (createModalEl) {
+        var createModal = new BS.Modal(createModalEl);
+        var createForm = document.getElementById('createOrderForm');
+
+        // Elements for auto time, customer and items
+        var orderTimeInput = document.getElementById('orderTime');
+        var orderStatusSelect = document.getElementById('orderStatus');
+        var orderTotalAmountInput = document.getElementById('orderTotalAmount');
+        var menuSearchInput = document.getElementById('orderMenuSearchInput');
+        var menuSearchResults = document.getElementById('orderMenuSearchResults');
+        var quantityInput = document.getElementById('orderItemQuantity');
+        var orderItemNoteInput = document.getElementById('orderItemNoteInput');
+        var addItemBtn = document.getElementById('addOrderItemBtn');
+        var itemsBody = document.getElementById('orderItemsBody');
+        var itemsEmptyRow = document.getElementById('orderItemsEmptyRow');
+        var customerNameInput = document.getElementById('orderCustomerName');
+        var customerPhoneInput = document.getElementById('orderCustomerPhone');
+        var walkInGuestCheckbox = document.getElementById('orderWalkInGuest');
+        var WALK_IN_DISPLAY_NAME = 'Khách vãng lai';
+        var orderTypeSelectEl = document.getElementById('orderType');
+        var orderNoteInput = document.getElementById('orderNote');
+        var selectedTableField = document.getElementById('selectedTableField');
+        var selectedTableDisplay = document.getElementById('selectedTableDisplay');
+        var tablePickerSection = document.getElementById('tablePickerSection');
+        var tablePickerGrid = document.getElementById('tablePickerGrid');
+        var reloadTablesBtn = document.getElementById('reloadTablesBtn');
+        var tablePickerHint = document.getElementById('tablePickerHint');
+
+        var selectedTableNumber = null;
+
+        var orderPaymentMethodSelect = document.getElementById('orderPaymentMethod');
+
+        var modalTitle = document.querySelector('#createOrderModal .modal-title');
+        var editingOrderCode = null;
+
+        var currentOrderItems = []; // {id, name, price, quantity, note, loyaltyRedemption?}
+        var waitingLoyaltyRedeemSlot = false;
+        var loyaltyPhoneTimer = null;
+        var LOYALTY_REDEEM_POINTS = 10;
+        var LOYALTY_MAX_FREE_VND = 50000;
+
+        var orderLoyaltyRow = document.getElementById('orderLoyaltyRow');
+        var orderLoyaltyPointsBadge = document.getElementById('orderLoyaltyPointsBadge');
+        var orderLoyaltyHint = document.getElementById('orderLoyaltyHint');
+        var orderLoyaltyRedeemModeBtn = document.getElementById('orderLoyaltyRedeemModeBtn');
+        var orderLoyaltyRedeemActiveHint = document.getElementById('orderLoyaltyRedeemActiveHint');
+
+        function isNonDrinkMenuCategory(item) {
+          var cat = (item && item.category && item.category.name) ? String(item.category.name).trim().toLowerCase() : '';
+          var foodCats = ['bánh ngọt', 'thức ăn nhẹ', 'đồ ăn nhẹ', 'do an nhe', 'banh ngot', 'food', 'snack'];
+          return foodCats.indexOf(cat) !== -1;
+        }
+
+        function syncRedeemModeUi() {
+          if (orderLoyaltyRedeemActiveHint) {
+            orderLoyaltyRedeemActiveHint.classList.toggle('d-none', !waitingLoyaltyRedeemSlot);
+          }
+          if (orderLoyaltyRedeemModeBtn) {
+            orderLoyaltyRedeemModeBtn.classList.toggle('active', waitingLoyaltyRedeemSlot);
+          }
+        }
+
+        function applyWalkInGuestUi() {
+          var on = walkInGuestCheckbox && walkInGuestCheckbox.checked;
+          if (customerNameInput) {
+            customerNameInput.disabled = !!on;
+            if (on) {
+              customerNameInput.value = WALK_IN_DISPLAY_NAME;
+            }
+          }
+          if (customerPhoneInput) {
+            customerPhoneInput.disabled = !!on;
+            if (on) {
+              customerPhoneInput.value = '';
+            }
+          }
+          if (on) {
+            waitingLoyaltyRedeemSlot = false;
+            if (orderLoyaltyRow) orderLoyaltyRow.style.display = 'none';
+            syncRedeemModeUi();
+          } else {
+            if (customerNameInput && customerNameInput.value.trim() === WALK_IN_DISPLAY_NAME) {
+              customerNameInput.value = '';
+            }
+            refreshOrderLoyaltyFromPhone();
+          }
+        }
+
+        if (walkInGuestCheckbox) {
+          walkInGuestCheckbox.addEventListener('change', function () {
+            if (walkInGuestCheckbox.checked) {
+              var hasRedeem = currentOrderItems.some(function (r) { return r.loyaltyRedemption; });
+              if (hasRedeem) {
+                alert('Đơn đang có món đổi điểm. Xóa dòng đó trước khi chọn khách vãng lai.');
+                walkInGuestCheckbox.checked = false;
+                return;
+              }
+            }
+            applyWalkInGuestUi();
+          });
+        }
+
+        function refreshOrderLoyaltyFromPhone() {
+          if (walkInGuestCheckbox && walkInGuestCheckbox.checked) {
+            if (orderLoyaltyRow) orderLoyaltyRow.style.display = 'none';
+            waitingLoyaltyRedeemSlot = false;
+            syncRedeemModeUi();
+            return;
+          }
+          if (!orderLoyaltyRow || !customerPhoneInput) return;
+          var phone = customerPhoneInput.value.trim();
+          if (!phone) {
+            orderLoyaltyRow.style.display = 'none';
+            waitingLoyaltyRedeemSlot = false;
+            syncRedeemModeUi();
+            return;
+          }
+          if (phone.replace(/\D/g, '').length < 9) {
+            orderLoyaltyRow.style.display = 'none';
             return;
           }
 
-          var method = order.paymentMethod || 'CASH';
-          if (method !== 'BANK_TRANSFER') {
-            // Đơn thanh toán tiền mặt/thẻ thì chỉ ẩn modal QR
+          fetch('/api/customers/phone/' + encodeURIComponent(phone))
+            .then(function (res) {
+              orderLoyaltyRow.style.display = '';
+              if (res.status === 404) {
+                if (orderLoyaltyPointsBadge) {
+                  orderLoyaltyPointsBadge.textContent = 'Khách mới';
+                  orderLoyaltyPointsBadge.className = 'badge bg-secondary';
+                }
+                if (orderLoyaltyHint) {
+                  orderLoyaltyHint.textContent = 'Chưa có hồ sơ. Hoàn thành đơn sẽ lưu SĐT và tích điểm (đồ uống).';
+                }
+                if (orderLoyaltyRedeemModeBtn) orderLoyaltyRedeemModeBtn.disabled = true;
+                waitingLoyaltyRedeemSlot = false;
+                syncRedeemModeUi();
+                return null;
+              }
+              if (!res.ok) {
+                orderLoyaltyRow.style.display = 'none';
+                return null;
+              }
+              return res.json();
+            })
+            .then(function (customer) {
+              if (!customer) return;
+              var p = customer.loyaltyPoints != null ? Number(customer.loyaltyPoints) : 0;
+              if (orderLoyaltyPointsBadge) {
+                orderLoyaltyPointsBadge.textContent = p + ' điểm';
+                orderLoyaltyPointsBadge.className = 'badge ' + (p >= LOYALTY_REDEEM_POINTS ? 'bg-success' : 'bg-secondary');
+              }
+              if (orderLoyaltyHint) {
+                orderLoyaltyHint.textContent = p >= LOYALTY_REDEEM_POINTS
+                  ? ('Đủ điểm đổi 1 ly (đồ uống dưới ' + (LOYALTY_MAX_FREE_VND / 1000) + 'k). Đồng bộ với Quản lý khách hàng.')
+                  : ('Cần ' + LOYALTY_REDEEM_POINTS + ' điểm để đổi 1 ly.');
+              }
+              var hasRedeemLine = currentOrderItems.some(function (r) { return r.loyaltyRedemption; });
+              if (orderLoyaltyRedeemModeBtn) {
+                orderLoyaltyRedeemModeBtn.disabled = p < LOYALTY_REDEEM_POINTS || hasRedeemLine;
+              }
+              if (hasRedeemLine) waitingLoyaltyRedeemSlot = false;
+              syncRedeemModeUi();
+            })
+            .catch(function () {
+              if (orderLoyaltyRow) orderLoyaltyRow.style.display = 'none';
+            });
+        }
+
+        function lookupCustomerByPhone() {
+          if (walkInGuestCheckbox && walkInGuestCheckbox.checked) return;
+          if (!customerPhoneInput || !customerNameInput) return;
+          var rawPhone = customerPhoneInput.value.trim();
+          if (!rawPhone) {
+            refreshOrderLoyaltyFromPhone();
             return;
           }
 
-          var qrUrl = buildQrUrlForOrder(order);
-          if (!qrUrl) {
-            return;
-          }
+          fetch('/api/customers/phone/' + encodeURIComponent(rawPhone))
+            .then(function (res) {
+              if (!res.ok) {
+                return null;
+              }
+              return res.json();
+            })
+            .then(function (customer) {
+              if (customer && customer.name && !customerNameInput.value.trim()) {
+                customerNameInput.value = customer.name;
+              }
+              refreshOrderLoyaltyFromPhone();
+            })
+            .catch(function () {
+              refreshOrderLoyaltyFromPhone();
+            });
+        }
 
-          var amount = order.total != null ? Number(order.total) : 0;
-          qrOrderAmountText.textContent = 'Số tiền: ' + formatCurrencyVND(amount);
-          if (qrOrderMethodText) {
-            qrOrderMethodText.textContent = 'Phương thức: Chuyển khoản ngân hàng';
-          }
+        if (customerPhoneInput) {
+          customerPhoneInput.addEventListener('blur', lookupCustomerByPhone);
+          customerPhoneInput.addEventListener('change', lookupCustomerByPhone);
+          customerPhoneInput.addEventListener('input', function () {
+            if (loyaltyPhoneTimer) clearTimeout(loyaltyPhoneTimer);
+            loyaltyPhoneTimer = setTimeout(function () {
+              refreshOrderLoyaltyFromPhone();
+            }, 400);
+          });
+        }
 
-          if (qrOrderInfoText) {
-            qrOrderInfoText.textContent = 'Đơn ' + (order.orderCode || '') + ' - vui lòng quét QR để thanh toán.';
-          }
+        if (orderLoyaltyRedeemModeBtn) {
+          orderLoyaltyRedeemModeBtn.addEventListener('click', function () {
+            if (walkInGuestCheckbox && walkInGuestCheckbox.checked) return;
+            if (orderLoyaltyRedeemModeBtn.disabled) return;
+            waitingLoyaltyRedeemSlot = !waitingLoyaltyRedeemSlot;
+            syncRedeemModeUi();
+          });
+        }
 
-          qrOrderImage.src = qrUrl;
-          qrOrderImage.style.display = 'block';
-          orderPaymentQrModal.show();
+        function setCurrentTime() {
+          if (!orderTimeInput) return;
+          var now = new Date();
+          var hours = String(now.getHours()).padStart(2, '0');
+          var minutes = String(now.getMinutes()).padStart(2, '0');
+          orderTimeInput.value = hours + ':' + minutes;
         }
 
         var menuSearchTimer = null;
@@ -316,7 +771,6 @@
         function commitSelectedMenuItem() {
           var item = selectedMenuItem;
           if (!item || item.id == null) {
-            // nếu chưa chọn item nhưng đang mở dropdown, lấy item đang highlight
             if (menuSearchResults && menuSearchResults.style.display === 'block' && menuResultsItems.length > 0) {
               var idx = menuActiveIndex >= 0 ? menuActiveIndex : 0;
               item = menuResultsItems[idx];
@@ -329,11 +783,36 @@
           var lineNote = orderItemNoteInput ? (orderItemNoteInput.value || '') : '';
           lineNote = String(lineNote).trim();
 
-          var price = Number(item.price || 0);
-          if (!isFinite(price) || price < 0) price = 0;
+          var catalogPrice = Number(item.price || 0);
+          if (!isFinite(catalogPrice) || catalogPrice < 0) catalogPrice = 0;
 
-          var existing = currentOrderItems.find(function (row) { return String(row.id) === String(item.id); });
-          if (existing) {
+          var redeemApply = Boolean(waitingLoyaltyRedeemSlot);
+          if (redeemApply && walkInGuestCheckbox && walkInGuestCheckbox.checked) {
+            return;
+          }
+          if (redeemApply) {
+            if (currentOrderItems.some(function (r) { return r.loyaltyRedemption; })) {
+              alert('Đơn chỉ có tối đa 1 ly đổi điểm.');
+              return;
+            }
+            if (qty !== 1) {
+              alert('Đổi điểm: chỉ thêm đúng 1 ly (số lượng 1).');
+              return;
+            }
+            if (catalogPrice >= LOYALTY_MAX_FREE_VND) {
+              alert('Chỉ đổi được món có giá dưới ' + LOYALTY_MAX_FREE_VND.toLocaleString('vi-VN') + 'đ.');
+              return;
+            }
+            if (isNonDrinkMenuCategory(item)) {
+              alert('Chỉ đồ uống mới được đổi bằng điểm.');
+              return;
+            }
+          }
+
+          var existing = currentOrderItems.find(function (row) {
+            return String(row.id) === String(item.id) && Boolean(row.loyaltyRedemption) === redeemApply;
+          });
+          if (existing && !redeemApply) {
             existing.quantity += qty;
             if (lineNote && (!existing.note || !String(existing.note).trim())) {
               existing.note = lineNote;
@@ -341,16 +820,23 @@
           } else {
             currentOrderItems.push({
               id: String(item.id),
-              name: item.name,
-              price: price,
+              name: redeemApply ? ((item.name || '') + ' (đổi điểm)') : (item.name || ''),
+              price: redeemApply ? 0 : catalogPrice,
               quantity: qty,
-              note: lineNote || ''
+              note: lineNote || '',
+              loyaltyRedemption: redeemApply
             });
           }
 
+          if (redeemApply) {
+            waitingLoyaltyRedeemSlot = false;
+            syncRedeemModeUi();
+          }
+
           renderOrderItems();
+          refreshOrderLoyaltyFromPhone();
+
           if (menuSearchInput) {
-            // clear để chọn món tiếp theo
             menuSearchInput.value = '';
             menuSearchInput.focus();
           }
@@ -548,9 +1034,17 @@
 
           currentOrderItems.forEach(function (row, index) {
             var tr = document.createElement('tr');
+            var isRedeem = Boolean(row.loyaltyRedemption);
 
             var tdName = document.createElement('td');
-            tdName.textContent = row.name;
+            tdName.textContent = row.name || '';
+            if (isRedeem) {
+              var b = document.createElement('span');
+              b.className = 'badge bg-info text-dark ms-1';
+              b.textContent = 'Đổi điểm';
+              tdName.appendChild(document.createTextNode(' '));
+              tdName.appendChild(b);
+            }
 
             var tdQty = document.createElement('td');
             tdQty.className = 'text-center';
@@ -559,7 +1053,9 @@
             qtyInput.min = '1';
             qtyInput.className = 'form-control form-control-sm text-center';
             qtyInput.value = String(row.quantity || 1);
+            qtyInput.disabled = isRedeem;
             qtyInput.addEventListener('input', function () {
+              if (isRedeem) return;
               var v = parseInt(qtyInput.value, 10);
               if (!v || v < 1) v = 1;
               currentOrderItems[index].quantity = v;
@@ -580,9 +1076,9 @@
 
             var tdPrice = document.createElement('td');
             tdPrice.className = 'text-end';
-            tdPrice.textContent = row.price.toLocaleString('vi-VN') + ' đ';
+            tdPrice.textContent = isRedeem ? '0 đ' : (Number(row.price || 0).toLocaleString('vi-VN') + ' đ');
 
-            var lineTotal = row.price * row.quantity;
+            var lineTotal = isRedeem ? 0 : (Number(row.price || 0) * Number(row.quantity || 1));
             total += lineTotal;
 
             var tdLineTotal = document.createElement('td');
@@ -597,6 +1093,7 @@
             removeBtn.addEventListener('click', function () {
               currentOrderItems.splice(index, 1);
               renderOrderItems();
+              refreshOrderLoyaltyFromPhone();
             });
             tdRemove.appendChild(removeBtn);
 
@@ -614,8 +1111,7 @@
             orderTotalAmountInput.value = total;
           }
 
-          // Cập nhật QR nếu đang chọn phương thức phù hợp
-          updateOrderPaymentQr();
+          refreshOrderLoyaltyFromPhone();
         }
 
         function addSelectedItem() {
@@ -631,8 +1127,10 @@
               createForm.reset();
             }
             selectedTableNumber = null;
+            waitingLoyaltyRedeemSlot = false;
+            if (orderLoyaltyRow) orderLoyaltyRow.style.display = 'none';
+            syncRedeemModeUi();
             if (tablePickerHint) tablePickerHint.textContent = '';
-            // Reset items state
             currentOrderItems = [];
             renderOrderItems();
 
@@ -651,8 +1149,8 @@
             toggleTablePickerByType();
             loadTableStatus();
 
-            // Ẩn QR lúc mới mở
-            updateOrderPaymentQr();
+            if (walkInGuestCheckbox) walkInGuestCheckbox.checked = false;
+            applyWalkInGuestUi();
             createModal.show();
           });
         }
@@ -686,39 +1184,46 @@
                 if (document.getElementById('orderStatus')) document.getElementById('orderStatus').value = order.status || 'PENDING';
                 if (document.getElementById('orderCustomerName')) document.getElementById('orderCustomerName').value = order.customerName || '';
                 if (document.getElementById('orderCustomerPhone')) document.getElementById('orderCustomerPhone').value = order.customerPhone || '';
+                if (document.getElementById('orderWalkInGuest')) {
+                  document.getElementById('orderWalkInGuest').checked = order.walkInGuest === true;
+                }
+                applyWalkInGuestUi();
                 if (document.getElementById('orderType')) document.getElementById('orderType').value = order.type || 'DINE_IN';
-                if (document.getElementById('orderNote')) document.getElementById('orderNote').value = order.tableName || '';
                 if (document.getElementById('orderPaymentMethod')) document.getElementById('orderPaymentMethod').value = order.paymentMethod || 'CASH';
 
-                // cố gắng parse số bàn từ tableName để highlight
-                try {
-                  var tn = order.tableName || '';
-                  var m = tn.match(/(\d+)/);
-                  selectedTableNumber = m ? Number(m[1]) : null;
-                } catch (e) {
-                  selectedTableNumber = null;
+                var tn = order.tableNumber != null ? Number(order.tableNumber) : null;
+                selectedTableNumber = tn != null && Number.isFinite(tn) ? tn : null;
+                if (document.getElementById('orderNote')) {
+                  document.getElementById('orderNote').value = order.orderNote != null ? String(order.orderNote) : '';
+                }
+                if (selectedTableDisplay) {
+                  selectedTableDisplay.value = selectedTableNumber != null ? ('Bàn ' + selectedTableNumber) : '';
                 }
 
                 toggleTablePickerByType();
                 loadTableStatus();
 
-                // Lấy thông tin các món
+                refreshOrderLoyaltyFromPhone();
+
                 return fetch('/api/orders/' + code + '/items');
               })
               .then(function (res) { return res.json(); })
               .then(function (items) {
                 if (Array.isArray(items)) {
                   currentOrderItems = items.map(function (item) {
+                    var lr = Boolean(item.loyaltyRedemption);
                     return {
                       id: item.menuItemId ? String(item.menuItemId) : (item.menuItem ? String(item.menuItem.id) : null),
                       name: item.itemName,
-                      price: item.itemPrice,
+                      price: lr ? 0 : Number(item.itemPrice != null ? item.itemPrice : 0),
                       quantity: item.quantity,
-                      note: item.note || ''
+                      note: item.note || '',
+                      loyaltyRedemption: lr
                     };
                   }).filter(function (x) { return x.id != null; });
                 }
                 renderOrderItems();
+                refreshOrderLoyaltyFromPhone();
                 createModal.show();
               })
               .catch(function (err) {
@@ -819,23 +1324,32 @@
               return;
             }
 
+            var walkIn = walkInGuestCheckbox && walkInGuestCheckbox.checked;
+            if (walkIn) {
+              var hasRedeemSubmit = currentOrderItems.some(function (r) { return r.loyaltyRedemption; });
+              if (hasRedeemSubmit) {
+                alert('Khách vãng lai không thể đổi điểm. Xóa dòng đổi điểm hoặc bỏ chọn khách vãng lai.');
+                return;
+              }
+            }
+
             // customerNameInput & customerPhoneInput đã được khai báo phía trên
 
             var payload = {
-              customerName: customerNameInput ? customerNameInput.value.trim() : null,
-              customerPhone: customerPhoneInput ? customerPhoneInput.value.trim() : null,
+              walkInGuest: walkIn ? true : null,
+              customerName: walkIn ? WALK_IN_DISPLAY_NAME : (customerNameInput ? customerNameInput.value.trim() : null),
+              customerPhone: walkIn ? null : (customerPhoneInput ? customerPhoneInput.value.trim() : null),
               type: orderTypeSelectEl ? orderTypeSelectEl.value : 'DINE_IN',
-              tableNote: (function () {
+              tableNumber: (function () {
                 var type = orderTypeSelectEl ? orderTypeSelectEl.value : 'DINE_IN';
-                var note = orderNoteInput ? orderNoteInput.value.trim() : '';
-                if (type === 'DINE_IN') {
-                  // vẫn lưu tableName chung field tableName: "Bàn X · ghi chú"
-                  var tablePart = selectedTableNumber ? ('Bàn ' + selectedTableNumber) : '';
-                  if (tablePart && note) return tablePart + ' · ' + note;
-                  if (tablePart) return tablePart;
-                  return note || null;
-                }
-                return note || null;
+                if (type !== 'DINE_IN') return null;
+                return selectedTableNumber != null && Number.isFinite(Number(selectedTableNumber))
+                  ? Number(selectedTableNumber)
+                  : null;
+              })(),
+              orderNote: (function () {
+                var raw = orderNoteInput ? orderNoteInput.value.trim() : '';
+                return raw ? raw : null;
               })(),
               status: orderStatusSelect ? orderStatusSelect.value : 'PENDING',
               paymentMethod: orderPaymentMethodSelect ? orderPaymentMethodSelect.value : 'CASH',
@@ -843,7 +1357,8 @@
                 return {
                   menuItemId: row.id,
                   quantity: row.quantity,
-                  note: row.note ? row.note.trim() : null
+                  note: row.note ? row.note.trim() : null,
+                  loyaltyRedemption: row.loyaltyRedemption === true ? true : null
                 };
               })
             };
@@ -860,58 +1375,19 @@
             })
               .then(function (res) {
                 if (!res.ok) {
-                  throw new Error('Request failed');
+                  return res.json().catch(function () { return {}; }).then(function (body) {
+                    throw new Error((body && body.error) ? body.error : 'Lưu đơn thất bại');
+                  });
                 }
                 return res.json();
               })
-              .then(function (data) {
-                // Ẩn form tạo đơn
+              .then(function () {
                 createModal.hide();
-
-                // Hiển thị modal QR nếu đơn dùng chuyển khoản ngân hàng
-                try {
-                  // Nếu chưa có paymentSettings (lỡ lỗi mạng trước đó) thì load lại rồi hiển thị
-                  if (!paymentSettings) {
-                    loadPaymentSettingsForOrder();
-                    setTimeout(function () {
-                      showQrModalForOrder(data);
-                    }, 400);
-                  } else {
-                    showQrModalForOrder(data);
-                  }
-                } catch (err) {
-                  // Nếu có lỗi hiển thị QR thì vẫn báo thành công bằng alert
-                  alert('Đã lưu đơn hàng thành công với mã: ' + (data.orderCode || '#ORD-MỚI'));
-                }
-
-                // Tải lại trang sau 1 giây báo thành công (hoặc sau khi họ đóng QR/alert)
-                // Cải thiện UI: Reload sau khi đóng modal để thấy dòng mới cập nhật
-                document.getElementById('createOrderModal').addEventListener('hidden.bs.modal', function () {
-                  if (!orderPaymentQrModalEl || !orderPaymentQrModalEl.classList.contains('show')) {
-                    window.location.reload();
-                  }
-                });
-                if (orderPaymentQrModalEl) {
-                  orderPaymentQrModalEl.addEventListener('hidden.bs.modal', function () {
-                    window.location.reload();
-                  });
-                }
-
-                // Tránh trường hợp không có QR modal nào hiện ra, ta reload trực tiếp nếu là CASH
-                if (payload.paymentMethod !== 'BANK_TRANSFER') {
-                  setTimeout(function () { window.location.reload(); }, 300);
-                }
-
+                setTimeout(function () { window.location.reload(); }, 350);
               })
-              .catch(function () {
-                alert('Có lỗi xảy ra khi lưu đơn hàng. Vui lòng thử lại.');
+              .catch(function (err) {
+                alert(err && err.message ? err.message : 'Có lỗi xảy ra khi lưu đơn hàng. Vui lòng thử lại.');
               });
-          });
-        }
-
-        if (orderPaymentMethodSelect) {
-          orderPaymentMethodSelect.addEventListener('change', function () {
-            updateOrderPaymentQr();
           });
         }
 
@@ -936,6 +1412,7 @@
         createBtn.addEventListener('click', function () {
           alert('Không mở được form tạo đơn. Kiểm tra quyền ADMIN/Thu ngân hoặc tải lại trang.');
         });
+      }
       }
 
       // Lọc trạng thái + tìm kiếm + sắp xếp cột (giống trang Kho)
@@ -974,7 +1451,7 @@
           case 'type':
             return normalizeOrderText(cells[2] ? cells[2].textContent : '');
           case 'table':
-            return normalizeOrderText(cells[3] ? cells[3].textContent : '');
+            return row.getAttribute('data-sort-table') || normalizeOrderText(cells[3] ? cells[3].textContent : '');
           case 'total': {
             var t = cells[4] ? cells[4].textContent : '';
             var digits = String(t).replace(/\D/g, '');
@@ -1153,8 +1630,8 @@
       }
       refreshOrderDateLabel();
 
-      var isBarista = !!document.getElementById('roleBaristaFlag');
-      if (isBarista) {
+      var preferPendingFirst = !!document.getElementById('orderPageCanMarkPrepComplete');
+      if (preferPendingFirst) {
         sortPendingFirst();
         var pendingBtn = Array.prototype.slice.call(filterBtns).find(function (b) {
           return b.getAttribute('data-order-filter') === 'PENDING';
@@ -1168,25 +1645,14 @@
         updateOrderSubtitle();
       }
 
-      // Barista: nút "Sẵn sàng phục vụ" (chỉ đổi trạng thái PENDING -> COMPLETED)
+      // Admin / Pha chế: nút "Sẵn sàng phục vụ" (PENDING -> COMPLETED)
       var readyBtns = document.querySelectorAll('.barista-ready-btn');
       readyBtns.forEach(function (btn) {
         btn.addEventListener('click', function () {
           var code = this.getAttribute('data-code');
           if (!code) return;
           if (!confirm('Đánh dấu đơn ' + code + ' là "Hoàn thành"?')) return;
-
-          fetch('/api/orders/' + code + '/status', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'COMPLETED' })
-          })
-            .then(function (res) {
-              if (!res.ok) throw new Error('Update status failed');
-              return res.json();
-            })
-            .then(function () { window.location.reload(); })
-            .catch(function () { alert('Không thể cập nhật trạng thái đơn.'); });
+          markOrderStatusCompletedThenReload(code);
         });
       });
 });

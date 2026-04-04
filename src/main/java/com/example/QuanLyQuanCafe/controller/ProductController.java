@@ -11,9 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Collections;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import java.security.Principal;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -237,8 +234,6 @@ public class ProductController {
 
 		// Xác định các bàn đang có khách dựa theo đơn "tại bàn" chưa hoàn thành/chưa hủy
 		List<CafeOrder> orders = orderService.findAll();
-		Pattern digitPattern = Pattern.compile("(\\d+)");
-
 		for (CafeOrder o : orders) {
 			if (o == null) continue;
 			if (o.getType() != OrderType.DINE_IN) continue;
@@ -246,18 +241,9 @@ public class ProductController {
 			if (o.getStatus() == OrderStatus.CANCELLED) continue;
 			if (Boolean.TRUE.equals(o.getTableReleased())) continue;
 
-			String tableName = o.getTableName();
-			if (tableName == null || tableName.isBlank()) continue;
-
-			Matcher m = digitPattern.matcher(tableName);
-			if (!m.find()) continue;
-
-			int tableNo;
-			try {
-				tableNo = Integer.parseInt(m.group(1));
-			} catch (NumberFormatException ex) {
-				continue;
-			}
+			Integer resolved = o.getTableNumber();
+			if (resolved == null) continue;
+			int tableNo = resolved;
 
 			if (tableNo < 1 || tableNo > totalTables) continue;
 

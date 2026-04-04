@@ -45,6 +45,10 @@ public class OrderItem {
     @Column(length = 255)
     private String note;
 
+    /** Món đổi 10 điểm: không tính tiền, không cộng điểm tích khi hoàn thành đơn. */
+    @Column(name = "loyalty_redemption", nullable = false)
+    private Boolean loyaltyRedemption = Boolean.FALSE;
+
     public Long getId() {
         return id;
     }
@@ -115,5 +119,13 @@ public class OrderItem {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public Boolean getLoyaltyRedemption() {
+        return loyaltyRedemption;
+    }
+
+    public void setLoyaltyRedemption(Boolean loyaltyRedemption) {
+        this.loyaltyRedemption = Boolean.TRUE.equals(loyaltyRedemption);
     }
 }

@@ -41,6 +41,11 @@
       outline-offset: 1px;
     }
 
+    .table-btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
     /* Menu autocomplete dropdown (overlay, không đẩy layout) */
     .menu-search-wrap {
       position: relative;
@@ -69,4 +74,17 @@
 
     .menu-search-results .list-group-item {
       background-color: #fff;
+    }
+
+    /* Cột hình thức + thu tiền: các badge cùng một hàng */
+    .orders-table .order-payment-cell {
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    .orders-table .order-payment-badges {
+      display: inline-flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 0.35rem;
     }

@@ -19,14 +19,18 @@ import com.example.QuanLyQuanCafe.config.BookingPolicy;
 import com.example.QuanLyQuanCafe.model.BookingStatus;
 import com.example.QuanLyQuanCafe.model.TableBooking;
 import com.example.QuanLyQuanCafe.repository.TableBookingRepository;
+import com.example.QuanLyQuanCafe.service.BookingTableValidationService;
 
 @Controller
 public class BookingController {
 
     private final TableBookingRepository tableBookingRepository;
+    private final BookingTableValidationService bookingTableValidationService;
 
-    public BookingController(TableBookingRepository tableBookingRepository) {
+    public BookingController(TableBookingRepository tableBookingRepository,
+                             BookingTableValidationService bookingTableValidationService) {
         this.tableBookingRepository = tableBookingRepository;
+        this.bookingTableValidationService = bookingTableValidationService;
     }
 
     @PostMapping("/booking")
@@ -111,11 +115,8 @@ public class BookingController {
     }
 
     @PostMapping("/Booking/save")
-    public String saveBookingFromAdmin(TableBooking booking) {
-        
-        
+    public String saveBookingFromAdmin(TableBooking booking, Model model) {
         if (booking.getId() != null) {
-            // lấy bản ghi cũ để giữ createdAt
             Optional<TableBooking> existing = tableBookingRepository.findById(booking.getId());
             existing.ifPresent(old -> {
                 booking.setCreatedAt(old.getCreatedAt());
@@ -124,13 +125,26 @@ public class BookingController {
                 }
             });
         }
-        
+
         if (booking.getBookingTime() != null) {
-            boolean existsSameTime = tableBookingRepository.existsByBookingTime(booking.getBookingTime());
-            if (existsSameTime && booking.getId() == null) {
-                return "redirect:/Booking?error=conflict";
+            boolean conflict = booking.getId() == null
+                    ? tableBookingRepository.existsByBookingTime(booking.getBookingTime())
+                    : tableBookingRepository.existsByBookingTimeAndIdNot(booking.getBookingTime(), booking.getId());
+            if (conflict) {
+                model.addAttribute("booking", booking);
+                model.addAttribute("errorMessage", "Đã có đặt bàn trùng khung giờ này.");
+                return "admin/BookingForm";
             }
         }
+
+        Optional<String> tableErr = bookingTableValidationService.validateReservedTableForBooking(
+                booking.getReservedTableNumber(), booking.getBookingTime(), booking.getId());
+        if (tableErr.isPresent()) {
+            model.addAttribute("booking", booking);
+            model.addAttribute("errorMessage", tableErr.get());
+            return "admin/BookingForm";
+        }
+
         tableBookingRepository.save(booking);
         return "redirect:/Booking";
     }

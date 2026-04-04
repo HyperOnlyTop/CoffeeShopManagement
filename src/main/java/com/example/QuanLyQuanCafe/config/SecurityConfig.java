@@ -70,6 +70,7 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.GET, "/api/orders/**").hasAnyRole("ADMIN", "CASHIER", "SERVER", "BARISTA")
             .requestMatchers(HttpMethod.POST, "/api/orders/**").hasAnyRole("ADMIN", "CASHIER")
             .requestMatchers(HttpMethod.PUT, "/api/orders/*/status").hasAnyRole("ADMIN", "CASHIER", "BARISTA")
+            .requestMatchers(HttpMethod.PUT, "/api/orders/*/payment").hasAnyRole("ADMIN", "CASHIER", "SERVER")
             .requestMatchers(HttpMethod.PUT, "/api/orders/**").hasAnyRole("ADMIN", "CASHIER")
             .anyRequest().authenticated()
         )

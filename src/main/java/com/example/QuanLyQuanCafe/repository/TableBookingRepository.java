@@ -17,4 +17,8 @@ public interface TableBookingRepository extends JpaRepository<TableBooking, Long
     List<TableBooking> findByEmailIgnoreCaseOrderByCreatedAtDesc(String email);
 
     List<TableBooking> findByStatusAndBookingTimeBetween(BookingStatus status, LocalDateTime start, LocalDateTime end);
+
+    List<TableBooking> findByReservedTableNumberAndStatus(Integer reservedTableNumber, BookingStatus status);
+
+    boolean existsByBookingTimeAndIdNot(LocalDateTime bookingTime, Long id);
 }

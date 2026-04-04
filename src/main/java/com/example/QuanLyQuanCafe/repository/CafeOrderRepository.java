@@ -15,4 +15,6 @@ public interface CafeOrderRepository extends JpaRepository<CafeOrder, Long> {
     List<CafeOrder> findByStatus(OrderStatus status);
 
     List<CafeOrder> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    List<CafeOrder> findTop30ByStatusAndPreparedAtAfterOrderByPreparedAtAsc(OrderStatus status, LocalDateTime after);
 }
