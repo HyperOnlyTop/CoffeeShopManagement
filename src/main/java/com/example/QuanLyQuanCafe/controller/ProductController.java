@@ -38,6 +38,7 @@ import com.example.QuanLyQuanCafe.repository.CustomerRepository;
 import com.example.QuanLyQuanCafe.repository.StaffRepository;
 import com.example.QuanLyQuanCafe.repository.AppUserRepository;
 import com.example.QuanLyQuanCafe.repository.TableBookingRepository;
+import com.example.QuanLyQuanCafe.repository.BookingStaffReminderRepository;
 
 @Controller
 public class ProductController {
@@ -50,6 +51,7 @@ public class ProductController {
 	private final StaffRepository staffRepository;
 	private final AppUserRepository appUserRepository;
     private final TableBookingRepository tableBookingRepository;
+    private final BookingStaffReminderRepository bookingStaffReminderRepository;
 
 	public ProductController(
 			MenuService menuService,
@@ -59,7 +61,8 @@ public class ProductController {
 			CustomerRepository customerRepository,
 			StaffRepository staffRepository,
 			AppUserRepository appUserRepository,
-			TableBookingRepository tableBookingRepository) {
+			TableBookingRepository tableBookingRepository,
+			BookingStaffReminderRepository bookingStaffReminderRepository) {
 		this.menuService = menuService;
 		this.orderService = orderService;
         this.staffService = staffService;
@@ -68,6 +71,7 @@ public class ProductController {
 		this.staffRepository = staffRepository;
 		this.appUserRepository = appUserRepository;
 		this.tableBookingRepository = tableBookingRepository;
+		this.bookingStaffReminderRepository = bookingStaffReminderRepository;
 	}
 
 	@GetMapping("/dashboard")
@@ -221,6 +225,8 @@ public class ProductController {
 		model.addAttribute("bookingStatCancelled", bookingCancelled);
 		model.addAttribute("bookingStatGuestsSum", bookingGuestsSum);
 		model.addAttribute("bookingPageNow", LocalDateTime.now());
+		model.addAttribute("bookingPageToday", LocalDate.now());
+		model.addAttribute("bookingReminderUnread", bookingStaffReminderRepository.countByReadAtIsNull());
 		return "admin/Booking";
 	}
 
@@ -311,8 +317,27 @@ public class ProductController {
 
 		List<Staff> staffList;
 		Staff selfStaff = null;
+		Map<Long, String> staffLinkedUsernames = Collections.emptyMap();
+		Map<Long, String> staffLinkedEmails = Collections.emptyMap();
+		LocalDate staffCardToday = LocalDate.now();
 		if (isAdmin) {
-			staffList = staffService.findAll();
+			staffList = staffService.findAllSyncingEndedLeave();
+			Map<Long, String> usernames = new HashMap<>();
+			Map<Long, String> emails = new HashMap<>();
+			for (Staff s : staffList) {
+				if (s.getId() == null) {
+					continue;
+				}
+				AppUser linked = appUserRepository.findByStaffId(s.getId());
+				if (linked != null) {
+					usernames.put(s.getId(), linked.getUsername());
+					if (linked.getEmail() != null && !linked.getEmail().isBlank()) {
+						emails.put(s.getId(), linked.getEmail());
+					}
+				}
+			}
+			staffLinkedUsernames = usernames;
+			staffLinkedEmails = emails;
 		} else {
 			staffList = Collections.emptyList();
 			if (principal != null) {
@@ -327,7 +352,10 @@ public class ProductController {
 					if (selfStaff == null) {
 						selfStaff = staffRepository.findByName(appUser.getUsername());
 					}
-					if (selfStaff != null) {
+					if (selfStaff != null && selfStaff.getId() != null) {
+						selfStaff = staffService.syncLeaveEndedToActiveIfNeeded(selfStaff.getId());
+						staffList = Collections.singletonList(selfStaff);
+					} else if (selfStaff != null) {
 						staffList = Collections.singletonList(selfStaff);
 					}
 				}
@@ -336,16 +364,19 @@ public class ProductController {
 
 		int total = staffList.size();
 		int working = (int) staffList.stream()
-			.filter(s -> s.getStatus() == StaffStatus.ACTIVE)
+			.filter(s -> staffService.effectiveCardStatus(s, staffCardToday) == StaffStatus.ACTIVE)
 			.count();
 		int onLeave = (int) staffList.stream()
-			.filter(s -> s.getStatus() == StaffStatus.ON_LEAVE)
+			.filter(s -> staffService.effectiveCardStatus(s, staffCardToday) == StaffStatus.ON_LEAVE)
 			.count();
 		int inactive = (int) staffList.stream()
-			.filter(s -> s.getStatus() == StaffStatus.INACTIVE)
+			.filter(s -> staffService.effectiveCardStatus(s, staffCardToday) == StaffStatus.INACTIVE)
 			.count();
 
 		model.addAttribute("staffList", staffList);
+		model.addAttribute("staffCardToday", staffCardToday);
+		model.addAttribute("staffLinkedUsernames", staffLinkedUsernames);
+		model.addAttribute("staffLinkedEmails", staffLinkedEmails);
 		model.addAttribute("selfStaff", selfStaff);
 		model.addAttribute("staffTotal", total);
 		model.addAttribute("staffWorking", working);

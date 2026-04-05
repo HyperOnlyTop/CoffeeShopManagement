@@ -625,7 +625,7 @@
                   orderLoyaltyPointsBadge.className = 'badge bg-secondary';
                 }
                 if (orderLoyaltyHint) {
-                  orderLoyaltyHint.textContent = 'Chưa có hồ sơ. Hoàn thành đơn sẽ lưu SĐT và tích điểm (đồ uống).';
+                  orderLoyaltyHint.textContent = 'Chưa có hồ sơ — coi như đăng ký tại quầy. Hoàn thành đơn sẽ tạo hồ sơ theo SĐT và tích điểm (đồ uống).';
                 }
                 if (orderLoyaltyRedeemModeBtn) orderLoyaltyRedeemModeBtn.disabled = true;
                 waitingLoyaltyRedeemSlot = false;
@@ -1108,7 +1108,7 @@
           });
 
           if (orderTotalAmountInput) {
-            orderTotalAmountInput.value = total;
+            orderTotalAmountInput.value = Number(total).toLocaleString('vi-VN') + ' đ';
           }
 
           refreshOrderLoyaltyFromPhone();

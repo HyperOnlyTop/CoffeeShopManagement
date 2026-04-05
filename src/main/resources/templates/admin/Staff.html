@@ -33,7 +33,7 @@
         <div class="header-row">
             <div class="page-title">
                 <h2>Quản lý Nhân viên</h2>
-                <p class="text-muted small mb-0">Danh sách hồ sơ, tài khoản, phân ca và báo cáo chấm công.</p>
+                <p class="text-muted small mb-0">Hồ sơ kèm tài khoản đăng nhập, phân ca và báo cáo chấm công.</p>
             </div>
             <div class="header-actions">
                 <button class="btn staff-add-btn" type="button">
@@ -128,51 +128,59 @@
                     <i class="bi bi-search"></i>
                     <input type="text" placeholder="Tìm kiếm nhân viên..." aria-label="Tìm kiếm nhân viên">
                 </div>
-                <div class="staff-filters">
-                    <button class="staff-filter active" type="button">Tất cả</button>
-                    <button class="staff-filter" type="button">Quản lý</button>
-                    <button class="staff-filter" type="button">Pha chế</button>
-                    <button class="staff-filter" type="button">Phục vụ</button>
-                    <button class="staff-filter" type="button">Thu ngân</button>
-                    <button class="staff-filter" type="button">Bảo vệ</button>
+                <div class="staff-filters staff-status-filters">
+                    <button class="staff-filter active" type="button" data-status-filter="ALL">Tất cả</button>
+                    <button class="staff-filter" type="button" data-status-filter="ACTIVE">Đang làm</button>
+                    <button class="staff-filter" type="button" data-status-filter="ON_LEAVE">Nghỉ phép</button>
+                    <button class="staff-filter" type="button" data-status-filter="INACTIVE">Đã nghỉ việc</button>
                 </div>
             </div>
 
             <div class="row g-3 mt-3">
                 <div class="col-lg-4 col-md-6" th:each="staff : ${staffList}">
-                    <div class="staff-card staff-card-clickable" th:attr="data-id=${staff.id},
+                    <div class="staff-card staff-card-clickable position-relative"
+                         th:with="eff=${@staffService.effectiveCardStatus(staff, staffCardToday)}"
+                         th:attr="data-id=${staff.id},
                               data-name=${staff.name},
                               data-role=${staff.role},
-                              data-status=${staff.status},
+                              data-status=${staff.status != null ? staff.status.name() : ''},
+                              data-effective-status=${eff.name()},
                               data-shift=${staff.shift},
                               data-salary=${staff.salary},
                               data-start-date=${staff.startDate},
                               data-avatar-url=${staff.avatarUrl},
-                              data-phone=${staff.phone}">
-                        <div class="d-flex align-items-center">
-                            <img class="staff-avatar" alt="Ảnh nhân viên"
-                                th:src="${staff.avatarUrl != null ? staff.avatarUrl : 'https://ui-avatars.com/api/?name=' + #strings.replace(staff.name, ' ', '+') + '&background=C98D4D&color=fff'}"
-                                th:alt="${staff.name}" th:title="${staff.name}">
-                            <div class="flex-grow-1 ms-3">
-                                <h5 class="staff-name mb-1" th:text="${staff.name}">Tên nhân viên</h5>
-                                <p class="staff-role mb-1"
-                                    th:text="${staff.role != null ? #strings.replace(staff.role.name(), '_', ' ') : 'Chưa thiết lập'}">
-                                    Vị trí</p>
+                              data-phone=${staff.phone},
+                              data-leave-from=${staff.leaveFrom},
+                              data-leave-to=${staff.leaveTo},
+                              data-left-on=${staff.leftOn},
+                              data-login-user=${staffLinkedUsernames.containsKey(staff.id) ? staffLinkedUsernames.get(staff.id) : ''},
+                              data-login-email=${staffLinkedEmails.containsKey(staff.id) ? staffLinkedEmails.get(staff.id) : ''}">
+                        <div class="position-absolute top-0 end-0 pt-2 pe-2" style="z-index: 1;">
                                 <span class="staff-status-badge staff-status-active"
-                                    th:if="${staff.status != null and staff.status.name() == 'ACTIVE'}">
+                                    th:if="${staff.status != null and eff.name() == 'ACTIVE'}">
                                     Đang làm
                                 </span>
                                 <span class="staff-status-badge staff-status-leave"
-                                    th:if="${staff.status != null and staff.status.name() == 'ON_LEAVE'}">
+                                    th:if="${staff.status != null and eff.name() == 'ON_LEAVE'}">
                                     Nghỉ phép
                                 </span>
                                 <span class="staff-status-badge staff-status-quit"
-                                    th:if="${staff.status != null and staff.status.name() == 'INACTIVE'}">
+                                    th:if="${staff.status != null and eff.name() == 'INACTIVE'}">
                                     Đã nghỉ việc
                                 </span>
                                 <span class="staff-status-badge" th:if="${staff.status == null}">
                                     Chưa rõ
                                 </span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <img class="staff-avatar" alt="Ảnh nhân viên"
+                                th:src="${staff.avatarUrl != null ? staff.avatarUrl : 'https://ui-avatars.com/api/?name=' + #strings.replace(staff.name, ' ', '+') + '&background=C98D4D&color=fff'}"
+                                th:alt="${staff.name}" th:title="${staff.name}">
+                            <div class="flex-grow-1 ms-3 pe-5">
+                                <h5 class="staff-name mb-1" th:text="${staff.name}">Tên nhân viên</h5>
+                                <p class="staff-role mb-0"
+                                    th:text="${staff.role != null ? #strings.replace(staff.role.name(), '_', ' ') : 'Chưa thiết lập'}">
+                                    Vị trí</p>
                             </div>
                         </div>
                         <div class="staff-contact mt-3">
@@ -180,22 +188,24 @@
                                 <span class="staff-phone-text"
                                     th:text="${staff.phone != null ? staff.phone : 'Chưa có số điện thoại'}">0901111111</span>
                             </p>
-                            <p class="mb-0"><i class="bi bi-clock"></i>
-                                <span class="staff-shift-text"
-                                    th:text="${staff.shift != null ? staff.shift : 'Chưa thiết lập ca làm'}">Ca sáng
-                                    (06:00 - 14:00)</span>
+                            <p class="mb-1"><i class="bi bi-calendar-week"></i>
+                                <span class="staff-leave-days-month-text">Nghỉ phép trong tháng: —</span>
+                            </p>
+                            <p class="mb-1 small staff-start-date-row" th:style="${staff.startDate != null} ? '' : 'display:none'">
+                                <i class="bi bi-calendar-event text-muted"></i>
+                                <span class="text-muted">Vào làm:</span>
+                                <span class="staff-start-date-text"
+                                      th:text="${staff.startDate != null ? #temporals.format(staff.startDate, 'dd/MM/yyyy') : ''}">—</span>
+                            </p>
+                            <p class="mb-0 mt-1 small text-muted staff-extra-meta"
+                                th:style="${(staff.status != null and staff.status.name() == 'ON_LEAVE' and staff.leaveFrom != null) or (staff.status != null and staff.status.name() == 'INACTIVE' and staff.leftOn != null)} ? '' : 'display:none'">
+                                <span th:if="${staff.status != null and staff.status.name() == 'ON_LEAVE' and staff.leaveFrom != null}"
+                                      th:text="${'Nghỉ phép: ' + #temporals.format(staff.leaveFrom, 'dd/MM/yyyy') + ' – ' + #temporals.format(staff.leaveTo != null ? staff.leaveTo : staff.leaveFrom, 'dd/MM/yyyy')}">Nghỉ phép</span>
+                                <span th:if="${staff.status != null and staff.status.name() == 'INACTIVE' and staff.leftOn != null}"
+                                      th:text="${'Nghỉ việc: ' + #temporals.format(staff.leftOn, 'dd/MM/yyyy')}">Nghỉ việc</span>
                             </p>
                         </div>
-                        <div class="staff-performance mt-3">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="staff-performance-label">Chuyên cần</span>
-                                <span class="staff-performance-percent">--</span>
-                            </div>
-                            <div class="staff-progress-track">
-                                <div class="staff-progress-bar" style="width: 0%;"></div>
-                            </div>
-                        </div>
-                        <div class="staff-salary-summary mt-3">
+                        <div class="staff-salary-summary mt-3 pt-2 border-top">
                             <p class="mb-1"><i class="bi bi-clock-history"></i>
                                 <span class="staff-hours-month-text">Giờ làm tháng này: --</span>
                             </p>
@@ -285,35 +295,6 @@
             </div>
         </div>
 
-        <!-- Quản lý tài khoản nhân sự (ADMIN) -->
-        <div class="custom-card mb-4" sec:authorize="hasRole('ADMIN')">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="settings-section-title mb-0">Tài khoản nhân sự</h6>
-                <button class="btn btn-primary btn-sm" type="button" id="btnOpenCreateUserModal">
-                    <i class="bi bi-person-plus"></i> Thêm tài khoản
-                </button>
-            </div>
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead>
-                    <tr>
-                        <th>Username</th>
-                        <th>Họ tên</th>
-                        <th>Email</th>
-                        <th>Số điện thoại</th>
-                        <th>Vai trò</th>
-                        <th>Nhân viên</th>
-                        <th style="width: 160px;">Thao tác</th>
-                    </tr>
-                    </thead>
-                    <tbody id="userAdminTableBody">
-                    <tr>
-                        <td colspan="7" class="text-center text-muted py-3">Đang tải danh sách tài khoản...</td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
         </div>
 
         <!-- ——— Nhân viên (Thu ngân / Phục vụ / Pha chế / Bảo vệ): chấm công & xem của mình ——— -->
@@ -324,7 +305,11 @@
                     <h2>Chấm công &amp; giờ làm</h2>
                     <p class="text-muted small mb-0" th:if="${selfStaff != null}">
                         Xin chào, <span th:text="${selfStaff.name}">bạn</span>.
-                        Đến ca: bấm <strong>Giờ vào</strong>. Hết ca: bấm <strong>Giờ ra</strong>. Giờ làm được cộng dồn trong tháng để tính lương.
+                        Chấm công theo <strong>ca được phân</strong> trong ngày.
+                        <strong>Ca liền kề</strong> (sáng+chiều, chiều+tối) được gộp thành 1 khung — chỉ cần chấm vào 1 lần và ra 1 lần.
+                        <strong>Ca rời</strong> (sáng+tối) chấm riêng từng ca.
+                        Mỗi khung mở chấm <strong>vào</strong> trước 15 phút và <strong>ra</strong> sau 15 phút.
+                        Giờ tính lương được làm tròn theo khung (vào sớm tính từ đầu khung, ra muộn tính đến cuối khung).
                     </p>
                     <p class="text-muted small mb-0" th:if="${selfStaff == null}">
                         Tài khoản chưa được gán hồ sơ nhân viên — vui lòng liên hệ quản lý.
@@ -459,73 +444,6 @@
 
     </main>
 
-    <!-- Modal: Tạo tài khoản nhân sự (ADMIN) -->
-    <div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true" sec:authorize="hasRole('ADMIN')">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content border-0 shadow-lg rounded-4">
-                <div class="modal-header border-0 pb-0 px-4 pt-4">
-                    <h5 class="modal-title fw-semibold">Thêm tài khoản nhân sự</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-                </div>
-                <div class="modal-body px-4 pb-0">
-                    <form id="createUserForm">
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-medium">Username</label>
-                                <input type="text" class="form-control" id="userUsername" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-medium">Mật khẩu</label>
-                                <input type="password" class="form-control" id="userPassword" required>
-                            </div>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-medium">Họ tên (tuỳ chọn)</label>
-                                <input type="text" class="form-control" id="userFullName">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-medium">Số điện thoại (tuỳ chọn)</label>
-                                <input type="tel" class="form-control" id="userPhone">
-                            </div>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-medium">Email (tuỳ chọn)</label>
-                                <input type="email" class="form-control" id="userEmail">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-medium">Vai trò</label>
-                                <select class="form-select" id="userRole" required>
-                                    <option value="" selected disabled>Chọn vai trò</option>
-                                    <option value="ADMIN">ADMIN</option>
-                                    <option value="CASHIER">CASHIER</option>
-                                    <option value="SERVER">SERVER</option>
-                                    <option value="BARISTA">BARISTA</option>
-                                    <option value="SECURITY">SECURITY</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="form-label fw-medium">Gán nhân viên</label>
-                            <select class="form-select" id="userStaffId" required>
-                                <option value="" selected disabled>Chọn nhân viên…</option>
-                            </select>
-                            <div class="small text-muted mt-1">Mỗi nhân viên chỉ được gán cho 1 tài khoản.</div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-end">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                    <button type="submit" form="createUserForm" class="btn btn-primary" id="btnCreateUserSubmit">Tạo tài khoản</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Modal: Thêm nhân viên mới (ADMIN) -->
     <div class="modal fade" id="createStaffModal" tabindex="-1" aria-hidden="true" sec:authorize="hasRole('ADMIN')">
         <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -551,10 +469,22 @@
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
+                                <label class="form-label fw-medium">Username</label>
+                                <input type="text" class="form-control" id="staffAccountUsername" autocomplete="username"
+                                    placeholder="VD: nguyenvana" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Mật khẩu</label>
+                                <input type="password" class="form-control" id="staffAccountPassword" autocomplete="new-password"
+                                    required>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
                                 <label class="form-label fw-medium">Vị trí</label>
                                 <select class="form-select" id="staffRole" required>
                                     <option value="" selected disabled>Chọn vị trí</option>
-                                    <option value="QUAN_LY">Quản lý</option>
                                     <option value="PHA_CHE">Pha chế</option>
                                     <option value="PHUC_VU">Phục vụ</option>
                                     <option value="THU_NGAN">Thu ngân</option>
@@ -587,6 +517,13 @@
                                 <input type="text" class="form-control" id="staffSalary" inputmode="numeric"
                                     placeholder="VD: 22.000">
                             </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Email (tuỳ chọn)</label>
+                                <input type="email" class="form-control" id="staffAccountEmail" placeholder="VD: a@email.com">
+                            </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-medium">Link ảnh (tùy chọn)</label>
                                 <input type="text" class="form-control" id="staffAvatarUrl"
@@ -598,6 +535,24 @@
                             <label class="form-label fw-medium">Ghi chú</label>
                             <textarea class="form-control" id="staffNote" rows="2"
                                 placeholder="Ghi chú thêm (nếu có)"></textarea>
+                        </div>
+
+                        <div class="row g-3 mb-3 d-none" id="createStaffLeaveRow">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Nghỉ phép từ</label>
+                                <input type="date" class="form-control" id="staffLeaveFrom">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Đến ngày</label>
+                                <input type="date" class="form-control" id="staffLeaveTo">
+                            </div>
+                            <div class="col-12"><p class="small text-muted mb-0">Để trống một ngày thì hệ thống dùng cùng một ngày cho từ và đến.</p></div>
+                        </div>
+                        <div class="row g-3 mb-3 d-none" id="createStaffLeftOnRow">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Ngày nghỉ việc</label>
+                                <input type="date" class="form-control" id="staffLeftOn">
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -621,18 +576,41 @@
                     <form id="editStaffForm">
                         <input type="hidden" id="editStaffId">
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6 d-flex align-items-center gap-3">
+                            <div class="col-md-6 d-flex align-items-end gap-3">
                                 <img id="editStaffAvatar" src="https://ui-avatars.com/api/?name=NV" alt="Avatar"
                                     class="staff-avatar">
-                                <div>
+                                <div class="flex-grow-1">
                                     <label class="form-label fw-medium mb-1">Họ và tên</label>
                                     <input type="text" class="form-control" id="editStaffName" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
+                                <label class="form-label fw-medium">Số điện thoại</label>
+                                <input type="tel" class="form-control" id="editStaffPhone" placeholder="VD: 0901234567">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Username (đăng nhập)</label>
+                                <input type="text" class="form-control" id="editStaffLinkedUsername" readonly
+                                    placeholder="Chưa có tài khoản">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Email tài khoản (tuỳ chọn)</label>
+                                <input type="email" class="form-control" id="editStaffLinkedEmail" placeholder="VD: a@email.com">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Mật khẩu mới</label>
+                                <input type="password" class="form-control" id="editStaffNewPassword" autocomplete="new-password"
+                                    placeholder="Để trống nếu không đổi">
+                            </div>
+                            <div class="col-md-6">
                                 <label class="form-label fw-medium">Vị trí</label>
                                 <select class="form-select" id="editStaffRole" required>
-                                    <option value="QUAN_LY">Quản lý</option>
                                     <option value="PHA_CHE">Pha chế</option>
                                     <option value="PHUC_VU">Phục vụ</option>
                                     <option value="THU_NGAN">Thu ngân</option>
@@ -642,19 +620,7 @@
                         </div>
 
                         <div class="row g-3 mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label fw-medium">Số điện thoại</label>
-                                <input type="tel" class="form-control" id="editStaffPhone" placeholder="VD: 0901234567">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-medium">Trạng thái</label>
-                                <select class="form-select" id="editStaffStatus">
-                                    <option value="ACTIVE">Đang làm</option>
-                                    <option value="ON_LEAVE">Nghỉ phép</option>
-                                    <option value="INACTIVE">Đã nghỉ việc</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label class="form-label fw-medium">Ca mặc định (tuỳ chọn)</label>
                                 <select class="form-select" id="editStaffShift">
                                     <option value="">-- Ca mặc định (tuỳ chọn) --</option>
@@ -663,6 +629,31 @@
                                     <option value="EVENING">Ca tối (18:00 - 22:00)</option>
                                     <option value="FULL_DAY">Cả ngày (07:00 - 22:00)</option>
                                 </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Trạng thái</label>
+                                <select class="form-select" id="editStaffStatus">
+                                    <option value="ACTIVE">Đang làm</option>
+                                    <option value="ON_LEAVE">Nghỉ phép</option>
+                                    <option value="INACTIVE">Đã nghỉ việc</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3 d-none" id="editStaffLeaveRow">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Nghỉ phép từ</label>
+                                <input type="date" class="form-control" id="editStaffLeaveFrom">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Đến ngày</label>
+                                <input type="date" class="form-control" id="editStaffLeaveTo">
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3 d-none" id="editStaffLeftOnRow">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Ngày nghỉ việc</label>
+                                <input type="date" class="form-control" id="editStaffLeftOn">
                             </div>
                         </div>
 
@@ -690,7 +681,7 @@
                         </div>
 
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <label class="form-label fw-medium">Link ảnh (tùy chọn)</label>
                                 <input type="text" class="form-control" id="editStaffAvatarUrl"
                                     placeholder="VD: https://...">
@@ -698,9 +689,8 @@
                         </div>
 
                         <div class="row g-3 mb-3">
-                            <div class="col-md-12 d-flex align-items-end justify-content-end">
-                                <span id="editStaffStatusBadge" class="staff-status-badge staff-status-active">Đang
-                                    làm</span>
+                            <div class="col-md-12 d-flex align-items-end justify-content-between flex-wrap gap-2">
+                                <span id="editStaffStatusBadge" class="staff-status-badge staff-status-active">Đang làm</span>
                             </div>
                         </div>
                     </form>

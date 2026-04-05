@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
 <head>
@@ -239,15 +239,14 @@
                 th:text="${currentUser.fullName != null && !currentUser.fullName.isEmpty() ? currentUser.fullName : currentUser.username}">
                 Admin</h5>
               <p class="text-muted mb-2"
-                th:text="${currentUser.role == 'ADMIN' ? 'Quản trị viên hệ thống' : (currentUser.role == 'STAFF' ? 'Nhân viên cửa hàng' : 'Khách hàng')}">Quản trị viên
-                hệ thống</p>
+                th:text="${currentUser.role == 'ADMIN' ? 'Chủ quán (quản trị hệ thống)' : (currentUser.role == 'CUSTOMER' ? 'Tài khoản khách hàng (đã đăng ký)' : ((currentUser.role == 'CASHIER' or currentUser.role == 'SERVER' or currentUser.role == 'BARISTA' or currentUser.role == 'SECURITY') ? 'Nhân viên cửa hàng' : (currentUser.role != null ? currentUser.role : '—')))}">Chủ quán</p>
               <span class="badge bg-success-subtle text-success px-3 py-2">Đang hoạt động</span>
             </div>
             <hr class="my-4">
             <ul class="list-unstyled mb-0 small text-muted text-start">
-              <li class="mb-2"><i class="bi bi-envelope me-2"></i>admin@cafe.com</li>
-              <li class="mb-2"><i class="bi bi-telephone me-2"></i>0901 234 567</li>
-              <li><i class="bi bi-clock-history me-2"></i>Lần đăng nhập gần nhất: 10:45 - 25/03/2026</li>
+              <li class="mb-2"><i class="bi bi-envelope me-2"></i><span th:text="${currentUser != null && currentUser.email != null && !#strings.isEmpty(currentUser.email)} ? ${currentUser.email} : '—'">—</span></li>
+              <li class="mb-2"><i class="bi bi-telephone me-2"></i><span th:text="${currentUser != null && currentUser.phone != null && !#strings.isEmpty(currentUser.phone)} ? ${currentUser.phone} : '—'">—</span></li>
+              <li sec:authorize="hasRole('ADMIN')" class="small"><i class="bi bi-info-circle me-2"></i>Chủ quán không gán hồ sơ nhân viên — không tính lương qua chấm công trong hệ thống.</li>
             </ul>
           </div>
         </div>

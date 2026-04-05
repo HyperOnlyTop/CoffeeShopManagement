@@ -110,20 +110,39 @@ public class BookingController {
         if (optional.isEmpty()) {
             return "redirect:/Booking";
         }
-        model.addAttribute("booking", optional.get());
+        TableBooking b = optional.get();
+        if (b.getBookingTime() != null && b.getBookingTime().toLocalDate().isBefore(LocalDate.now())) {
+            return "redirect:/Booking?pastBooking=1";
+        }
+        model.addAttribute("booking", b);
         return "admin/BookingForm";
     }
 
     @PostMapping("/Booking/save")
     public String saveBookingFromAdmin(TableBooking booking, Model model) {
+        LocalDate today = LocalDate.now();
+
+        if (booking.getBookingTime() != null && booking.getBookingTime().toLocalDate().isBefore(today)) {
+            model.addAttribute("booking", booking);
+            model.addAttribute("errorMessage", "Không dùng ngày đặt trong quá khứ.");
+            return "admin/BookingForm";
+        }
+
         if (booking.getId() != null) {
             Optional<TableBooking> existing = tableBookingRepository.findById(booking.getId());
-            existing.ifPresent(old -> {
-                booking.setCreatedAt(old.getCreatedAt());
-                if (booking.getStatus() == null) {
-                    booking.setStatus(old.getStatus());
-                }
-            });
+            if (existing.isEmpty()) {
+                return "redirect:/Booking";
+            }
+            TableBooking old = existing.get();
+            if (old.getBookingTime() != null && old.getBookingTime().toLocalDate().isBefore(today)) {
+                model.addAttribute("booking", booking);
+                model.addAttribute("errorMessage", "Đặt bàn đã qua ngày, không được sửa.");
+                return "admin/BookingForm";
+            }
+            booking.setCreatedAt(old.getCreatedAt());
+            if (booking.getStatus() == null) {
+                booking.setStatus(old.getStatus());
+            }
         }
 
         if (booking.getBookingTime() != null) {
@@ -146,14 +165,6 @@ public class BookingController {
         }
 
         tableBookingRepository.save(booking);
-        return "redirect:/Booking";
-    }
-
-    @GetMapping("/Booking/delete/{id}")
-    public String deleteBooking(@PathVariable("id") Long id) {
-        if (id != null) {
-            tableBookingRepository.deleteById(id);
-        }
         return "redirect:/Booking";
     }
 }

@@ -46,7 +46,7 @@ public class SecurityConfig {
             .requestMatchers("/api/loyalty/**").hasRole("ADMIN")
             .requestMatchers("/api/bookings/**").hasAnyRole("ADMIN", "CASHIER", "SERVER")
             .requestMatchers(HttpMethod.POST, "/api/menu/**").hasRole("ADMIN")
-            .requestMatchers("/Booking/new", "/Booking/edit/**", "/Booking/delete/**", "/Booking/save").hasRole("ADMIN")
+            .requestMatchers("/Booking/new", "/Booking/edit/**", "/Booking/save").hasRole("ADMIN")
             .requestMatchers("/dashboard/**").hasRole("ADMIN")
             .requestMatchers("/Menu/**", "/Revenue/**", "/Inventory/**", "/Setting/**", "/Accounts/**", "/Customers/**").hasRole("ADMIN")
             .requestMatchers("/Order/**").hasAnyRole("ADMIN", "CASHIER", "SERVER", "BARISTA")
@@ -63,6 +63,7 @@ public class SecurityConfig {
             .requestMatchers("/api/staff/**").hasRole("ADMIN")
             .requestMatchers(HttpMethod.GET, "/api/attendance/report").hasRole("ADMIN")
             .requestMatchers(HttpMethod.GET, "/api/attendance/my-records").hasAnyRole("CASHIER", "SERVER", "BARISTA", "SECURITY")
+            // Chấm công / lương theo giờ: chỉ nhân viên ca — ADMIN (chủ quán) không gọi API này
             .requestMatchers("/api/attendance/**").hasAnyRole("CASHIER", "SERVER", "BARISTA", "SECURITY")
             // Staff shifts: ai cũng xem được, chỉ ADMIN sửa
             .requestMatchers(HttpMethod.GET, "/api/staff-shifts/**").hasAnyRole("ADMIN", "CASHIER", "SERVER", "BARISTA", "SECURITY")

@@ -13,5 +13,8 @@ public interface StaffShiftAssignmentRepository extends JpaRepository<StaffShift
     List<StaffShiftAssignment> findByWorkDate(LocalDate workDate);
     boolean existsByStaffAndWorkDateAndShiftCode(Staff staff, LocalDate workDate, ShiftCode shiftCode);
     void deleteByStaffAndWorkDateAndShiftCode(Staff staff, LocalDate workDate, ShiftCode shiftCode);
+
+    /** Lấy tất cả ca đã gán cho nhân viên trong một ngày (có thể nhiều ca). */
+    List<StaffShiftAssignment> findByStaffAndWorkDate(Staff staff, LocalDate workDate);
 }
 

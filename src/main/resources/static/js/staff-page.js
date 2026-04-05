@@ -1,4 +1,4 @@
-﻿        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function () {
             function formatIsoDateVi(iso) {
                 if (!iso) return '—';
                 var p = String(iso).split('-');
@@ -20,6 +20,129 @@
                     .replace(/"/g, '&quot;');
             }
 
+            /** Chuẩn hoá ngày từ JSON (chuỗi ISO hoặc mảng LocalDate của Jackson) → yyyy-MM-dd. */
+            function jsonDateToIsoInput(d) {
+                if (d == null || d === '') return '';
+                if (typeof d === 'string') return d.length >= 10 ? d.substring(0, 10) : '';
+                if (Array.isArray(d) && d.length >= 3) {
+                    var y = d[0];
+                    var m = String(d[1]).padStart(2, '0');
+                    var day = String(d[2]).padStart(2, '0');
+                    return y + '-' + m + '-' + day;
+                }
+                return '';
+            }
+
+            function formatIsoDateViShort(iso) {
+                if (!iso || String(iso).length < 10) return '';
+                var p = String(iso).substring(0, 10).split('-');
+                if (p.length !== 3) return iso;
+                return p[2] + '/' + p[1] + '/' + p[0];
+            }
+
+            function staffExtraMetaLine(status, leaveFrom, leaveTo, leftOn) {
+                if (status === 'ON_LEAVE' && leaveFrom) {
+                    var to = leaveTo || leaveFrom;
+                    return 'Nghỉ phép: ' + formatIsoDateViShort(leaveFrom) + ' – ' + formatIsoDateViShort(to);
+                }
+                if (status === 'INACTIVE' && leftOn) {
+                    return 'Nghỉ việc: ' + formatIsoDateViShort(leftOn);
+                }
+                return '';
+            }
+
+            function setCardExtraMeta(card, status, leaveFrom, leaveTo, leftOn) {
+                if (!card) return;
+                var meta = card.querySelector('.staff-extra-meta');
+                if (!meta) return;
+                var line = staffExtraMetaLine(status, leaveFrom, leaveTo, leftOn);
+                meta.textContent = line;
+                meta.style.display = line ? '' : 'none';
+            }
+
+            function todayIsoForInput() {
+                var d = new Date();
+                var m = String(d.getMonth() + 1).padStart(2, '0');
+                var day = String(d.getDate()).padStart(2, '0');
+                return d.getFullYear() + '-' + m + '-' + day;
+            }
+
+            function staffOnLeaveOnWorkDate(s, dateStr) {
+                if (!s || s.status !== 'ON_LEAVE' || !dateStr) return false;
+                if (!s.leaveFrom || !s.leaveTo) return false;
+                return dateStr >= s.leaveFrom && dateStr <= s.leaveTo;
+            }
+
+            /** Trạng thái hiển thị / lọc thẻ: khớp StaffService.effectiveCardStatus (Java). */
+            function effectiveStaffCardStatus(dbStatus, leaveFrom, leaveTo) {
+                if (dbStatus === 'INACTIVE') {
+                    return 'INACTIVE';
+                }
+                var d = new Date();
+                var iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                var lf = (leaveFrom && String(leaveFrom).length >= 10) ? String(leaveFrom).substring(0, 10) : '';
+                var lt = (leaveTo && String(leaveTo).length >= 10) ? String(leaveTo).substring(0, 10) : '';
+                if (dbStatus === 'ON_LEAVE' && lf && lt && iso >= lf && iso <= lt) {
+                    return 'ON_LEAVE';
+                }
+                return 'ACTIVE';
+            }
+
+            function setStaffCardBadgesForEffective(card, eff) {
+                var activeBadge = card.querySelector('.staff-status-badge.staff-status-active');
+                var leaveBadge = card.querySelector('.staff-status-badge.staff-status-leave');
+                var quitBadge = card.querySelector('.staff-status-badge.staff-status-quit');
+                var unknownBadge = card.querySelector('.staff-status-badge:not(.staff-status-active):not(.staff-status-leave):not(.staff-status-quit)');
+                function vis(el, on) {
+                    if (!el) return;
+                    el.style.display = on ? '' : 'none';
+                }
+                vis(activeBadge, eff === 'ACTIVE');
+                vis(leaveBadge, eff === 'ON_LEAVE');
+                vis(quitBadge, eff === 'INACTIVE');
+                vis(unknownBadge, false);
+            }
+
+            /** Số ngày nghỉ phép (theo khoảng đã lưu) giao với tháng hiện tại; sang tháng mới tự tính lại theo ngày hệ thống. */
+            function leaveDaysInMonthOverlapping(fromStr, toStr, refDate) {
+                refDate = refDate || new Date();
+                var y = refDate.getFullYear();
+                var m = refDate.getMonth();
+                var pad = function (n) { return String(n).padStart(2, '0'); };
+                var lastD = new Date(y, m + 1, 0).getDate();
+                var monthStart = y + '-' + pad(m + 1) + '-01';
+                var monthEnd = y + '-' + pad(m + 1) + '-' + pad(lastD);
+                if (!fromStr || !toStr || String(fromStr).length < 10 || String(toStr).length < 10) return 0;
+                var a = String(fromStr).substring(0, 10);
+                var b = String(toStr).substring(0, 10);
+                var s = a > monthStart ? a : monthStart;
+                var t = b < monthEnd ? b : monthEnd;
+                if (s > t) return 0;
+                var d1 = new Date(s + 'T12:00:00');
+                var d2 = new Date(t + 'T12:00:00');
+                return Math.round((d2 - d1) / 86400000) + 1;
+            }
+
+            function updateStaffCardLeaveDaysMonth(card) {
+                var el = card.querySelector('.staff-leave-days-month-text');
+                if (!el) return;
+                var st = card.getAttribute('data-status') || '';
+                var lf = card.getAttribute('data-leave-from') || '';
+                var lt = card.getAttribute('data-leave-to') || '';
+                if (lf === 'null') lf = '';
+                if (lt === 'null') lt = '';
+                if (st !== 'ON_LEAVE' || !lf || !lt) {
+                    el.textContent = 'Nghỉ phép trong tháng: 0 ngày';
+                    return;
+                }
+                var n = leaveDaysInMonthOverlapping(lf, lt);
+                el.textContent = 'Nghỉ phép trong tháng: ' + n + ' ngày';
+            }
+
+            function refreshAllStaffLeaveDaysMonthLabels() {
+                document.querySelectorAll('.staff-card-clickable').forEach(updateStaffCardLeaveDaysMonth);
+            }
+
             /** Mã StaffRole từ API /api/staff/basic → nhãn tiếng Việt (tab phân ca). */
             function staffRoleLabelVi(roleCode) {
                 if (!roleCode) return 'Chưa thiết lập';
@@ -35,35 +158,141 @@
             }
 
             let attendanceStatus = 'NOT_CHECKED_IN';
+            let attendanceTodayData = null;
             var checkinBtn = document.getElementById('checkinBtn');
             var selfRoot = document.getElementById('staffPageSelfService');
             var hasStaffProfile = !selfRoot || selfRoot.getAttribute('data-has-profile') === 'true';
+
+            function shiftLabelVi(code) {
+                if (!code) return '';
+                var m = { MORNING: 'sáng', AFTERNOON: 'chiều', EVENING: 'tối', FULL_DAY: 'cả ngày' };
+                return m[code] || code;
+            }
+
+            /** Chuyển danh sách shift codes thành label tiếng Việt (vd: "sáng + chiều"). */
+            function blockShiftsLabelVi(shiftsArr) {
+                if (!shiftsArr || !shiftsArr.length) return '';
+                return shiftsArr.map(shiftLabelVi).join(' + ');
+            }
 
             function updateSelfTodayCards(data) {
                 var titleEl = document.getElementById('staffSelfTodayTitle');
                 var detailEl = document.getElementById('staffSelfTodayDetail');
                 if (!titleEl) return;
                 var st = (data && data.status) ? data.status : 'NOT_CHECKED_IN';
+
                 if (st === 'NOT_STAFF') {
                     titleEl.textContent = 'Chưa có hồ sơ nhân viên';
                     if (detailEl) detailEl.textContent = 'Liên hệ quản lý để gán tài khoản.';
                     return;
                 }
-                if (st === 'NOT_CHECKED_IN') {
-                    titleEl.textContent = 'Chưa chấm giờ vào';
-                    if (detailEl) detailEl.textContent = 'Bấm nút bên phải khi bắt đầu ca.';
-                } else if (st === 'CHECKED_IN') {
-                    titleEl.textContent = 'Đang trong ca';
-                    var t = data.checkInTime ? String(data.checkInTime).substring(0, 5) : '';
-                    if (detailEl) detailEl.textContent = t ? ('Giờ vào: ' + t) : '';
-                } else if (st === 'COMPLETED') {
-                    titleEl.textContent = 'Đã chấm đủ hôm nay';
-                    var h = data.workHours != null ? data.workHours : 0;
-                    if (detailEl) detailEl.textContent = 'Tổng ' + h + ' giờ làm hôm nay.';
-                } else {
-                    titleEl.textContent = '—';
-                    if (detailEl) detailEl.textContent = '';
+                if (st === 'NO_SHIFT') {
+                    titleEl.textContent = 'Chưa được phân ca hôm nay';
+                    if (detailEl) detailEl.textContent = data.message || 'Liên hệ quản lý.';
+                    return;
                 }
+                if (st === 'CHECKED_IN') {
+                    // Hiển thị thông tin block (có thể là ca gộp)
+                    var blockLabel = '';
+                    if (data.currentBlock) {
+                        // currentBlock có thể là "MORNING,AFTERNOON" hoặc "MORNING"
+                        var parts = String(data.currentBlock).split(',');
+                        blockLabel = ' ' + blockShiftsLabelVi(parts);
+                    }
+                    titleEl.textContent = 'Đang trong ca' + blockLabel;
+                    var t = data.checkInTime ? String(data.checkInTime).substring(0, 5) : '';
+                    var blockTime = '';
+                    if (data.currentBlockStart && data.currentBlockEnd) {
+                        blockTime = ' (' + String(data.currentBlockStart).substring(0, 5) + '–' + String(data.currentBlockEnd).substring(0, 5) + ')';
+                    }
+                    if (detailEl) detailEl.textContent = t ? ('Giờ vào: ' + t + blockTime) : '';
+                    return;
+                }
+                if (st === 'ALL_COMPLETED') {
+                    titleEl.textContent = 'Đã chấm đủ hôm nay';
+                    var h = data.totalHoursToday != null ? data.totalHoursToday : 0;
+                    if (detailEl) detailEl.textContent = 'Tổng ' + h + ' giờ làm hôm nay.';
+                    return;
+                }
+                if (st === 'READY_TO_CHECK_IN') {
+                    // Hiển thị thông tin block tiếp theo
+                    var nextLabel = '';
+                    if (data.nextBlockShifts && data.nextBlockShifts.length) {
+                        nextLabel = blockShiftsLabelVi(data.nextBlockShifts);
+                    } else if (data.nextShift) {
+                        nextLabel = shiftLabelVi(data.nextShift);
+                    }
+                    titleEl.textContent = 'Sẵn sàng chấm công' + (nextLabel ? ' ca ' + nextLabel : '');
+                    if (detailEl) detailEl.textContent = data.message || '';
+                    return;
+                }
+                if (st === 'WAITING_FOR_SHIFT') {
+                    titleEl.textContent = 'Chờ đến giờ ca tiếp theo';
+                    if (detailEl) detailEl.textContent = data.message || '';
+                    return;
+                }
+                if (st === 'SHIFT_WINDOW_PASSED') {
+                    titleEl.textContent = 'Đã quá giờ chấm công';
+                    if (detailEl) detailEl.textContent = data.message || 'Liên hệ quản lý.';
+                    return;
+                }
+                titleEl.textContent = '—';
+                if (detailEl) detailEl.textContent = '';
+            }
+
+            function applyCheckinButtonState(data) {
+                if (!checkinBtn) return;
+                var textSpan = document.getElementById('checkinText');
+                var st = (data && data.status) ? data.status : '';
+
+                checkinBtn.classList.remove('btn-primary', 'btn-warning', 'btn-success', 'btn-secondary');
+                checkinBtn.disabled = false;
+                checkinBtn.removeAttribute('title');
+
+                if (st === 'NOT_STAFF' || st === 'NO_SHIFT') {
+                    checkinBtn.disabled = true;
+                    checkinBtn.classList.add('btn-secondary');
+                    if (textSpan) textSpan.textContent = 'Không thể chấm công';
+                    checkinBtn.style.display = 'inline-block';
+                    return;
+                }
+                if (st === 'CHECKED_IN') {
+                    checkinBtn.classList.add('btn-warning');
+                    if (textSpan) textSpan.textContent = 'Chấm công ra (Giờ ra)';
+                    checkinBtn.style.display = 'inline-block';
+                    return;
+                }
+                if (st === 'ALL_COMPLETED') {
+                    checkinBtn.disabled = true;
+                    checkinBtn.classList.add('btn-success');
+                    var h = data.totalHoursToday != null ? data.totalHoursToday : 0;
+                    if (textSpan) textSpan.textContent = 'Đã hoàn thành (' + h + ' giờ)';
+                    checkinBtn.style.display = 'inline-block';
+                    return;
+                }
+                if (st === 'READY_TO_CHECK_IN') {
+                    checkinBtn.classList.add('btn-primary');
+                    var nextLabel = '';
+                    if (data.nextBlockShifts && data.nextBlockShifts.length) {
+                        nextLabel = ' ca ' + blockShiftsLabelVi(data.nextBlockShifts);
+                    } else if (data.nextShift) {
+                        nextLabel = ' ca ' + shiftLabelVi(data.nextShift);
+                    }
+                    if (textSpan) textSpan.textContent = 'Chấm công vào' + nextLabel;
+                    checkinBtn.style.display = 'inline-block';
+                    return;
+                }
+                if (st === 'WAITING_FOR_SHIFT' || st === 'SHIFT_WINDOW_PASSED') {
+                    checkinBtn.disabled = true;
+                    checkinBtn.classList.add('btn-secondary');
+                    if (textSpan) textSpan.textContent = st === 'WAITING_FOR_SHIFT' ? 'Chờ đến giờ ca' : 'Quá giờ chấm công';
+                    checkinBtn.setAttribute('title', data.message || '');
+                    checkinBtn.style.display = 'inline-block';
+                    return;
+                }
+                checkinBtn.classList.add('btn-primary');
+                if (textSpan) textSpan.textContent = 'Chấm công';
+                checkinBtn.style.display = 'inline-block';
             }
 
             function loadSelfMonthSummary() {
@@ -86,45 +315,24 @@
                 if (selfRoot && !hasStaffProfile) {
                     checkinBtn.style.display = 'none';
                 } else {
-                fetch('/api/attendance/today')
-                    .then(function (res) { return res.json(); })
-                    .then(function (data) {
-                        attendanceStatus = data.status || 'NOT_CHECKED_IN';
-                        updateSelfTodayCards(data);
-                        var textSpan = document.getElementById('checkinText');
-                        if (attendanceStatus === 'NOT_STAFF') {
-                            if (textSpan) textSpan.textContent = 'Không thể chấm công';
-                            checkinBtn.disabled = true;
-                            checkinBtn.style.display = 'inline-block';
-                            return;
-                        }
-                        if (attendanceStatus === 'NOT_CHECKED_IN') {
-                            if (textSpan) textSpan.textContent = 'Chấm công (Giờ vào)';
-                            checkinBtn.classList.add('btn-primary');
-                            checkinBtn.style.display = 'inline-block';
-                        } else if (attendanceStatus === 'CHECKED_IN') {
-                            if (textSpan) textSpan.textContent = 'Chấm công ra (Giờ ra)';
-                            checkinBtn.classList.remove('btn-primary');
-                            checkinBtn.classList.add('btn-warning');
-                            checkinBtn.style.display = 'inline-block';
-                        } else if (attendanceStatus === 'COMPLETED') {
-                            if (textSpan) textSpan.textContent = 'Đã hoàn thành (' + data.workHours + ' giờ)';
-                            checkinBtn.classList.remove('btn-primary', 'btn-warning');
-                            checkinBtn.classList.add('btn-success');
-                            checkinBtn.disabled = true;
-                            checkinBtn.style.display = 'inline-block';
-                        }
-                        if (selfRoot && hasStaffProfile) {
-                            loadSelfMonthSummary();
-                        }
-                    })
-                    .catch(function (err) { console.error(err); });
+                    fetch('/api/attendance/today')
+                        .then(function (res) { return res.json(); })
+                        .then(function (data) {
+                            attendanceStatus = data.status || 'NOT_CHECKED_IN';
+                            attendanceTodayData = data;
+                            updateSelfTodayCards(data);
+                            applyCheckinButtonState(data);
+                            if (selfRoot && hasStaffProfile) {
+                                loadSelfMonthSummary();
+                            }
+                        })
+                        .catch(function (err) { console.error(err); });
                 }
             }
 
             window.staffCheckInOut = function () {
-                if (attendanceStatus === 'NOT_STAFF') return;
-                var url = attendanceStatus === 'NOT_CHECKED_IN' ? '/api/attendance/check-in' : '/api/attendance/check-out';
+                if (attendanceStatus === 'NOT_STAFF' || attendanceStatus === 'NO_SHIFT') return;
+                var url = (attendanceStatus === 'CHECKED_IN') ? '/api/attendance/check-out' : '/api/attendance/check-in';
                 fetch(url, { method: 'POST' })
                     .then(async res => {
                         const msg = await res.text();
@@ -172,221 +380,28 @@
                 });
             }
 
-            // Admin - quản lý tài khoản nhân sự
-            var userAdminModalInstance = null;
-            var staffOptionsCache = [];
-            var userTableBody = document.getElementById('userAdminTableBody');
-            var btnOpenCreateUserModal = document.getElementById('btnOpenCreateUserModal');
-            var createUserModalEl = document.getElementById('createUserModal');
-            var createUserForm = document.getElementById('createUserForm');
-
-            function roleIsStaff(role) {
-                var r = role ? String(role).toUpperCase() : '';
-                return r && r !== 'CUSTOMER';
-            }
-
-            function renderCreateUserStaffOptions(users) {
-                var sel = document.getElementById('userStaffId');
-                if (!sel) return;
-
-                var used = new Set();
-                if (Array.isArray(users)) {
-                    users.forEach(function (u) {
-                        if (!u) return;
-                        if (!roleIsStaff(u.role)) return;
-                        if (u.staffId != null) used.add(String(u.staffId));
-                    });
+            function syncCreateStaffStatusRows() {
+                var stEl = document.getElementById('staffStatus');
+                var leaveRow = document.getElementById('createStaffLeaveRow');
+                var leftRow = document.getElementById('createStaffLeftOnRow');
+                if (!stEl || !leaveRow || !leftRow) return;
+                var v = stEl.value;
+                leaveRow.classList.toggle('d-none', v !== 'ON_LEAVE');
+                leftRow.classList.toggle('d-none', v !== 'INACTIVE');
+                if (v === 'INACTIVE') {
+                    var lo = document.getElementById('staffLeftOn');
+                    if (lo && !lo.value) lo.value = todayIsoForInput();
                 }
-
-                var opts = ['<option value="" selected disabled>Chọn nhân viên…</option>'];
-                staffOptionsCache.forEach(function (s) {
-                    if (!s || s.id == null) return;
-                    if (used.has(String(s.id))) return;
-                    var label = (s.name || ('Staff #' + s.id)) + (s.phone ? (' · ' + s.phone) : '');
-                    opts.push('<option value="' + s.id + '">' + label + '</option>');
-                });
-                sel.innerHTML = opts.join('');
             }
 
-            function renderUsers(users) {
-                if (!userTableBody) return;
-                if (!users || users.length === 0) {
-                    userTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Chưa có tài khoản nào.</td></tr>';
-                    return;
-                }
-
-                var staffOptionsHtml = (function () {
-                    var opts = ['<option value="">-- Chưa gán --</option>'];
-                    staffOptionsCache.forEach(function (s) {
-                        if (!s || s.id == null) return;
-                        var label = (s.name || ('Staff #' + s.id)) + (s.phone ? (' · ' + s.phone) : '');
-                        opts.push('<option value="' + s.id + '">' + label + '</option>');
-                    });
-                    return opts.join('');
-                })();
-
-                var rows = users
-                    .filter(function (u) {
-                        var role = (u && u.role) ? String(u.role).toUpperCase() : '';
-                        return role && role !== 'CUSTOMER';
-                    })
-                    .map(function (u) {
-                        var safeUsername = u.username || '';
-                        var safeFullName = u.fullName || '';
-                        var safeEmail = u.email || '';
-                        var safePhone = u.phone || '';
-                        var safeRole = u.role || '';
-
-                        return '<tr data-id="' + u.id + '">' +
-                            '<td>' + safeUsername + '</td>' +
-                            '<td>' + safeFullName + '</td>' +
-                            '<td>' + safeEmail + '</td>' +
-                            '<td>' + safePhone + '</td>' +
-                            '<td>' + safeRole + '</td>' +
-                            '<td>' +
-                            '<div class="d-flex gap-2 align-items-center">' +
-                            '<select class="form-select form-select-sm user-staff-select" style="min-width: 220px;">' +
-                            staffOptionsHtml +
-                            '</select>' +
-                            '<button type="button" class="btn btn-sm btn-outline-primary btn-link-staff">Lưu</button>' +
-                            '</div>' +
-                            '</td>' +
-                            '<td>' +
-                            '<button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-edit-user">Sửa</button>' +
-                            '<button type="button" class="btn btn-sm btn-outline-danger btn-delete-user">Xóa</button>' +
-                            '</td>' +
-                            '</tr>';
-                    }).join('');
-
-                userTableBody.innerHTML = rows || '<tr><td colspan="7" class="text-center text-muted py-3">Chưa có tài khoản nào.</td></tr>';
-
-                userTableBody.querySelectorAll('tr[data-id]').forEach(function (tr) {
-                    var id = tr.getAttribute('data-id');
-                    var u = users.find(function (x) { return String(x.id) === String(id); });
-                    if (!u) return;
-                    var sel = tr.querySelector('.user-staff-select');
-                    if (!sel) return;
-                    sel.value = u.staffId != null ? String(u.staffId) : '';
-                });
-            }
-
-            function loadStaffOptions() {
-                return fetch('/api/staff')
-                    .then(function (res) { return res.ok ? res.json() : []; })
-                    .then(function (data) { staffOptionsCache = Array.isArray(data) ? data : []; })
-                    .catch(function () { staffOptionsCache = []; });
-            }
-
-            function loadUsers() {
-                if (!userTableBody) return;
-                fetch('/api/admin/users')
-                    .then(function (res) {
-                        if (!res.ok) throw new Error('Không thể tải danh sách tài khoản');
-                        return res.json();
-                    })
-                    .then(function (data) { renderUsers(Array.isArray(data) ? data : []); })
-                    .catch(function () {
-                        userTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Lỗi khi tải danh sách tài khoản.</td></tr>';
-                    });
-            }
-
-            if (userTableBody) {
-                loadStaffOptions().then(function () { loadUsers(); });
-                userTableBody.addEventListener('click', function (e) {
-                    var target = e.target;
-                    var row = target.closest('tr');
-                    if (!row) return;
-                    var id = row.getAttribute('data-id');
-                    if (!id) return;
-
-                    if (target.classList.contains('btn-link-staff')) {
-                        var sel = row.querySelector('.user-staff-select');
-                        var staffId = sel && sel.value ? Number(sel.value) : null;
-                        fetch('/api/admin/users/' + id + '/staff', {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ staffId: staffId })
-                        })
-                            .then(function (res) {
-                                if (!res.ok) return res.text().then(function (t) { throw new Error(t || 'Lưu liên kết thất bại'); });
-                                return res.json();
-                            })
-                            .then(function () { loadUsers(); })
-                            .catch(function (err) { alert(err && err.message ? err.message : 'Không thể lưu liên kết nhân viên.'); });
-                        return;
-                    }
-
-                    if (target.classList.contains('btn-delete-user')) {
-                        if (!confirm('Bạn có chắc chắn muốn xóa tài khoản này?')) return;
-                        fetch('/api/admin/users/' + id, { method: 'DELETE' })
-                            .then(function (res) {
-                                if (!res.ok && res.status !== 204) throw new Error('Xóa tài khoản thất bại');
-                                loadUsers();
-                            })
-                            .catch(function () { alert('Không thể xóa tài khoản.'); });
-                    }
-                });
-            }
-
-            // Admin - tạo tài khoản nhân sự (chọn staff ngay lúc tạo)
-            if (btnOpenCreateUserModal && createUserModalEl) {
-                var createUserModal = new bootstrap.Modal(createUserModalEl);
-                btnOpenCreateUserModal.addEventListener('click', function () {
-                    Promise.all([
-                        loadStaffOptions(),
-                        fetch('/api/admin/users').then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })
-                    ]).then(function (res) {
-                        var users = Array.isArray(res[1]) ? res[1] : [];
-                        if (createUserForm) createUserForm.reset();
-                        renderCreateUserStaffOptions(users);
-                        createUserModal.show();
-                    }).catch(function () {
-                        alert('Không thể tải dữ liệu nhân viên/tài khoản.');
-                    });
-                });
-
-                if (createUserForm) {
-                    createUserForm.addEventListener('submit', function (e) {
-                        e.preventDefault();
-                        var username = (document.getElementById('userUsername')?.value || '').trim();
-                        var password = (document.getElementById('userPassword')?.value || '').trim();
-                        var fullName = (document.getElementById('userFullName')?.value || '').trim();
-                        var email = (document.getElementById('userEmail')?.value || '').trim();
-                        var phone = (document.getElementById('userPhone')?.value || '').trim();
-                        var role = document.getElementById('userRole')?.value;
-                        var staffIdRaw = document.getElementById('userStaffId')?.value;
-
-                        if (!username) return alert('Vui lòng nhập username.');
-                        if (!password) return alert('Vui lòng nhập mật khẩu.');
-                        if (!role) return alert('Vui lòng chọn vai trò.');
-                        if (!staffIdRaw) return alert('Vui lòng chọn nhân viên để gán.');
-
-                        var payload = {
-                            username: username,
-                            password: password,
-                            fullName: fullName || null,
-                            email: email || null,
-                            phone: phone || null,
-                            role: role,
-                            staffId: Number(staffIdRaw)
-                        };
-
-                        fetch('/api/admin/users', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        }).then(function (res) {
-                            if (!res.ok) return res.text().then(function (t) { throw new Error(t || 'Tạo tài khoản thất bại'); });
-                            return res.json();
-                        }).then(function () {
-                            alert('Đã tạo tài khoản và gán nhân viên thành công.');
-                            createUserModal.hide();
-                            loadStaffOptions().then(function () { loadUsers(); });
-                        }).catch(function (err) {
-                            alert(err && err.message ? err.message : 'Không thể tạo tài khoản.');
-                        });
-                    });
-                }
+            function syncEditStaffStatusRows() {
+                var stEl = document.getElementById('editStaffStatus');
+                var leaveRow = document.getElementById('editStaffLeaveRow');
+                var leftRow = document.getElementById('editStaffLeftOnRow');
+                if (!stEl || !leaveRow || !leftRow) return;
+                var v = stEl.value;
+                leaveRow.classList.toggle('d-none', v !== 'ON_LEAVE');
+                leftRow.classList.toggle('d-none', v !== 'INACTIVE');
             }
 
             // Phân ca theo ngày (ai cũng xem, chỉ ADMIN sửa)
@@ -434,8 +449,10 @@
                         function cell(code) {
                             var key = String(id) + '|' + code;
                             var checked = assignmentsSet.has(key) ? 'checked' : '';
-                            var disabled = isAdminForShifts ? '' : 'disabled';
-                            return '<input type="checkbox" class="form-check-input shift-toggle" data-staff="' + id + '" data-code="' + code + '" ' + checked + ' ' + disabled + ' />';
+                            var blocked = s.status === 'INACTIVE' || staffOnLeaveOnWorkDate(s, dateStr);
+                            var disabled = (!isAdminForShifts || blocked) ? 'disabled' : '';
+                            var title = blocked ? ' title="' + escHtml(s.status === 'INACTIVE' ? 'Đã nghỉ việc' : 'Đang nghỉ phép ngày này') + '"' : '';
+                            return '<input type="checkbox" class="form-check-input shift-toggle" data-staff="' + id + '" data-code="' + code + '" ' + checked + ' ' + disabled + title + ' />';
                         }
                         return '<tr>' +
                             '<td>' + nameLine + '<div class="text-muted small">' + phone + '</div></td>' +
@@ -689,9 +706,21 @@
                     if (form) {
                         form.reset();
                     }
+                    var lf = document.getElementById('staffLeaveFrom');
+                    var lt = document.getElementById('staffLeaveTo');
+                    var lo = document.getElementById('staffLeftOn');
+                    if (lf) lf.value = '';
+                    if (lt) lt.value = '';
+                    if (lo) lo.value = '';
                     bindMoneyInput(document.getElementById('staffSalary'));
+                    syncCreateStaffStatusRows();
                     modal.show();
                 });
+
+                var staffStatusEl = document.getElementById('staffStatus');
+                if (staffStatusEl) {
+                    staffStatusEl.addEventListener('change', syncCreateStaffStatusRows);
+                }
 
                 if (form) {
                     form.addEventListener('submit', function (e) {
@@ -720,15 +749,46 @@
                             return;
                         }
 
+                        var accUser = (document.getElementById('staffAccountUsername')?.value || '').trim();
+                        var accPass = document.getElementById('staffAccountPassword')?.value || '';
+                        var accEmail = (document.getElementById('staffAccountEmail')?.value || '').trim();
+                        if (!accUser) {
+                            alert('Vui lòng nhập username cho tài khoản đăng nhập.');
+                            return;
+                        }
+                        if (!accPass.trim()) {
+                            alert('Vui lòng nhập mật khẩu cho tài khoản đăng nhập.');
+                            return;
+                        }
+
+                        var st = status || 'ACTIVE';
+                        var leaveFromVal = document.getElementById('staffLeaveFrom') ? document.getElementById('staffLeaveFrom').value : '';
+                        var leaveToVal = document.getElementById('staffLeaveTo') ? document.getElementById('staffLeaveTo').value : '';
+                        var leftOnVal = document.getElementById('staffLeftOn') ? document.getElementById('staffLeftOn').value : '';
+
+                        if (st === 'ON_LEAVE' && !leaveFromVal && !leaveToVal) {
+                            alert('Nghỉ phép: vui lòng chọn ít nhất một ngày (từ hoặc đến).');
+                            return;
+                        }
+                        if (st === 'INACTIVE' && !leftOnVal) {
+                            leftOnVal = todayIsoForInput();
+                        }
+
                         var payload = {
                             name: name,
                             phone: phone,
                             role: role,
-                            status: status || 'ACTIVE',
+                            status: st,
                             shift: shift || null,
                             salary: parseVnMoneyToInt(salaryValue),
                             avatarUrl: avatarUrl || null,
-                            startDate: null
+                            startDate: null,
+                            leaveFrom: st === 'ON_LEAVE' ? (leaveFromVal || null) : null,
+                            leaveTo: st === 'ON_LEAVE' ? (leaveToVal || null) : null,
+                            leftOn: st === 'INACTIVE' ? (leftOnVal || null) : null,
+                            accountUsername: accUser,
+                            accountPassword: accPass,
+                            accountEmail: accEmail || null
                         };
 
                         fetch('/api/staff', {
@@ -739,39 +799,57 @@
                             body: JSON.stringify(payload)
                         }).then(function (res) {
                             if (!res.ok) {
-                                throw new Error('Lỗi tạo nhân viên');
+                                return res.json().catch(function () { return null; }).then(function (b) {
+                                    throw new Error((b && b.error) ? b.error : 'Lỗi tạo nhân viên');
+                                });
                             }
                             return res.json();
                         }).then(function () {
-                            alert('Đã thêm nhân viên mới thành công.');
+                            alert('Đã thêm nhân viên và tạo tài khoản đăng nhập (đã gán staff).');
                             modal.hide();
                             window.location.reload();
                         }).catch(function (err) {
                             console.error(err);
-                            alert('Có lỗi xảy ra khi thêm nhân viên mới.');
+                            alert(err && err.message ? err.message : 'Có lỗi xảy ra khi thêm nhân viên mới.');
                         });
                     });
                 }
             }
 
-            // Tìm kiếm nhân viên theo tên/vị trí
-            if (searchInput) {
-                searchInput.addEventListener('input', function () {
-                    var keyword = searchInput.value.trim().toLowerCase();
-                    var cards = document.querySelectorAll('.staff-card-clickable');
-                    cards.forEach(function (card) {
-                        var nameEl = card.querySelector('.staff-name');
-                        var roleEl = card.querySelector('.staff-role');
-                        var text = '';
-                        if (nameEl) text += nameEl.textContent.toLowerCase();
-                        if (roleEl) text += ' ' + roleEl.textContent.toLowerCase();
-                        if (!keyword || text.indexOf(keyword) !== -1) {
-                            card.parentElement.style.display = '';
-                        } else {
-                            card.parentElement.style.display = 'none';
-                        }
-                    });
+            var selectedStatusFilter = 'ALL';
+
+            function applyStaffCardVisibility() {
+                var keyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
+                document.querySelectorAll('.staff-card-clickable').forEach(function (card) {
+                    var nameEl = card.querySelector('.staff-name');
+                    var roleEl = card.querySelector('.staff-role');
+                    var text = '';
+                    if (nameEl) text += nameEl.textContent.toLowerCase();
+                    if (roleEl) text += ' ' + roleEl.textContent.toLowerCase();
+                    if (keyword && text.indexOf(keyword) === -1) {
+                        card.parentElement.style.display = 'none';
+                        return;
+                    }
+                    var stData = card.getAttribute('data-effective-status') || card.getAttribute('data-status') || '';
+                    if (selectedStatusFilter !== 'ALL' && stData !== selectedStatusFilter) {
+                        card.parentElement.style.display = 'none';
+                        return;
+                    }
+                    card.parentElement.style.display = '';
                 });
+            }
+
+            document.querySelectorAll('.staff-status-filters .staff-filter').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('.staff-status-filters .staff-filter').forEach(function (b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    selectedStatusFilter = btn.getAttribute('data-status-filter') || 'ALL';
+                    applyStaffCardVisibility();
+                });
+            });
+
+            if (searchInput) {
+                searchInput.addEventListener('input', applyStaffCardVisibility);
             }
 
             // Mở modal chi tiết/chỉnh sửa khi bấm vào thẻ nhân viên
@@ -779,6 +857,10 @@
                 var detailModal = new bootstrap.Modal(detailModalEl);
                 var cards = document.querySelectorAll('.staff-card-clickable');
                 var editForm = document.getElementById('editStaffForm');
+                var editStaffStatusEl = document.getElementById('editStaffStatus');
+                if (editStaffStatusEl) {
+                    editStaffStatusEl.addEventListener('change', syncEditStaffStatusRows);
+                }
 
                 cards.forEach(function (card) {
                     card.addEventListener('click', function () {
@@ -791,6 +873,11 @@
                         var startDate = card.getAttribute('data-start-date') || '';
                         var avatarUrl = card.getAttribute('data-avatar-url') || '';
                         var phone = card.getAttribute('data-phone') || '';
+                        var leaveFrom = card.getAttribute('data-leave-from') || '';
+                        var leaveTo = card.getAttribute('data-leave-to') || '';
+                        var leftOn = card.getAttribute('data-left-on') || '';
+                        var loginUser = card.getAttribute('data-login-user') || '';
+                        var loginEmail = card.getAttribute('data-login-email') || '';
 
                         document.getElementById('editStaffId').value = id;
                         document.getElementById('editStaffName').value = name;
@@ -805,6 +892,26 @@
                         if (phoneInput) {
                             phoneInput.value = phone || '';
                         }
+
+                        var linkedUserEl = document.getElementById('editStaffLinkedUsername');
+                        var linkedEmailEl = document.getElementById('editStaffLinkedEmail');
+                        var newPwEl = document.getElementById('editStaffNewPassword');
+                        if (linkedUserEl) {
+                            linkedUserEl.value = (loginUser && loginUser !== 'null') ? loginUser : '';
+                            linkedUserEl.placeholder = (loginUser && loginUser !== 'null') ? '' : 'Chưa có tài khoản';
+                        }
+                        if (linkedEmailEl) {
+                            linkedEmailEl.value = (loginEmail && loginEmail !== 'null') ? loginEmail : '';
+                        }
+                        if (newPwEl) newPwEl.value = '';
+
+                        var elf = document.getElementById('editStaffLeaveFrom');
+                        var elt = document.getElementById('editStaffLeaveTo');
+                        var elo = document.getElementById('editStaffLeftOn');
+                        if (elf) elf.value = leaveFrom && leaveFrom !== 'null' ? String(leaveFrom).substring(0, 10) : '';
+                        if (elt) elt.value = leaveTo && leaveTo !== 'null' ? String(leaveTo).substring(0, 10) : '';
+                        if (elo) elo.value = leftOn && leftOn !== 'null' ? String(leftOn).substring(0, 10) : '';
+                        syncEditStaffStatusRows();
 
                         // Avatar & badge trong modal
                         var avatarEl = document.getElementById('editStaffAvatar');
@@ -899,11 +1006,27 @@
                         var startDate = document.getElementById('editStaffStartDate').value;
                         var avatarUrl = document.getElementById('editStaffAvatarUrl').value.trim();
                         var phone = document.getElementById('editStaffPhone') ? document.getElementById('editStaffPhone').value.trim() : '';
+                        var leaveFromVal = document.getElementById('editStaffLeaveFrom') ? document.getElementById('editStaffLeaveFrom').value : '';
+                        var leaveToVal = document.getElementById('editStaffLeaveTo') ? document.getElementById('editStaffLeaveTo').value : '';
+                        var leftOnVal = document.getElementById('editStaffLeftOn') ? document.getElementById('editStaffLeftOn').value : '';
 
                         if (!id || !name) {
                             alert('Vui lòng nhập đầy đủ thông tin bắt buộc.');
                             return;
                         }
+
+                        if (status === 'ON_LEAVE' && !leaveFromVal && !leaveToVal) {
+                            alert('Nghỉ phép: vui lòng chọn ít nhất một ngày (từ hoặc đến).');
+                            return;
+                        }
+                        if (status === 'INACTIVE' && !leftOnVal) {
+                            leftOnVal = todayIsoForInput();
+                        }
+
+                        var linkedEmailField = document.getElementById('editStaffLinkedEmail');
+                        var linkedEmailStr = linkedEmailField ? linkedEmailField.value.trim() : '';
+                        var newPwField = document.getElementById('editStaffNewPassword');
+                        var newPwStr = newPwField ? newPwField.value : '';
 
                         var payload = {
                             id: Number(id),
@@ -914,8 +1037,15 @@
                             shift: shift || null,
                             salary: parseVnMoneyToInt(salaryValue),
                             avatarUrl: avatarUrl || null,
-                            startDate: startDate || null
+                            startDate: startDate || null,
+                            leaveFrom: status === 'ON_LEAVE' ? (leaveFromVal || null) : null,
+                            leaveTo: status === 'ON_LEAVE' ? (leaveToVal || null) : null,
+                            leftOn: status === 'INACTIVE' ? (leftOnVal || null) : null,
+                            linkedAccountEmail: linkedEmailStr
                         };
+                        if (newPwStr.trim()) {
+                            payload.linkedAccountNewPassword = newPwStr;
+                        }
 
                         fetch('/api/staff/update', {
                             method: 'POST',
@@ -925,21 +1055,49 @@
                             body: JSON.stringify(payload)
                         }).then(function (res) {
                             if (!res.ok) {
-                                throw new Error('Lỗi cập nhật nhân viên');
+                                return res.json().catch(function () { return null; }).then(function (b) {
+                                    throw new Error((b && b.error) ? b.error : 'Lỗi cập nhật nhân viên');
+                                });
                             }
                             return res.json();
                         }).then(function (updated) {
                             // Cập nhật lại thẻ nhân viên tương ứng trên giao diện
                             var card = document.querySelector('.staff-card-clickable[data-id="' + updated.id + '"]');
                             if (card) {
+                                var lfU = jsonDateToIsoInput(updated.leaveFrom);
+                                var ltU = jsonDateToIsoInput(updated.leaveTo);
+                                var loU = jsonDateToIsoInput(updated.leftOn);
                                 card.setAttribute('data-name', updated.name || '');
                                 card.setAttribute('data-phone', updated.phone || '');
                                 card.setAttribute('data-role', updated.role || '');
                                 card.setAttribute('data-status', updated.status || '');
+                                var effU = effectiveStaffCardStatus(updated.status || '', lfU, ltU);
+                                card.setAttribute('data-effective-status', effU);
                                 card.setAttribute('data-shift', updated.shift || '');
                                 card.setAttribute('data-salary', updated.salary || '');
-                                card.setAttribute('data-start-date', updated.startDate || '');
+                                card.setAttribute('data-start-date', jsonDateToIsoInput(updated.startDate) || '');
                                 card.setAttribute('data-avatar-url', updated.avatarUrl || '');
+                                card.setAttribute('data-leave-from', lfU || '');
+                                card.setAttribute('data-leave-to', ltU || '');
+                                card.setAttribute('data-left-on', loU || '');
+                                card.setAttribute('data-login-email', linkedEmailStr);
+                                setCardExtraMeta(card, updated.status, lfU, ltU, loU);
+                                updateStaffCardLeaveDaysMonth(card);
+
+                                var sdU = jsonDateToIsoInput(updated.startDate);
+                                var startRow = card.querySelector('.staff-start-date-row');
+                                var startText = card.querySelector('.staff-start-date-text');
+                                if (startText && startRow) {
+                                    if (sdU) {
+                                        startText.textContent = formatIsoDateVi(sdU);
+                                        startRow.style.display = '';
+                                    } else {
+                                        startRow.style.display = 'none';
+                                    }
+                                }
+
+                                var npw = document.getElementById('editStaffNewPassword');
+                                if (npw) npw.value = '';
 
                                 var nameEl = card.querySelector('.staff-name');
                                 if (nameEl) {
@@ -956,43 +1114,8 @@
                                     roleEl.textContent = updated.role.replace(/_/g, ' ');
                                 }
 
-                                // Cập nhật lại các badge trạng thái (ẩn/hiện đúng span)
-                                var activeBadge = card.querySelector('.staff-status-badge.staff-status-active');
-                                var leaveBadge = card.querySelector('.staff-status-badge.staff-status-leave');
-                                var quitBadge = card.querySelector('.staff-status-badge.staff-status-quit');
-                                var unknownBadge = card.querySelector('.staff-status-badge:not(.staff-status-active):not(.staff-status-leave):not(.staff-status-quit)');
-
-                                function setBadgeVisibility(el, visible) {
-                                    if (!el) return;
-                                    el.style.display = visible ? '' : 'none';
-                                }
-
-                                if (updated.status === 'ACTIVE') {
-                                    setBadgeVisibility(activeBadge, true);
-                                    setBadgeVisibility(leaveBadge, false);
-                                    setBadgeVisibility(quitBadge, false);
-                                    setBadgeVisibility(unknownBadge, false);
-                                } else if (updated.status === 'ON_LEAVE') {
-                                    setBadgeVisibility(activeBadge, false);
-                                    setBadgeVisibility(leaveBadge, true);
-                                    setBadgeVisibility(quitBadge, false);
-                                    setBadgeVisibility(unknownBadge, false);
-                                } else if (updated.status === 'INACTIVE') {
-                                    setBadgeVisibility(activeBadge, false);
-                                    setBadgeVisibility(leaveBadge, false);
-                                    setBadgeVisibility(quitBadge, true);
-                                    setBadgeVisibility(unknownBadge, false);
-                                } else {
-                                    setBadgeVisibility(activeBadge, false);
-                                    setBadgeVisibility(leaveBadge, false);
-                                    setBadgeVisibility(quitBadge, false);
-                                    setBadgeVisibility(unknownBadge, true);
-                                }
-
-                                var shiftEl = card.querySelector('.staff-shift-text');
-                                if (shiftEl) {
-                                    shiftEl.textContent = updated.shift || 'Chưa thiết lập ca làm';
-                                }
+                                setStaffCardBadgesForEffective(card, effU);
+                                applyStaffCardVisibility();
 
                                 // Cập nhật ảnh đại diện nếu có link mới
                                 var avatarImg = card.querySelector('.staff-avatar');
@@ -1005,7 +1128,7 @@
                             detailModal.hide();
                         }).catch(function (err) {
                             console.error(err);
-                            alert('Có lỗi xảy ra khi cập nhật nhân viên.');
+                            alert(err && err.message ? err.message : 'Có lỗi xảy ra khi cập nhật nhân viên.');
                         });
                     });
                 }
@@ -1016,6 +1139,8 @@
                 if (!document.getElementById('roleAdminFlag')) return;
                 var cards = document.querySelectorAll('.staff-card-clickable');
                 if (!cards.length) return;
+
+                refreshAllStaffLeaveDaysMonthLabels();
 
                 cards.forEach(function (card) {
                     var id = card.getAttribute('data-id');

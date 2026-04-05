@@ -18,9 +18,11 @@
   <!-- Shared layout styles -->
   <link rel="stylesheet" href="/css/doanhthu.css">
   <link rel="stylesheet" href="/css/accounts-page.css">
+  <link rel="stylesheet" th:href="@{/css/booking-admin.css}">
 </head>
 
 <body>
+  <span id="bookingPageIsAdmin" class="d-none" sec:authorize="hasRole('ADMIN')">1</span>
 
   <!-- Sidebar -->
   <div th:replace="~{fragments/sidebar :: sidebar('BOOKING')}"></div>
@@ -34,8 +36,27 @@
         <h2>Quản lý Đặt bàn</h2>
         <p id="bookingPageSubtitle" class="text-muted small mb-0" th:text="|${bookingStatTotal} yêu cầu đặt bàn|">0 yêu cầu đặt bàn</p>
       </div>
-      <div class="header-actions" sec:authorize="hasRole('ADMIN')">
-        <a href="/Booking/new" class="btn stock-import-btn text-decoration-none d-inline-flex align-items-center">
+      <div class="header-actions d-flex flex-wrap align-items-center gap-2" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER')">
+        <div class="dropdown booking-reminder-wrap" id="bookingReminderDropdownWrap"
+            th:attr="data-initial-unread=${bookingReminderUnread}">
+          <button class="btn btn-outline-secondary booking-reminder-toggle position-relative d-inline-flex align-items-center gap-2 rounded-pill px-3" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" id="bookingReminderToggle" aria-label="Nhắc đặt bàn">
+            <i class="bi bi-bell"></i>
+            <span class="d-none d-sm-inline small">Nhắc đặt bàn</span>
+            <span class="booking-reminder-badge badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle d-none">0</span>
+          </button>
+          <div class="dropdown-menu dropdown-menu-end shadow border-0 booking-reminder-menu p-0" aria-labelledby="bookingReminderToggle" style="min-width: 340px;">
+            <div class="p-2 border-bottom d-flex justify-content-between align-items-center gap-2 flex-wrap bg-white rounded-top">
+              <span class="fw-semibold small mb-0">Lịch sử nhắc (trước 15 phút)</span>
+              <button type="button" class="btn btn-link btn-sm text-decoration-none p-0" id="bookingReminderMarkAllRead">Đánh dấu đã đọc</button>
+            </div>
+            <div id="bookingReminderList" class="list-group list-group-flush overflow-auto bg-white" style="max-height: 320px;">
+              <div class="p-3 text-muted small" id="bookingReminderLoading">Đang tải…</div>
+            </div>
+            <div id="bookingReminderEmpty" class="p-3 text-muted small text-center border-top d-none">Chưa có nhắc nào.</div>
+            <div class="p-2 border-top small text-muted bg-light rounded-bottom">Nhắc tạo tự động mỗi phút. Gán bàn tại Sửa đặt bàn hoặc Quản lý bàn.</div>
+          </div>
+        </div>
+        <a href="/Booking/new" class="btn stock-import-btn text-decoration-none d-inline-flex align-items-center" sec:authorize="hasRole('ADMIN')">
           <i class="bi bi-plus-lg"></i> Thêm đặt bàn
         </a>
       </div>
@@ -98,6 +119,9 @@
     </div>
 
     <div class="custom-card">
+      <div th:if="${param.pastBooking != null}" class="alert alert-warning py-2 px-3 small mb-3" role="alert">
+        Đặt bàn đã qua ngày không thể mở sửa.
+      </div>
       <div class="d-flex flex-wrap gap-3 align-items-center stock-toolbar mb-3">
         <div class="stock-search">
           <i class="bi bi-search"></i>
@@ -127,19 +151,9 @@
         <table class="table align-middle orders-table stock-table booking-table mb-0">
           <thead>
             <tr>
-              <th scope="col" class="stock-th-wrap">
+              <th scope="col" class="stock-th-wrap booking-th-customer">
                 <button type="button" class="stock-th-sort" data-sort="name" title="Sắp xếp theo tên khách">
                   <span>Khách hàng</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
-                </button>
-              </th>
-              <th scope="col" class="stock-th-wrap">
-                <button type="button" class="stock-th-sort" data-sort="phone" title="Sắp xếp theo SĐT">
-                  <span>Số điện thoại</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
-                </button>
-              </th>
-              <th scope="col" class="stock-th-wrap">
-                <button type="button" class="stock-th-sort" data-sort="email" title="Sắp xếp theo email">
-                  <span>Email</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
                 </button>
               </th>
               <th scope="col" class="stock-th-wrap">
@@ -148,13 +162,13 @@
                 </button>
               </th>
               <th scope="col" class="stock-th-wrap">
-                <button type="button" class="stock-th-sort" data-sort="guests" title="Sắp xếp theo số khách">
-                  <span>Số khách</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                <button type="button" class="stock-th-sort" data-sort="status" title="Sắp xếp theo trạng thái">
+                  <span>Trạng thái</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
                 </button>
               </th>
-              <th scope="col" class="stock-th-wrap">
-                <button type="button" class="stock-th-sort" data-sort="note" title="Sắp xếp theo ghi chú">
-                  <span>Ghi chú</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+              <th scope="col" class="stock-th-wrap booking-th-guests-note">
+                <button type="button" class="stock-th-sort" data-sort="guests" title="Sắp xếp theo số khách">
+                  <span>Số khách / Ghi chú</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
                 </button>
               </th>
               <th scope="col" class="stock-th-wrap">
@@ -167,39 +181,64 @@
                   <span>Thời gian gửi</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
                 </button>
               </th>
-              <th scope="col" class="stock-th-wrap stock-th-actions" sec:authorize="hasRole('ADMIN')"></th>
+              <th scope="col" class="stock-th-wrap stock-th-actions"></th>
             </tr>
           </thead>
           <tbody>
-            <tr th:if="${#lists.isEmpty(bookings)}" sec:authorize="hasRole('ADMIN')">
-              <td colspan="9" class="text-center text-muted py-4">Chưa có yêu cầu đặt bàn nào.</td>
-            </tr>
-            <tr th:if="${#lists.isEmpty(bookings)}" sec:authorize="hasAnyRole('CASHIER','SERVER')">
-              <td colspan="8" class="text-center text-muted py-4">Chưa có yêu cầu đặt bàn nào.</td>
+            <tr th:if="${#lists.isEmpty(bookings)}">
+              <td colspan="7" class="text-center text-muted py-4">Chưa có yêu cầu đặt bàn nào.</td>
             </tr>
 
             <tr th:each="b : ${bookings}" class="booking-data-row"
+                th:id="|booking-row-${b.id}|"
+                th:with="isPast=${b.bookingTime != null and bookingPageToday != null and b.bookingTime.toLocalDate().isBefore(bookingPageToday)}"
                 th:data-booking-status="${b.status != null ? b.status.name() : ''}"
                 th:data-has-table="${b.reservedTableNumber != null}"
                 th:data-upcoming="${b.bookingTime != null and bookingPageNow != null and b.bookingTime.isAfter(bookingPageNow)}"
                 th:data-sort-booking="${b.bookingTime != null ? #temporals.format(b.bookingTime, 'yyyy-MM-dd HH:mm:ss') : ''}"
                 th:data-sort-created="${b.createdAt != null ? #temporals.format(b.createdAt, 'yyyy-MM-dd HH:mm:ss') : ''}"
-                th:data-booking-day="${b.bookingTime != null ? #temporals.format(b.bookingTime, 'yyyy-MM-dd') : ''}">
-              <td th:text="${b.name}">Tên khách</td>
-              <td th:text="${b.phone}">Số điện thoại</td>
-              <td th:text="${b.email}">Email</td>
+                th:data-booking-day="${b.bookingTime != null ? #temporals.format(b.bookingTime, 'yyyy-MM-dd') : ''}"
+                th:data-sort-phone="${b.phone != null ? b.phone : ''}"
+                th:data-sort-email="${b.email != null ? b.email : ''}"
+                th:data-sort-guests="${b.guests}"
+                th:data-sort-note="${b.note != null ? b.note : ''}">
+              <td class="booking-customer-cell">
+                <div class="booking-customer-name fw-medium text-dark" th:text="${b.name}">Tên khách</div>
+                <div class="booking-customer-meta small text-muted mt-1">
+                  <div class="booking-customer-phone" th:text="${b.phone}">090…</div>
+                  <div class="booking-customer-email text-break" th:if="${b.email != null and !#strings.isEmpty(#strings.trim(b.email))}" th:text="${b.email}">email</div>
+                </div>
+              </td>
               <td th:text="${b.bookingTime != null ? #temporals.format(b.bookingTime, 'dd/MM/yyyy HH:mm') : ''}">01/01/2026 09:00</td>
-              <td th:text="${b.guests}">2</td>
-              <td th:text="${b.note}">Ghi chú</td>
+              <td>
+                <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle booking-status-pill" th:if="${b.status != null and b.status.name() == 'CONFIRMED'}">Đã xác nhận</span>
+                <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle booking-status-pill" th:if="${b.status != null and (b.status.name() == 'CHECKED_IN' or b.status.name() == 'COMPLETED')}">Đã đến</span>
+                <span class="badge rounded-pill bg-secondary-subtle text-secondary border booking-status-pill" th:if="${b.status != null and (b.status.name() == 'CANCELLED' or b.status.name() == 'NO_SHOW')}">Đã hủy</span>
+                <span class="badge rounded-pill bg-light text-muted border" th:if="${b.status == null}">—</span>
+              </td>
+              <td class="booking-guests-note-cell">
+                <div class="booking-guests-note-line">
+                  <span class="fw-semibold" th:text="${b.guests}">2</span>
+                  <th:block th:if="${b.note != null and !#strings.isEmpty(#strings.trim(b.note))}">
+                    <span class="text-muted"> — </span>
+                    <span class="booking-note-text" th:text="${b.note}">Ghi chú</span>
+                  </th:block>
+                </div>
+              </td>
               <td th:text="${b.reservedTableNumber != null ? 'Bàn ' + b.reservedTableNumber : '—'}">Bàn 1</td>
               <td th:text="${b.createdAt != null ? #temporals.format(b.createdAt, 'dd/MM/yyyy HH:mm') : ''}">01/01/2026 08:30</td>
-              <td sec:authorize="hasRole('ADMIN')">
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                  <a th:href="@{'/Booking/edit/' + ${b.id}}" class="icon-circle-btn text-decoration-none" title="Sửa" aria-label="Sửa đặt bàn">
+              <td class="booking-action-cell" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER')">
+                <div class="d-flex align-items-center gap-1 flex-wrap justify-content-end">
+                  <th:block th:if="${!isPast and b.status != null and b.status.name() == 'CONFIRMED'}">
+                    <button type="button" class="icon-circle-btn booking-checkin-btn" th:data-booking-id="${b.id}" title="Đã đến" aria-label="Đã đến">
+                      <i class="bi bi-check-lg text-success"></i>
+                    </button>
+                    <button type="button" class="icon-circle-btn icon-circle-btn-danger booking-cancel-open-btn" th:data-booking-id="${b.id}" title="Hủy đặt" aria-label="Hủy đặt">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  </th:block>
+                  <a th:if="${!isPast}" th:href="@{'/Booking/edit/' + ${b.id}}" class="icon-circle-btn text-decoration-none" title="Sửa" aria-label="Sửa đặt bàn" sec:authorize="hasRole('ADMIN')">
                     <i class="bi bi-pencil"></i>
-                  </a>
-                  <a th:href="@{'/Booking/delete/' + ${b.id}}" class="icon-circle-btn icon-circle-btn-danger text-decoration-none" title="Xóa" aria-label="Xóa đặt bàn" onclick="return confirm('Bạn có chắc muốn xóa đặt bàn này?');">
-                    <i class="bi bi-trash"></i>
                   </a>
                 </div>
               </td>
@@ -209,6 +248,25 @@
       </div>
     </div>
   </main>
+
+  <div class="modal fade" id="bookingCancelModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-semibold">Hủy đặt bàn</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body pt-2">
+          <label class="form-label small text-muted mb-1" for="bookingCancelNoteInput">Lý do (tuỳ chọn)</label>
+          <textarea class="form-control form-control-sm" id="bookingCancelNoteInput" rows="3" placeholder="Ví dụ: khách báo huỷ, trễ giờ…"></textarea>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+          <button type="button" class="btn btn-sm btn-danger" id="bookingCancelConfirmBtn">Hủy đặt</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="/js/admin-common.js"></script>

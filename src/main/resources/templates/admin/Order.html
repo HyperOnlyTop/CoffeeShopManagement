@@ -129,6 +129,17 @@
       </div>
       <div class="table-responsive">
         <table class="table align-middle orders-table stock-table mb-0">
+          <colgroup>
+            <col class="orders-col-code">
+            <col class="orders-col-customer">
+            <col class="orders-col-type">
+            <col class="orders-col-table">
+            <col class="orders-col-total">
+            <col class="orders-col-time">
+            <col class="orders-col-status">
+            <col class="orders-col-payment">
+            <col class="orders-col-actions">
+          </colgroup>
           <thead>
             <tr>
               <th scope="col" class="stock-th-wrap">
@@ -167,8 +178,8 @@
                 </button>
               </th>
               <th scope="col" class="stock-th-wrap">
-                <button type="button" class="stock-th-sort" data-sort="payment" title="Hình thức & trạng thái thu tiền">
-                  <span>Hình thức / Thu tiền</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
+                <button type="button" class="stock-th-sort" data-sort="payment" title="Hình thức thanh toán và trạng thái thu tiền">
+                  <span>Thu tiền</span><i class="bi bi-arrow-down-up stock-sort-icon" aria-hidden="true"></i>
                 </button>
               </th>
               <th scope="col" class="stock-th-wrap stock-th-actions"></th>
@@ -202,7 +213,8 @@
               </td>
               <td th:text="${order.tableAndNoteColumn}">
                 Bàn / Ghi chú</td>
-              <td class="orders-amount" th:text="${order.total != null ? order.total + ' đ' : '0 đ'}">0 đ</td>
+              <td class="orders-amount"
+                th:text="${order.total != null ? #numbers.formatInteger(order.total, 0, 'POINT') + ' đ' : '0 đ'}">0 đ</td>
               <td th:text="${order.createdAt != null ? #temporals.format(order.createdAt, 'HH:mm') : '--:--'}">--:--
               </td>
               <td>
@@ -407,8 +419,8 @@
             <div class="row g-3 mb-3 align-items-end">
               <div class="col-md-6">
                 <label class="form-label fw-medium">Tổng tiền (đ)</label>
-                <input type="number" class="form-control" id="orderTotalAmount" min="0" step="1000"
-                  placeholder="Tự tính từ món đã chọn" readonly>
+                <input type="text" class="form-control text-end" id="orderTotalAmount" inputmode="numeric"
+                  placeholder="Tự tính từ món đã chọn" readonly autocomplete="off">
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-medium">Hình thức thanh toán dự kiến</label>

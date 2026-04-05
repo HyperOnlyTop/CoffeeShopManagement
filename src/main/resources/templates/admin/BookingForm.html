@@ -71,6 +71,16 @@
                placeholder="Yêu cầu đặc biệt (nếu có)" title="Ghi chú thêm cho đặt bàn">
         </div>
 
+        <div class="col-md-6" th:if="${booking.id} != null">
+          <label class="form-label" for="bookingStatusAdmin">Trạng thái</label>
+          <select id="bookingStatusAdmin" class="form-select" th:field="*{status}" title="Trạng thái đặt bàn">
+            <option value="CONFIRMED">Đã xác nhận</option>
+            <option value="CHECKED_IN">Đã đến</option>
+            <option value="CANCELLED">Đã hủy</option>
+          </select>
+          <div class="form-text">Đổi tay khi cần; nhân viên cũng có thể dùng nút nhanh trên danh sách đặt bàn.</div>
+        </div>
+
         <div class="col-12">
           <label class="form-label">Giữ bàn (tuỳ chọn)</label>
           <input type="hidden" th:field="*{reservedTableNumber}" id="bookingReservedTableNumber">

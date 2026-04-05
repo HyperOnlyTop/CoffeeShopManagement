@@ -43,6 +43,23 @@ public class Attendance {
     @Column(name = "work_hours")
     private Double workHours;
 
+    /** Ca làm việc tương ứng với segment chấm công này (null nếu dữ liệu cũ chưa gắn ca hoặc ca gộp). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "shift_code", length = 20)
+    private ShiftCode shiftCode;
+
+    /** Giờ bắt đầu khung làm việc (dùng cho ca gộp hoặc ca đơn). */
+    @Column(name = "block_start")
+    private LocalTime blockStart;
+
+    /** Giờ kết thúc khung làm việc (dùng cho ca gộp hoặc ca đơn). */
+    @Column(name = "block_end")
+    private LocalTime blockEnd;
+
+    /** Danh sách mã ca trong khung gộp, phân cách bằng dấu phẩy (vd: "MORNING,AFTERNOON"). */
+    @Column(name = "block_shifts", length = 100)
+    private String blockShifts;
+
     public Long getId() {
         return id;
     }
@@ -97,5 +114,37 @@ public class Attendance {
 
     public void setWorkHours(Double workHours) {
         this.workHours = workHours;
+    }
+
+    public ShiftCode getShiftCode() {
+        return shiftCode;
+    }
+
+    public void setShiftCode(ShiftCode shiftCode) {
+        this.shiftCode = shiftCode;
+    }
+
+    public LocalTime getBlockStart() {
+        return blockStart;
+    }
+
+    public void setBlockStart(LocalTime blockStart) {
+        this.blockStart = blockStart;
+    }
+
+    public LocalTime getBlockEnd() {
+        return blockEnd;
+    }
+
+    public void setBlockEnd(LocalTime blockEnd) {
+        this.blockEnd = blockEnd;
+    }
+
+    public String getBlockShifts() {
+        return blockShifts;
+    }
+
+    public void setBlockShifts(String blockShifts) {
+        this.blockShifts = blockShifts;
     }
 }

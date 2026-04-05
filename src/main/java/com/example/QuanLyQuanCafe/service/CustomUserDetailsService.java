@@ -24,10 +24,19 @@ public class CustomUserDetailsService implements UserDetailsService {
         if (appUser == null) {
             throw new UsernameNotFoundException("Không tìm thấy người dùng: " + username);
         }
+        if (!appUser.isEnabled()) {
+            throw new UsernameNotFoundException("Tài khoản đã bị vô hiệu hoá.");
+        }
+        String role = appUser.getRole();
+        if (role == null || role.isBlank()) {
+            role = "CUSTOMER";
+        } else if ("KHACH".equalsIgnoreCase(role)) {
+            role = "CUSTOMER";
+        }
         return User.builder()
                 .username(appUser.getUsername())
                 .password(appUser.getPassword())
-                .roles(appUser.getRole() != null ? appUser.getRole() : "CUSTOMER")
+                .roles(role)
                 .build();
     }
 }

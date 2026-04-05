@@ -76,15 +76,51 @@
       background-color: #fff;
     }
 
-    /* Cột hình thức + thu tiền: các badge cùng một hàng */
-    .orders-table .order-payment-cell {
+    /* Bảng đơn: độ rộng cột vừa nội dung, không kéo giãn full khối */
+    .orders-table {
+      table-layout: fixed;
+      width: max-content;
+      max-width: 100%;
+    }
+
+    .orders-col-code { width: 5.75rem; }
+    .orders-col-customer { width: 13rem; }
+    .orders-col-type { width: 6.25rem; }
+    .orders-col-table { width: 11.5rem; }
+    .orders-col-total { width: 6.75rem; }
+    .orders-col-time { width: 4.5rem; }
+    .orders-col-status { width: 8rem; }
+    .orders-col-payment { width: 10.25rem; }
+    .orders-col-actions { width: 6.5rem; }
+
+    .orders-table thead th.stock-th-actions,
+    .orders-table tbody td:last-child {
       white-space: nowrap;
+    }
+
+    .orders-table tbody td:nth-child(2),
+    .orders-table tbody td:nth-child(4) {
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    .orders-table .order-code,
+    .orders-table .orders-amount,
+    .orders-table tbody td:nth-child(3),
+    .orders-table tbody td:nth-child(6),
+    .orders-table tbody td:nth-child(7) {
+      white-space: nowrap;
+    }
+
+    /* Cột thu tiền: badge hình thức + trạng thái */
+    .orders-table .order-payment-cell {
+      white-space: normal;
       vertical-align: middle;
     }
 
     .orders-table .order-payment-badges {
       display: inline-flex;
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
       align-items: center;
       gap: 0.35rem;
     }
