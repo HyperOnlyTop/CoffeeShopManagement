@@ -30,6 +30,7 @@ public class Staff {
     @Column(length = 30)
     private StaffRole role;
 
+    /** Lương theo giờ (VNĐ/giờ). Lương tạm tính = tổng giờ chấm công trong kỳ × giá trị này. Không dùng cho chủ quán (tài khoản ADMIN không gán staff). */
     @Column(precision = 12, scale = 0)
     private BigDecimal salary;
 
@@ -45,6 +46,17 @@ public class Staff {
 
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
+
+    /** Nghỉ phép: ngày đầu (kể cả nghỉ 1 ngày thì có thể trùng {@link #leaveTo}). */
+    @Column(name = "leave_from")
+    private LocalDate leaveFrom;
+
+    @Column(name = "leave_to")
+    private LocalDate leaveTo;
+
+    /** Đã nghỉ việc: ngày làm việc cuối / nghỉ việc. */
+    @Column(name = "left_on")
+    private LocalDate leftOn;
 
     public Long getId() {
         return id;
@@ -116,5 +128,29 @@ public class Staff {
 
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
+    }
+
+    public LocalDate getLeaveFrom() {
+        return leaveFrom;
+    }
+
+    public void setLeaveFrom(LocalDate leaveFrom) {
+        this.leaveFrom = leaveFrom;
+    }
+
+    public LocalDate getLeaveTo() {
+        return leaveTo;
+    }
+
+    public void setLeaveTo(LocalDate leaveTo) {
+        this.leaveTo = leaveTo;
+    }
+
+    public LocalDate getLeftOn() {
+        return leftOn;
+    }
+
+    public void setLeftOn(LocalDate leftOn) {
+        this.leftOn = leftOn;
     }
 }

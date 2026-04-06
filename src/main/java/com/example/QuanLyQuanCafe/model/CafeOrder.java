@@ -16,6 +16,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import java.util.Locale;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 @Table(name = "orders")
 public class CafeOrder {
@@ -41,8 +45,11 @@ public class CafeOrder {
     @Column(length = 20)
     private OrderType type;
 
-    @Column(name = "table_name", length = 30)
-    private String tableName;
+    @Column(name = "table_number")
+    private Integer tableNumber;
+
+    @Column(name = "order_note", length = 500)
+    private String orderNote;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
@@ -71,8 +78,22 @@ public class CafeOrder {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    /** Thời điểm chuyển sang COMPLETED (hoàn thành pha chế) — dùng báo phục vụ / lọc. */
+    @Column(name = "prepared_at")
+    private LocalDateTime preparedAt;
+
     @Column(name = "loyalty_points_awarded")
     private Boolean loyaltyPointsAwarded;
+
+    /**
+     * {@code false} = khách vãng lai (SĐT chưa thuộc khách đã có trong hệ thống / chưa có tài khoản app với SĐT đó):
+     * không trừ/cộng điểm khi hoàn thành đơn. {@code null} = đơn cũ trước khi có cột, giữ hành vi xử lý như trước.
+     */
+    @Column(name = "loyalty_earn_eligible")
+    private Boolean loyaltyEarnEligible;
+
+    @Column(name = "walk_in_guest")
+    private Boolean walkInGuest;
 
     // Trả bàn là thao tác riêng ở màn Quản lý bàn.
     // Hoàn thành pha chế (COMPLETED) KHÔNG tự động trả bàn.
@@ -127,12 +148,53 @@ public class CafeOrder {
         this.type = type;
     }
 
-    public String getTableName() {
-        return tableName;
+    public Integer getTableNumber() {
+        return tableNumber;
     }
 
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
+    public void setTableNumber(Integer tableNumber) {
+        this.tableNumber = tableNumber;
+    }
+
+    public String getOrderNote() {
+        return orderNote;
+    }
+
+    public void setOrderNote(String orderNote) {
+        this.orderNote = orderNote;
+    }
+
+    /** Cột danh sách đơn: mang về → {@code order_note}; tại bàn → {@code Bàn N} hoặc {@code Bàn N - ghi chú}. */
+    @JsonIgnore
+    public String getTableAndNoteColumn() {
+        if (type == OrderType.TAKEAWAY) {
+            return (orderNote != null && !orderNote.isBlank()) ? orderNote : "—";
+        }
+        if (type == OrderType.DINE_IN) {
+            if (tableNumber == null && (orderNote == null || orderNote.isBlank())) {
+                return "—";
+            }
+            if (tableNumber == null) {
+                return orderNote;
+            }
+            if (orderNote == null || orderNote.isBlank()) {
+                return "Bàn " + tableNumber;
+            }
+            return "Bàn " + tableNumber + " - " + orderNote;
+        }
+        return "—";
+    }
+
+    /** Sắp xếp cột bàn (ưu tiên số bàn). */
+    @JsonIgnore
+    public String getTableSortKey() {
+        if (tableNumber != null) {
+            return String.format(Locale.ROOT, "%04d", tableNumber);
+        }
+        if (orderNote != null && !orderNote.isBlank()) {
+            return "z" + orderNote.toLowerCase(Locale.ROOT);
+        }
+        return "z";
     }
 
     public OrderStatus getStatus() {
@@ -199,12 +261,36 @@ public class CafeOrder {
         this.createdAt = createdAt;
     }
 
+    public LocalDateTime getPreparedAt() {
+        return preparedAt;
+    }
+
+    public void setPreparedAt(LocalDateTime preparedAt) {
+        this.preparedAt = preparedAt;
+    }
+
     public Boolean getLoyaltyPointsAwarded() {
         return loyaltyPointsAwarded;
     }
 
     public void setLoyaltyPointsAwarded(Boolean loyaltyPointsAwarded) {
         this.loyaltyPointsAwarded = loyaltyPointsAwarded;
+    }
+
+    public Boolean getLoyaltyEarnEligible() {
+        return loyaltyEarnEligible;
+    }
+
+    public void setLoyaltyEarnEligible(Boolean loyaltyEarnEligible) {
+        this.loyaltyEarnEligible = loyaltyEarnEligible;
+    }
+
+    public Boolean getWalkInGuest() {
+        return walkInGuest;
+    }
+
+    public void setWalkInGuest(Boolean walkInGuest) {
+        this.walkInGuest = walkInGuest;
     }
 
     public Boolean getTableReleased() {

@@ -224,7 +224,7 @@ var bookingSection = document.getElementById('booking');
         var loggedIn = bookingSection && bookingSection.getAttribute('data-user-logged-in') === 'true';
 
         function statusVi(code) {
-            var m = { CONFIRMED: 'Đã xác nhận', CANCELLED: 'Đã hủy', CHECKED_IN: 'Đã check-in', COMPLETED: 'Hoàn tất', NO_SHOW: 'Không đến' };
+            var m = { CONFIRMED: 'Đã xác nhận', CANCELLED: 'Đã hủy', CHECKED_IN: 'Đã đến', COMPLETED: 'Đã đến', NO_SHOW: 'Đã hủy' };
             return m[code] || code;
         }
         function escapeHtml(s) {

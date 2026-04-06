@@ -153,29 +153,47 @@ public class AuthController {
             return "auth/register";
         }
 
-        if (customerRepository.findByPhone(phone).isPresent()) {
-            model.addAttribute("error", "Số điện thoại đã được đăng ký.");
+        String phoneTrim = phone == null ? "" : phone.trim();
+        if (phoneTrim.isEmpty()) {
+            model.addAttribute("error", "Vui lòng nhập số điện thoại.");
             return "auth/register";
         }
-        
+        if (userRepository.existsByPhone(phoneTrim)) {
+            model.addAttribute("error", "Số điện thoại này đã có tài khoản đăng nhập.");
+            return "auth/register";
+        }
+
         AppUser user = new AppUser();
-        user.setFullName(fullName);
-        user.setEmail(email);
-        user.setPhone(phone);
+        user.setFullName(fullName != null ? fullName.trim() : "");
+        user.setEmail(email != null ? email.trim() : "");
+        user.setPhone(phoneTrim);
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
-        user.setRole("KHACH");
+        user.setRole("CUSTOMER");
         userRepository.save(user);
-        
-        // Save to customers table
-        Customer customer = new Customer();
-        customer.setName(fullName);
-        customer.setEmail(email);
-        customer.setPhone(phone);
-        customer.setTotalOrders(0);
-        customer.setTotalSpent(BigDecimal.ZERO);
-        customerRepository.save(customer);
-        
+
+        Optional<Customer> existing = customerRepository.findByPhone(phoneTrim);
+        if (existing.isPresent()) {
+            Customer c = existing.get();
+            if (fullName != null && !fullName.trim().isEmpty()) {
+                c.setName(fullName.trim());
+            }
+            if (email != null && !email.trim().isEmpty()) {
+                c.setEmail(email.trim());
+            }
+            customerRepository.save(c);
+        } else {
+            Customer customer = new Customer();
+            customer.setName(fullName != null && !fullName.trim().isEmpty() ? fullName.trim() : "Khách mới");
+            customer.setEmail(email != null && !email.trim().isEmpty() ? email.trim() : null);
+            customer.setPhone(phoneTrim);
+            customer.setTotalOrders(0);
+            customer.setTotalSpent(BigDecimal.ZERO);
+            customer.setLoyaltyPoints(0);
+            customer.setLoyaltyRedeemedCount(0);
+            customerRepository.save(customer);
+        }
+
         return "redirect:/login?registered";
     }
 

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.QuanLyQuanCafe.config.LoyaltyPolicy;
 import com.example.QuanLyQuanCafe.controller.dto.LoyaltyAdjustRequest;
 import com.example.QuanLyQuanCafe.controller.dto.LoyaltyRedeemRequest;
 import com.example.QuanLyQuanCafe.model.Customer;
@@ -62,11 +63,11 @@ public class LoyaltyController {
         }
 
         int points = customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0;
-        if (points < 10) {
-            return ResponseEntity.badRequest().body("Không đủ điểm để đổi (cần 10 điểm)");
+        if (points < LoyaltyPolicy.POINTS_PER_FREE_DRINK) {
+            return ResponseEntity.badRequest().body("Không đủ điểm để đổi (cần " + LoyaltyPolicy.POINTS_PER_FREE_DRINK + " điểm)");
         }
 
-        customer.setLoyaltyPoints(points - 10);
+        customer.setLoyaltyPoints(points - LoyaltyPolicy.POINTS_PER_FREE_DRINK);
         int redeemed = customer.getLoyaltyRedeemedCount() != null ? customer.getLoyaltyRedeemedCount() : 0;
         customer.setLoyaltyRedeemedCount(redeemed + 1);
         return ResponseEntity.ok(customerRepository.save(customer));

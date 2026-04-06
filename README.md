@@ -25,14 +25,14 @@ Các nghiệp vụ chính:
   - `spring-boot-starter-web` – xây dựng REST API và MVC
   - `spring-boot-starter-thymeleaf` – render giao diện server-side bằng Thymeleaf
   - `spring-boot-starter-data-jpa` – thao tác database với JPA/Hibernate
-  - `spring-boot-starter-security` – xác thực, phân quyền (ADMIN / STAFF / KHACH)
+  - `spring-boot-starter-security` – xác thực, phân quyền (ADMIN, nhân viên: CASHIER / SERVER / BARISTA / SECURITY, khách đăng ký: CUSTOMER)
   - `spring-boot-starter-oauth2-client` – đã khai báo, hiện cấu hình OAuth2 bị disable trong `SecurityConfig`
   - `spring-boot-starter-validation` – validate dữ liệu request
 - **Bảo mật:**
   - Spring Security, cấu hình trong `config/SecurityConfig.java`
   - Đăng nhập bằng form login tùy biến (`/login`), đăng ký tài khoản `/register`
   - Mã hóa mật khẩu bằng `BCryptPasswordEncoder`
-  - Phân quyền theo role: `ROLE_ADMIN`, `ROLE_CASHIER`, `ROLE_SERVER`, `ROLE_BARISTA`, `ROLE_SECURITY`, khách thường (`ROLE_CUSTOMER`)
+  - Phân quyền theo role: `ROLE_ADMIN`, `ROLE_CASHIER`, `ROLE_SERVER`, `ROLE_BARISTA`, `ROLE_SECURITY`, `ROLE_CUSTOMER` (khách có tài khoản app; khác với khách vãng lai / walk-in trên đơn hàng)
 - **Truy cập dữ liệu:**
   - Spring Data JPA repositories dưới `repository/`
   - Entity cho các bảng: menu, đơn hàng, khách hàng, nhân viên, chấm công, doanh thu, kho, cài đặt, đặt bàn, v.v… trong `model/`

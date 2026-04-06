@@ -11,9 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Collections;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import java.security.Principal;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -41,6 +38,7 @@ import com.example.QuanLyQuanCafe.repository.CustomerRepository;
 import com.example.QuanLyQuanCafe.repository.StaffRepository;
 import com.example.QuanLyQuanCafe.repository.AppUserRepository;
 import com.example.QuanLyQuanCafe.repository.TableBookingRepository;
+import com.example.QuanLyQuanCafe.repository.BookingStaffReminderRepository;
 
 @Controller
 public class ProductController {
@@ -53,6 +51,7 @@ public class ProductController {
 	private final StaffRepository staffRepository;
 	private final AppUserRepository appUserRepository;
     private final TableBookingRepository tableBookingRepository;
+    private final BookingStaffReminderRepository bookingStaffReminderRepository;
 
 	public ProductController(
 			MenuService menuService,
@@ -62,7 +61,8 @@ public class ProductController {
 			CustomerRepository customerRepository,
 			StaffRepository staffRepository,
 			AppUserRepository appUserRepository,
-			TableBookingRepository tableBookingRepository) {
+			TableBookingRepository tableBookingRepository,
+			BookingStaffReminderRepository bookingStaffReminderRepository) {
 		this.menuService = menuService;
 		this.orderService = orderService;
         this.staffService = staffService;
@@ -71,6 +71,7 @@ public class ProductController {
 		this.staffRepository = staffRepository;
 		this.appUserRepository = appUserRepository;
 		this.tableBookingRepository = tableBookingRepository;
+		this.bookingStaffReminderRepository = bookingStaffReminderRepository;
 	}
 
 	@GetMapping("/dashboard")
@@ -224,6 +225,8 @@ public class ProductController {
 		model.addAttribute("bookingStatCancelled", bookingCancelled);
 		model.addAttribute("bookingStatGuestsSum", bookingGuestsSum);
 		model.addAttribute("bookingPageNow", LocalDateTime.now());
+		model.addAttribute("bookingPageToday", LocalDate.now());
+		model.addAttribute("bookingReminderUnread", bookingStaffReminderRepository.countByReadAtIsNull());
 		return "admin/Booking";
 	}
 
@@ -237,8 +240,6 @@ public class ProductController {
 
 		// Xác định các bàn đang có khách dựa theo đơn "tại bàn" chưa hoàn thành/chưa hủy
 		List<CafeOrder> orders = orderService.findAll();
-		Pattern digitPattern = Pattern.compile("(\\d+)");
-
 		for (CafeOrder o : orders) {
 			if (o == null) continue;
 			if (o.getType() != OrderType.DINE_IN) continue;
@@ -246,18 +247,9 @@ public class ProductController {
 			if (o.getStatus() == OrderStatus.CANCELLED) continue;
 			if (Boolean.TRUE.equals(o.getTableReleased())) continue;
 
-			String tableName = o.getTableName();
-			if (tableName == null || tableName.isBlank()) continue;
-
-			Matcher m = digitPattern.matcher(tableName);
-			if (!m.find()) continue;
-
-			int tableNo;
-			try {
-				tableNo = Integer.parseInt(m.group(1));
-			} catch (NumberFormatException ex) {
-				continue;
-			}
+			Integer resolved = o.getTableNumber();
+			if (resolved == null) continue;
+			int tableNo = resolved;
 
 			if (tableNo < 1 || tableNo > totalTables) continue;
 
@@ -324,43 +316,68 @@ public class ProductController {
 			.anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
 		List<Staff> staffList;
+		Staff selfStaff = null;
+		Map<Long, String> staffLinkedUsernames = Collections.emptyMap();
+		Map<Long, String> staffLinkedEmails = Collections.emptyMap();
+		LocalDate staffCardToday = LocalDate.now();
 		if (isAdmin) {
-			staffList = staffService.findAll();
+			staffList = staffService.findAllSyncingEndedLeave();
+			Map<Long, String> usernames = new HashMap<>();
+			Map<Long, String> emails = new HashMap<>();
+			for (Staff s : staffList) {
+				if (s.getId() == null) {
+					continue;
+				}
+				AppUser linked = appUserRepository.findByStaffId(s.getId());
+				if (linked != null) {
+					usernames.put(s.getId(), linked.getUsername());
+					if (linked.getEmail() != null && !linked.getEmail().isBlank()) {
+						emails.put(s.getId(), linked.getEmail());
+					}
+				}
+			}
+			staffLinkedUsernames = usernames;
+			staffLinkedEmails = emails;
 		} else {
 			staffList = Collections.emptyList();
 			if (principal != null) {
 				AppUser appUser = appUserRepository.findByUsername(principal.getName());
 				if (appUser != null) {
-					Staff staff = null;
-					if (appUser.getFullName() != null && !appUser.getFullName().isBlank()) {
-						staff = staffRepository.findByName(appUser.getFullName());
+					if (appUser.getStaffId() != null) {
+						selfStaff = staffRepository.findById(appUser.getStaffId()).orElse(null);
 					}
-					if (staff == null) {
-						staff = new Staff();
-						staff.setName(appUser.getFullName() != null && !appUser.getFullName().isBlank()
-								? appUser.getFullName()
-								: appUser.getUsername());
-						staff.setPhone(appUser.getPhone());
+					if (selfStaff == null && appUser.getFullName() != null && !appUser.getFullName().isBlank()) {
+						selfStaff = staffRepository.findByName(appUser.getFullName());
 					}
-					// Đồng bộ avatar từ tài khoản đăng nhập cho view nhân viên tự xem
-					staff.setAvatarUrl(appUser.getAvatarUrl());
-					staffList = Collections.singletonList(staff);
+					if (selfStaff == null) {
+						selfStaff = staffRepository.findByName(appUser.getUsername());
+					}
+					if (selfStaff != null && selfStaff.getId() != null) {
+						selfStaff = staffService.syncLeaveEndedToActiveIfNeeded(selfStaff.getId());
+						staffList = Collections.singletonList(selfStaff);
+					} else if (selfStaff != null) {
+						staffList = Collections.singletonList(selfStaff);
+					}
 				}
 			}
 		}
 
 		int total = staffList.size();
 		int working = (int) staffList.stream()
-			.filter(s -> s.getStatus() == StaffStatus.ACTIVE)
+			.filter(s -> staffService.effectiveCardStatus(s, staffCardToday) == StaffStatus.ACTIVE)
 			.count();
 		int onLeave = (int) staffList.stream()
-			.filter(s -> s.getStatus() == StaffStatus.ON_LEAVE)
+			.filter(s -> staffService.effectiveCardStatus(s, staffCardToday) == StaffStatus.ON_LEAVE)
 			.count();
 		int inactive = (int) staffList.stream()
-			.filter(s -> s.getStatus() == StaffStatus.INACTIVE)
+			.filter(s -> staffService.effectiveCardStatus(s, staffCardToday) == StaffStatus.INACTIVE)
 			.count();
 
 		model.addAttribute("staffList", staffList);
+		model.addAttribute("staffCardToday", staffCardToday);
+		model.addAttribute("staffLinkedUsernames", staffLinkedUsernames);
+		model.addAttribute("staffLinkedEmails", staffLinkedEmails);
+		model.addAttribute("selfStaff", selfStaff);
 		model.addAttribute("staffTotal", total);
 		model.addAttribute("staffWorking", working);
 		model.addAttribute("staffOnLeave", onLeave);

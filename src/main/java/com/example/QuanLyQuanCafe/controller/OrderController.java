@@ -1,14 +1,16 @@
 package com.example.QuanLyQuanCafe.controller;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +27,7 @@ import com.example.QuanLyQuanCafe.model.OrderItem;
 import com.example.QuanLyQuanCafe.model.OrderStatus;
 import com.example.QuanLyQuanCafe.service.OrderService;
 import com.example.QuanLyQuanCafe.controller.dto.OrderCreateRequest;
+import com.example.QuanLyQuanCafe.controller.dto.OrderPaymentUpdateRequest;
 import com.example.QuanLyQuanCafe.controller.dto.OrderStatusUpdateRequest;
 
 @RestController
@@ -40,6 +43,27 @@ public class OrderController {
     @GetMapping
     public List<CafeOrder> getAll() {
         return orderService.findAll();
+    }
+
+    /**
+     * Đơn vừa hoàn thành pha chế ({@code preparedAt} &gt; after) — phục vụ poll để báo lấy nước.
+     */
+    @GetMapping("/prepared-since")
+    public ResponseEntity<List<Map<String, Object>>> getPreparedSince(
+            @RequestParam("after") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime after) {
+        List<CafeOrder> list = orderService.findCompletedPreparedAfter(after);
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (CafeOrder o : list) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("orderCode", o.getOrderCode());
+            m.put("type", o.getType() != null ? o.getType().name() : null);
+            m.put("tableNumber", o.getTableNumber());
+            m.put("customerName", o.getCustomerName());
+            m.put("orderNote", o.getOrderNote());
+            m.put("preparedAt", o.getPreparedAt() != null ? o.getPreparedAt().toString() : null);
+            out.add(m);
+        }
+        return ResponseEntity.ok(out);
     }
 
     @PostMapping
@@ -99,20 +123,43 @@ public class OrderController {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean isBarista = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_BARISTA"));
-        boolean isCashierOrAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a ->
-                a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_CASHIER"));
+        boolean isAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isCashier = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CASHIER"));
 
-        // Barista chỉ được đánh dấu "sẵn sàng phục vụ" = COMPLETED
+        // Barista chỉ được chuyển sang COMPLETED (hoàn thành pha chế)
         if (isBarista && next != OrderStatus.COMPLETED) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "BARISTA only allowed COMPLETED"));
         }
-        if (!isBarista && !isCashierOrAdmin) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        // COMPLETED: chỉ Admin hoặc Pha chế (thu ngân / phục vụ không được)
+        if (next == OrderStatus.COMPLETED) {
+            if (!isBarista && !isAdmin) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Chỉ Admin hoặc Pha chế được đánh dấu hoàn thành pha chế."));
+            }
+        } else {
+            if (!isAdmin && !isCashier) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
         }
 
-        order.setStatus(next);
-        CafeOrder saved = orderService.save(order);
+        CafeOrder saved = orderService.updateOrderStatus(order, next);
         return ResponseEntity.ok(saved);
+    }
+
+    @PutMapping("/{code}/payment")
+    public ResponseEntity<?> updatePayment(@PathVariable("code") String code, @RequestBody OrderPaymentUpdateRequest request) {
+        if (request == null || request.getPaid() == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Thiếu trường paid (true/false)."));
+        }
+        try {
+            CafeOrder updated = orderService.setOrderPaid(code, Boolean.TRUE.equals(request.getPaid()));
+            if (updated == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
     }
 
     @GetMapping("/{code}/items")
@@ -133,8 +180,14 @@ public class OrderController {
             if (item.getMenuItem() != null) {
                 map.put("menuItemId", item.getMenuItem().getId());
             }
+            map.put("loyaltyRedemption", Boolean.TRUE.equals(item.getLoyaltyRedemption()));
             result.add(map);
         }
         return ResponseEntity.ok(result);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleOrderBadRequest(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
     }
 }

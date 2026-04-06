@@ -68,16 +68,23 @@ public class UserAdminController {
             return ResponseEntity.badRequest().body("Username đã tồn tại");
         }
 
+        String roleRaw = request.getRole() != null ? request.getRole().trim() : "";
+        boolean isOwnerAdmin = "ADMIN".equalsIgnoreCase(roleRaw);
+
         Long staffId = request.getStaffId();
-        if (staffId == null) {
-            return ResponseEntity.badRequest().body("Vui lòng chọn nhân viên để gán cho tài khoản");
-        }
-        if (staffRepository.findById(staffId).isEmpty()) {
-            return ResponseEntity.badRequest().body("Không tìm thấy nhân viên");
-        }
-        AppUser other = userRepository.findByStaffId(staffId);
-        if (other != null) {
-            return ResponseEntity.badRequest().body("Nhân viên này đã được gán cho tài khoản: " + other.getUsername());
+        if (!isOwnerAdmin) {
+            if (staffId == null) {
+                return ResponseEntity.badRequest().body("Vui lòng chọn nhân viên để gán cho tài khoản");
+            }
+            if (staffRepository.findById(staffId).isEmpty()) {
+                return ResponseEntity.badRequest().body("Không tìm thấy nhân viên");
+            }
+            AppUser other = userRepository.findByStaffId(staffId);
+            if (other != null) {
+                return ResponseEntity.badRequest().body("Nhân viên này đã được gán cho tài khoản: " + other.getUsername());
+            }
+        } else {
+            staffId = null;
         }
 
         AppUser user = new AppUser();
@@ -114,7 +121,11 @@ public class UserAdminController {
             user.setPhone(request.getPhone());
         }
         if (request.getRole() != null) {
-            user.setRole(request.getRole());
+            String r = request.getRole().trim();
+            user.setRole(r);
+            if ("ADMIN".equalsIgnoreCase(r)) {
+                user.setStaffId(null);
+            }
         }
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -150,6 +161,16 @@ public class UserAdminController {
         }
 
         Long staffId = request != null ? request.getStaffId() : null;
+
+        if (user.getRole() != null && user.getRole().trim().equalsIgnoreCase("ADMIN")) {
+            if (staffId != null) {
+                return ResponseEntity.badRequest()
+                        .body("Tài khoản ADMIN (chủ quán) không gán hồ sơ nhân viên — không dùng chấm công/lương theo giờ trong hệ thống.");
+            }
+            user.setStaffId(null);
+            return ResponseEntity.ok(userRepository.save(user));
+        }
+
         if (staffId == null) {
             user.setStaffId(null);
             return ResponseEntity.ok(userRepository.save(user));

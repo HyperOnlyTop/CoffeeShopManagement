@@ -23,7 +23,7 @@
         html += '<div class="mb-2"><strong>Mã đơn:</strong> ' + (order.orderCode || '') + '</div>';
         html += '<div class="mb-2"><strong>Khách:</strong> ' + (order.customerName || 'Khách lẻ') + (order.customerPhone ? (' · ' + order.customerPhone) : '') + '</div>';
         html += '<div class="mb-2"><strong>Trạng thái đơn:</strong> ' + (order.status || '') + '</div>';
-        html += '<div class="mb-3"><strong>Ghi chú:</strong> ' + (order.tableName || '') + '</div>';
+        html += '<div class="mb-3"><strong>Ghi chú đơn:</strong> ' + (order.orderNote || '') + '</div>';
 
         html += '<div class="table-responsive">';
         html += '<table class="table table-sm align-middle mb-0">';
@@ -52,7 +52,12 @@
         if (releaseBtn) releaseBtn.style.display = 'none';
         fetch('/api/tables/' + encodeURIComponent(tableNo) + '/active-order')
           .then(function (res) {
-            if (!res.ok) return null;
+            if (res.status === 404) return null;
+            if (!res.ok) {
+              return res.text().then(function (t) {
+                throw new Error(t || res.statusText || 'HTTP ' + res.status);
+              });
+            }
             return res.json();
           })
           .then(function (data) {

@@ -6,8 +6,11 @@ public class OrderCreateRequest {
 
     private String customerName;
     private String customerPhone;
+    /** {@code true}: khách vãng lai — không SĐT, không tích/đổi điểm; tên hiển thị cố định phía server. */
+    private Boolean walkInGuest;
     private String type;
-    private String tableNote;
+    private Integer tableNumber;
+    private String orderNote;
     private String status;
     private String paymentMethod;
     private List<OrderLineRequest> items;
@@ -28,6 +31,14 @@ public class OrderCreateRequest {
         this.customerPhone = customerPhone;
     }
 
+    public Boolean getWalkInGuest() {
+        return walkInGuest;
+    }
+
+    public void setWalkInGuest(Boolean walkInGuest) {
+        this.walkInGuest = walkInGuest;
+    }
+
     public String getType() {
         return type;
     }
@@ -36,12 +47,20 @@ public class OrderCreateRequest {
         this.type = type;
     }
 
-    public String getTableNote() {
-        return tableNote;
+    public Integer getTableNumber() {
+        return tableNumber;
     }
 
-    public void setTableNote(String tableNote) {
-        this.tableNote = tableNote;
+    public void setTableNumber(Integer tableNumber) {
+        this.tableNumber = tableNumber;
+    }
+
+    public String getOrderNote() {
+        return orderNote;
+    }
+
+    public void setOrderNote(String orderNote) {
+        this.orderNote = orderNote;
     }
 
     public String getStatus() {

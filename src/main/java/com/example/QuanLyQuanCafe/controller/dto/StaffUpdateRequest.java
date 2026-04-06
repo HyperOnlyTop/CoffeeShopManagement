@@ -14,6 +14,14 @@ public class StaffUpdateRequest {
     private LocalDate startDate;
     private String avatarUrl;
     private String phone;
+    private LocalDate leaveFrom;
+    private LocalDate leaveTo;
+    private LocalDate leftOn;
+
+    /** Cập nhật email tài khoản liên kết (nếu có). */
+    private String linkedAccountEmail;
+    /** Đổi mật khẩu đăng nhập; để trống = giữ nguyên. */
+    private String linkedAccountNewPassword;
 
     public Long getId() {
         return id;
@@ -85,5 +93,45 @@ public class StaffUpdateRequest {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public LocalDate getLeaveFrom() {
+        return leaveFrom;
+    }
+
+    public void setLeaveFrom(LocalDate leaveFrom) {
+        this.leaveFrom = leaveFrom;
+    }
+
+    public LocalDate getLeaveTo() {
+        return leaveTo;
+    }
+
+    public void setLeaveTo(LocalDate leaveTo) {
+        this.leaveTo = leaveTo;
+    }
+
+    public LocalDate getLeftOn() {
+        return leftOn;
+    }
+
+    public void setLeftOn(LocalDate leftOn) {
+        this.leftOn = leftOn;
+    }
+
+    public String getLinkedAccountEmail() {
+        return linkedAccountEmail;
+    }
+
+    public void setLinkedAccountEmail(String linkedAccountEmail) {
+        this.linkedAccountEmail = linkedAccountEmail;
+    }
+
+    public String getLinkedAccountNewPassword() {
+        return linkedAccountNewPassword;
+    }
+
+    public void setLinkedAccountNewPassword(String linkedAccountNewPassword) {
+        this.linkedAccountNewPassword = linkedAccountNewPassword;
     }
 }

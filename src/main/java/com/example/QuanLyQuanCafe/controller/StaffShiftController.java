@@ -22,19 +22,24 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.QuanLyQuanCafe.controller.dto.ShiftAssignRequest;
 import com.example.QuanLyQuanCafe.model.ShiftCode;
 import com.example.QuanLyQuanCafe.model.Staff;
+import com.example.QuanLyQuanCafe.model.StaffStatus;
 import com.example.QuanLyQuanCafe.model.StaffShiftAssignment;
 import com.example.QuanLyQuanCafe.repository.StaffRepository;
 import com.example.QuanLyQuanCafe.repository.StaffShiftAssignmentRepository;
+import com.example.QuanLyQuanCafe.service.StaffService;
 
 @RestController
 @RequestMapping("/api/staff-shifts")
 public class StaffShiftController {
     private final StaffShiftAssignmentRepository repo;
     private final StaffRepository staffRepository;
+    private final StaffService staffService;
 
-    public StaffShiftController(StaffShiftAssignmentRepository repo, StaffRepository staffRepository) {
+    public StaffShiftController(StaffShiftAssignmentRepository repo, StaffRepository staffRepository,
+            StaffService staffService) {
         this.repo = repo;
         this.staffRepository = staffRepository;
+        this.staffService = staffService;
     }
 
     private boolean isAdmin() {
@@ -71,11 +76,23 @@ public class StaffShiftController {
         }
         Staff staff = staffRepository.findById(req.getStaffId()).orElse(null);
         if (staff == null) return ResponseEntity.badRequest().body(Map.of("error", "Staff not found"));
+        staff = staffService.syncLeaveEndedToActiveIfNeeded(staff.getId());
+        if (staff == null) return ResponseEntity.badRequest().body(Map.of("error", "Staff not found"));
         LocalDate d;
         try {
             d = LocalDate.parse(req.getWorkDate());
         } catch (DateTimeParseException ex) {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid date"));
+        }
+        if (staff.getStatus() == StaffStatus.INACTIVE) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Nhân viên đã nghỉ việc, không gán ca."));
+        }
+        if (staff.getStatus() == StaffStatus.ON_LEAVE
+                && staff.getLeaveFrom() != null
+                && staff.getLeaveTo() != null
+                && !d.isBefore(staff.getLeaveFrom())
+                && !d.isAfter(staff.getLeaveTo())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Nhân viên đang nghỉ phép trong ngày này."));
         }
         ShiftCode code;
         try {

@@ -6,8 +6,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.QuanLyQuanCafe.config.BookingPolicy;
 import com.example.QuanLyQuanCafe.model.BookingStatus;
 import com.example.QuanLyQuanCafe.model.CafeOrder;
+import com.example.QuanLyQuanCafe.model.OrderItem;
 import com.example.QuanLyQuanCafe.model.OrderStatus;
 import com.example.QuanLyQuanCafe.model.OrderType;
 import com.example.QuanLyQuanCafe.model.TableBooking;
@@ -66,7 +65,6 @@ public class TablesApiController {
 
         // Occupied from open dine-in orders
         List<CafeOrder> orders = orderService.findAll();
-        Pattern digitPattern = Pattern.compile("(\\d+)");
         for (CafeOrder o : orders) {
             if (o == null) continue;
             if (o.getType() != OrderType.DINE_IN) continue;
@@ -74,17 +72,9 @@ public class TablesApiController {
             if (o.getStatus() == OrderStatus.CANCELLED) continue;
             if (Boolean.TRUE.equals(o.getTableReleased())) continue;
 
-            String tableName = o.getTableName();
-            if (tableName == null || tableName.isBlank()) continue;
-            Matcher m = digitPattern.matcher(tableName);
-            if (!m.find()) continue;
-
-            int tableNo;
-            try {
-                tableNo = Integer.parseInt(m.group(1));
-            } catch (NumberFormatException ex) {
-                continue;
-            }
+            Integer resolved = o.getTableNumber();
+            if (resolved == null) continue;
+            int tableNo = resolved;
             if (tableNo < 1 || tableNo > totalTables) continue;
 
             TableStatusDto current = result.get(tableNo);
@@ -128,6 +118,38 @@ public class TablesApiController {
         return ResponseEntity.ok(list);
     }
 
+    private static Map<String, Object> orderToSafeJson(CafeOrder o) {
+        Map<String, Object> m = new HashMap<>();
+        if (o == null) return m;
+        m.put("id", o.getId());
+        m.put("orderCode", o.getOrderCode());
+        m.put("customerName", o.getCustomerName());
+        m.put("customerPhone", o.getCustomerPhone());
+        m.put("type", o.getType() != null ? o.getType().name() : null);
+        m.put("tableNumber", o.getTableNumber());
+        m.put("orderNote", o.getOrderNote());
+        m.put("tableSummary", o.getTableAndNoteColumn());
+        m.put("status", o.getStatus() != null ? o.getStatus().name() : null);
+        m.put("subtotal", o.getSubtotal());
+        m.put("discount", o.getDiscount());
+        m.put("total", o.getTotal());
+        m.put("paymentMethod", o.getPaymentMethod() != null ? o.getPaymentMethod().name() : null);
+        m.put("createdAt", o.getCreatedAt() != null ? o.getCreatedAt().toString() : null);
+        m.put("tableReleased", o.getTableReleased());
+        return m;
+    }
+
+    private static Map<String, Object> orderItemToSafeJson(OrderItem it) {
+        Map<String, Object> m = new HashMap<>();
+        if (it == null) return m;
+        m.put("id", it.getId());
+        m.put("itemName", it.getItemName());
+        m.put("itemPrice", it.getItemPrice());
+        m.put("quantity", it.getQuantity());
+        m.put("note", it.getNote());
+        return m;
+    }
+
     @GetMapping("/{tableNo}/active-order")
     public ResponseEntity<Map<String, Object>> getActiveOrderForTable(@PathVariable("tableNo") int tableNo) {
         if (!isStaffOrAdmin()) {
@@ -137,44 +159,19 @@ public class TablesApiController {
             return ResponseEntity.badRequest().build();
         }
 
-        // Find latest active order mapped to this table number
-        List<CafeOrder> orders = orderService.findAll();
-        Pattern digitPattern = Pattern.compile("(\\d+)");
-        CafeOrder picked = null;
-        for (CafeOrder o : orders) {
-            if (o == null) continue;
-            if (o.getType() != OrderType.DINE_IN) continue;
-            if (o.getStatus() == OrderStatus.CANCELLED) continue;
-            if (Boolean.TRUE.equals(o.getTableReleased())) continue;
-
-            String tableName = o.getTableName();
-            if (tableName == null || tableName.isBlank()) continue;
-            Matcher m = digitPattern.matcher(tableName);
-            if (!m.find()) continue;
-            int no;
-            try {
-                no = Integer.parseInt(m.group(1));
-            } catch (NumberFormatException ex) {
-                continue;
-            }
-            if (no != tableNo) continue;
-
-            if (picked == null) {
-                picked = o;
-                continue;
-            }
-            if (picked.getCreatedAt() != null && o.getCreatedAt() != null && o.getCreatedAt().isAfter(picked.getCreatedAt())) {
-                picked = o;
-            }
-        }
-
+        CafeOrder picked = orderService.findActiveDineInOrderForTable(tableNo);
         if (picked == null) {
             return ResponseEntity.notFound().build();
         }
 
+        List<Map<String, Object>> itemMaps = new ArrayList<>();
+        for (OrderItem it : orderService.findItemsByOrder(picked)) {
+            itemMaps.add(orderItemToSafeJson(it));
+        }
+
         Map<String, Object> result = new HashMap<>();
-        result.put("order", picked);
-        result.put("items", orderService.findItemsByOrder(picked));
+        result.put("order", orderToSafeJson(picked));
+        result.put("items", itemMaps);
         return ResponseEntity.ok(result);
     }
 
@@ -183,13 +180,12 @@ public class TablesApiController {
         if (!isStaffOrAdmin()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        ResponseEntity<Map<String, Object>> active = getActiveOrderForTable(tableNo);
-        if (!active.getStatusCode().is2xxSuccessful() || active.getBody() == null) {
-            return ResponseEntity.status(active.getStatusCode()).build();
+        if (tableNo < 1 || tableNo > 200) {
+            return ResponseEntity.badRequest().build();
         }
-        Object orderObj = active.getBody().get("order");
-        if (!(orderObj instanceof CafeOrder order)) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        CafeOrder order = orderService.findActiveDineInOrderForTable(tableNo);
+        if (order == null) {
+            return ResponseEntity.notFound().build();
         }
         order.setTableReleased(Boolean.TRUE);
         CafeOrder saved = orderService.save(order);

@@ -59,7 +59,7 @@ public class StaffController {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
         if (isAdmin) {
-            return ResponseEntity.ok(staffService.findAll());
+            return ResponseEntity.ok(staffService.findAllSyncingEndedLeave());
         } else {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
@@ -68,7 +68,7 @@ public class StaffController {
     // Dùng cho các màn hình cần xem lịch/nhân sự ở mức cơ bản (không lộ lương, ghi chú...)
     @GetMapping("/basic")
     public ResponseEntity<?> getAllBasic() {
-        List<Staff> staff = staffService.findAll();
+        List<Staff> staff = staffService.findAllSyncingEndedLeave();
         List<Map<String, Object>> res = staff.stream().map(s -> {
             Map<String, Object> m = new java.util.HashMap<>();
             m.put("id", s.getId());
@@ -76,6 +76,9 @@ public class StaffController {
             m.put("phone", s.getPhone());
             m.put("role", s.getRole() != null ? s.getRole().name() : null);
             m.put("status", s.getStatus() != null ? s.getStatus().name() : null);
+            m.put("leaveFrom", s.getLeaveFrom());
+            m.put("leaveTo", s.getLeaveTo());
+            m.put("leftOn", s.getLeftOn());
             return m;
         }).collect(Collectors.toList());
         return ResponseEntity.ok(res);
@@ -104,6 +107,12 @@ public class StaffController {
         if (staff == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+        if (staff.getId() != null) {
+            Staff synced = staffService.syncLeaveEndedToActiveIfNeeded(staff.getId());
+            if (synced != null) {
+                staff = synced;
+            }
+        }
         return ResponseEntity.ok(staff);
     }
 
@@ -118,8 +127,14 @@ public class StaffController {
         AppUser appUser = appUserRepository.findByUsername(username);
 
         Staff staff = null;
-        if (appUser != null && appUser.getFullName() != null && !appUser.getFullName().isBlank()) {
+        if (appUser != null && appUser.getStaffId() != null) {
+            staff = staffRepository.findById(appUser.getStaffId()).orElse(null);
+        }
+        if (staff == null && appUser != null && appUser.getFullName() != null && !appUser.getFullName().isBlank()) {
             staff = staffRepository.findByName(appUser.getFullName());
+        }
+        if (staff == null && appUser != null) {
+            staff = staffRepository.findByName(appUser.getUsername());
         }
         if (staff == null) {
             staff = staffRepository.findByName(username);
@@ -127,6 +142,12 @@ public class StaffController {
         if (staff == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "Không tìm thấy nhân viên"));
+        }
+        if (staff.getId() != null) {
+            Staff synced = staffService.syncLeaveEndedToActiveIfNeeded(staff.getId());
+            if (synced != null) {
+                staff = synced;
+            }
         }
 
         LocalDate today = LocalDate.now();
@@ -213,12 +234,20 @@ public class StaffController {
     }
 
     @PostMapping
-    public Staff create(@RequestBody StaffCreateRequest request) {
-        return staffService.create(request);
+    public ResponseEntity<?> create(@RequestBody StaffCreateRequest request) {
+        try {
+            return ResponseEntity.ok(staffService.create(request));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
     }
 
     @PostMapping("/update")
-    public Staff update(@RequestBody StaffUpdateRequest request) {
-        return staffService.update(request);
+    public ResponseEntity<?> update(@RequestBody StaffUpdateRequest request) {
+        try {
+            return ResponseEntity.ok(staffService.update(request));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
     }
 }

@@ -4,14 +4,18 @@ import com.example.QuanLyQuanCafe.model.Customer;
 import com.example.QuanLyQuanCafe.repository.CustomerRepository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Optional;
+import java.util.Objects;
 import java.util.Set;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.QuanLyQuanCafe.config.LoyaltyPolicy;
 import com.example.QuanLyQuanCafe.controller.dto.OrderCreateRequest;
 import com.example.QuanLyQuanCafe.controller.dto.OrderLineRequest;
 import com.example.QuanLyQuanCafe.model.CafeOrder;
@@ -26,6 +30,13 @@ import com.example.QuanLyQuanCafe.repository.OrderItemRepository;
 
 @Service
 public class OrderService {
+
+    private static final String WALK_IN_DISPLAY_NAME = "Khách vãng lai";
+
+    /** Ngày làm việc của quán (mã đơn theo ngày). */
+    private static final ZoneId CAFE_BUSINESS_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+
+    private static final Object ORDER_CODE_LOCK = new Object();
 
     private final CafeOrderRepository cafeOrderRepository;
     private final OrderItemRepository orderItemRepository;
@@ -78,6 +89,201 @@ public class OrderService {
         return cafeOrderRepository.save(order);
     }
 
+    /**
+     * Thu tiền do nhân viên xác nhận — độc lập với trạng thái pha chế / trả bàn.
+     */
+    @Transactional
+    public CafeOrder setOrderPaid(String orderCode, boolean paid) {
+        CafeOrder order = cafeOrderRepository.findByOrderCode(orderCode);
+        if (order == null) {
+            return null;
+        }
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalArgumentException("Đơn đã hủy, không cập nhật thanh toán.");
+        }
+        if (paid) {
+            order.setPaidAt(LocalDateTime.now());
+        } else {
+            order.setPaidAt(null);
+        }
+        return cafeOrderRepository.save(order);
+    }
+
+    @Transactional
+    public CafeOrder updateOrderStatus(CafeOrder order, OrderStatus next) {
+        OrderStatus previous = order.getStatus();
+        order.setStatus(next);
+        if (next == OrderStatus.COMPLETED && previous != OrderStatus.COMPLETED) {
+            order.setPreparedAt(LocalDateTime.now());
+        }
+        CafeOrder saved = cafeOrderRepository.save(order);
+        if (saved.getStatus() == OrderStatus.COMPLETED && previous != OrderStatus.COMPLETED) {
+            maybeAwardLoyaltyPoints(saved, orderItemRepository.findByOrder(saved));
+        }
+        return saved;
+    }
+
+    public List<CafeOrder> findCompletedPreparedAfter(LocalDateTime after) {
+        if (after == null) {
+            return List.of();
+        }
+        return cafeOrderRepository.findTop30ByStatusAndPreparedAtAfterOrderByPreparedAtAsc(OrderStatus.COMPLETED, after);
+    }
+
+    /** Đơn dine-in mới nhất còn chiếm bàn (theo {@code table_number}). */
+    public CafeOrder findActiveDineInOrderForTable(int tableNo) {
+        if (tableNo < 1) {
+            return null;
+        }
+        List<CafeOrder> orders = findAll();
+        CafeOrder picked = null;
+        for (CafeOrder o : orders) {
+            if (o == null) continue;
+            if (o.getType() != OrderType.DINE_IN) continue;
+            if (o.getStatus() == OrderStatus.CANCELLED) continue;
+            if (Boolean.TRUE.equals(o.getTableReleased())) continue;
+
+            Integer no = o.getTableNumber();
+            if (no == null || no != tableNo) continue;
+
+            if (picked == null) {
+                picked = o;
+                continue;
+            }
+            if (picked.getCreatedAt() != null && o.getCreatedAt() != null && o.getCreatedAt().isAfter(picked.getCreatedAt())) {
+                picked = o;
+            }
+        }
+        return picked;
+    }
+
+    private static String trimOrderNoteField(String s) {
+        if (s == null) {
+            return null;
+        }
+        String t = s.trim();
+        if (t.isEmpty()) {
+            return null;
+        }
+        if (t.length() > 500) {
+            return t.substring(0, 500);
+        }
+        return t;
+    }
+
+    /**
+     * Khách vãng lai: bỏ SĐT, tên hiển thị cố định (client không thể gửi SĐT để lách tích điểm).
+     */
+    private void normalizeWalkInOnRequest(OrderCreateRequest request) {
+        if (!Boolean.TRUE.equals(request.getWalkInGuest())) {
+            return;
+        }
+        request.setCustomerPhone(null);
+        request.setCustomerName(WALK_IN_DISPLAY_NAME);
+    }
+
+    private void assertValidLoyaltyRedemptions(OrderCreateRequest request) {
+        if (request.getItems() == null) {
+            return;
+        }
+        int redemptionLines = 0;
+        int redemptionQty = 0;
+        for (OrderLineRequest line : request.getItems()) {
+            if (!Boolean.TRUE.equals(line.getLoyaltyRedemption())) {
+                continue;
+            }
+            redemptionLines++;
+            int q = (line.getQuantity() != null && line.getQuantity() > 0) ? line.getQuantity() : 1;
+            redemptionQty += q;
+        }
+        if (redemptionLines == 0) {
+            return;
+        }
+        if (Boolean.TRUE.equals(request.getWalkInGuest())) {
+            throw new IllegalArgumentException("Khách vãng lai không thể đổi điểm.");
+        }
+        if (redemptionLines != 1 || redemptionQty != 1) {
+            throw new IllegalArgumentException("Đổi điểm: chỉ được một dòng món, số lượng 1 ly.");
+        }
+        String phone = request.getCustomerPhone();
+        if (phone == null || phone.isBlank()) {
+            throw new IllegalArgumentException("Nhập SĐT khách để đổi điểm.");
+        }
+        Customer c = customerRepository.findByPhone(phone.trim()).orElse(null);
+        if (c == null) {
+            throw new IllegalArgumentException("Khách chưa có trong hệ thống (chưa lưu SĐT).");
+        }
+        int pts = c.getLoyaltyPoints() != null ? c.getLoyaltyPoints() : 0;
+        if (pts < LoyaltyPolicy.POINTS_PER_FREE_DRINK) {
+            throw new IllegalArgumentException("Khách không đủ " + LoyaltyPolicy.POINTS_PER_FREE_DRINK + " điểm để đổi.");
+        }
+        for (OrderLineRequest line : request.getItems()) {
+            if (!Boolean.TRUE.equals(line.getLoyaltyRedemption())) {
+                continue;
+            }
+            MenuItem mi = menuItemRepository.findById(line.getMenuItemId()).orElse(null);
+            if (mi == null) {
+                throw new IllegalArgumentException("Món đổi điểm không tồn tại.");
+            }
+            if (!isDrinkMenuItem(mi)) {
+                throw new IllegalArgumentException("Chỉ đồ uống mới được đổi bằng điểm.");
+            }
+            BigDecimal p = mi.getPrice() != null ? mi.getPrice() : BigDecimal.ZERO;
+            if (p.compareTo(LoyaltyPolicy.MAX_MENU_PRICE_FREE_DRINK_VND) >= 0) {
+                throw new IllegalArgumentException("Món đổi điểm phải có giá dưới 50.000đ.");
+            }
+        }
+    }
+
+    /** @return tiền dòng cộng vào tổng đơn (0 nếu đổi điểm). */
+    private BigDecimal persistOrderLine(CafeOrder order, OrderLineRequest line) {
+        if (line.getMenuItemId() == null) {
+            return BigDecimal.ZERO;
+        }
+        MenuItem menuItem = menuItemRepository.findById(line.getMenuItemId()).orElse(null);
+        if (menuItem == null) {
+            return BigDecimal.ZERO;
+        }
+
+        int quantity = (line.getQuantity() != null && line.getQuantity() > 0) ? line.getQuantity() : 1;
+        BigDecimal catalogPrice = menuItem.getPrice() != null ? menuItem.getPrice() : BigDecimal.ZERO;
+        BigDecimal cost = menuItem.getCost() != null ? menuItem.getCost() : BigDecimal.ZERO;
+        boolean redeem = Boolean.TRUE.equals(line.getLoyaltyRedemption());
+
+        BigDecimal unitPrice;
+        BigDecimal lineSubtotal;
+        if (redeem) {
+            unitPrice = BigDecimal.ZERO;
+            lineSubtotal = BigDecimal.ZERO;
+        } else {
+            unitPrice = catalogPrice;
+            lineSubtotal = catalogPrice.multiply(BigDecimal.valueOf(quantity));
+        }
+
+        OrderItem orderItem = new OrderItem();
+        orderItem.setOrder(order);
+        orderItem.setMenuItem(menuItem);
+        orderItem.setItemName(redeem ? (menuItem.getName() + " (đổi điểm)") : menuItem.getName());
+        orderItem.setItemPrice(unitPrice);
+        orderItem.setItemCost(cost);
+        orderItem.setQuantity(quantity);
+        orderItem.setSubtotal(lineSubtotal);
+        orderItem.setNote(line.getNote());
+        orderItem.setLoyaltyRedemption(redeem);
+        orderItemRepository.save(orderItem);
+        return lineSubtotal;
+    }
+
+    private void applyTableAndNoteFromRequest(CafeOrder order, OrderType type, OrderCreateRequest request) {
+        if (type == OrderType.TAKEAWAY) {
+            order.setTableNumber(null);
+            order.setOrderNote(trimOrderNoteField(request.getOrderNote()));
+            return;
+        }
+        order.setTableNumber(request.getTableNumber());
+        order.setOrderNote(trimOrderNoteField(request.getOrderNote()));
+    }
+
     private static final Set<String> NON_DRINK_CATEGORIES = Set.of(
             "bánh ngọt",
             "thức ăn nhẹ",
@@ -91,56 +297,193 @@ public class OrderService {
     private boolean isDrinkMenuItem(MenuItem menuItem) {
         if (menuItem == null) return false;
         if (menuItem.getCategory() == null || menuItem.getCategory().getName() == null) {
-            return true; // không có danh mục thì tạm coi là đồ uống để không mất điểm
+            return false;
         }
         String cat = menuItem.getCategory().getName().trim().toLowerCase();
         return !NON_DRINK_CATEGORIES.contains(cat);
     }
 
-    private void maybeAwardLoyaltyPoints(CafeOrder order, List<OrderItem> orderItems) {
-        if (order == null) return;
-        if (order.getStatus() != OrderStatus.COMPLETED) return;
-        if (Boolean.TRUE.equals(order.getLoyaltyPointsAwarded())) return;
+    /**
+     * Không vãng lai + có SĐT trên đơn → được tích/trừ điểm (đăng ký tại quầy hoặc đã có app/hồ sơ trước đó).
+     */
+    private boolean loyaltyEarnEligibleForNonWalkInOrder(String customerPhone) {
+        return customerPhone != null && !customerPhone.trim().isBlank();
+    }
 
-        String phone = order.getCustomerPhone();
-        if (phone == null || phone.isBlank()) return;
-
-        Customer customer = customerRepository.findByPhone(phone.trim()).orElse(null);
-        if (customer == null) return;
-
-        int earned = 0;
-        if (orderItems != null) {
-            for (OrderItem oi : orderItems) {
-                if (oi == null) continue;
-                int qty = oi.getQuantity() != null ? oi.getQuantity() : 0;
-                if (qty <= 0) continue;
-                MenuItem mi = oi.getMenuItem();
-                if (isDrinkMenuItem(mi)) {
-                    earned += qty;
-                }
-            }
+    /**
+     * Tạo hồ sơ Customer tối thiểu nếu chưa có — để đổi điểm / cộng điểm khi hoàn đơn (kể cả đơn cập nhật sau).
+     */
+    private void ensureCustomerExistsForLoyalty(CafeOrder order) {
+        if (order == null || Boolean.TRUE.equals(order.getWalkInGuest())) {
+            return;
         }
-        if (earned <= 0) {
+        String phone = order.getCustomerPhone();
+        if (phone == null || phone.isBlank()) {
+            return;
+        }
+        String p = phone.trim();
+        if (customerRepository.findByPhone(p).isPresent()) {
+            return;
+        }
+        Customer c = new Customer();
+        c.setPhone(p);
+        String name = order.getCustomerName();
+        c.setName(name != null && !name.isBlank() ? name.trim() : "Khách mới");
+        c.setTotalOrders(0);
+        c.setTotalSpent(BigDecimal.ZERO);
+        c.setLoyaltyPoints(0);
+        c.setLoyaltyRedeemedCount(0);
+        customerRepository.save(c);
+    }
+
+    private static boolean orderAllowsLoyaltyProcessing(CafeOrder order) {
+        Boolean f = order.getLoyaltyEarnEligible();
+        return f == null || Boolean.TRUE.equals(f);
+    }
+
+    private void maybeAwardLoyaltyPoints(CafeOrder order, List<OrderItem> orderItems) {
+        if (order == null) {
+            return;
+        }
+        if (order.getStatus() != OrderStatus.COMPLETED) {
+            return;
+        }
+        if (Boolean.TRUE.equals(order.getLoyaltyPointsAwarded())) {
+            return;
+        }
+        if (!orderAllowsLoyaltyProcessing(order)) {
             order.setLoyaltyPointsAwarded(Boolean.TRUE);
             cafeOrderRepository.save(order);
             return;
         }
 
-        int currentPoints = customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0;
-        customer.setLoyaltyPoints(currentPoints + earned);
+        String phone = order.getCustomerPhone();
+        if (phone == null || phone.isBlank()) {
+            order.setLoyaltyPointsAwarded(Boolean.TRUE);
+            cafeOrderRepository.save(order);
+            return;
+        }
+
+        Customer customer = customerRepository.findByPhone(phone.trim()).orElse(null);
+        if (customer == null) {
+            order.setLoyaltyPointsAwarded(Boolean.TRUE);
+            cafeOrderRepository.save(order);
+            return;
+        }
+
+        int redeemDrinks = 0;
+        if (orderItems != null) {
+            for (OrderItem oi : orderItems) {
+                if (oi == null || !Boolean.TRUE.equals(oi.getLoyaltyRedemption())) {
+                    continue;
+                }
+                int q = oi.getQuantity() != null ? oi.getQuantity() : 0;
+                if (q <= 0) {
+                    continue;
+                }
+                if (!isDrinkMenuItem(oi.getMenuItem())) {
+                    continue;
+                }
+                redeemDrinks += q;
+            }
+        }
+
+        int points = customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0;
+        int redeemedCount = customer.getLoyaltyRedeemedCount() != null ? customer.getLoyaltyRedeemedCount() : 0;
+
+        if (redeemDrinks == 1 && points >= LoyaltyPolicy.POINTS_PER_FREE_DRINK) {
+            points -= LoyaltyPolicy.POINTS_PER_FREE_DRINK;
+            redeemedCount += 1;
+        }
+
+        int earned = 0;
+        if (orderItems != null) {
+            for (OrderItem oi : orderItems) {
+                if (oi == null || Boolean.TRUE.equals(oi.getLoyaltyRedemption())) {
+                    continue;
+                }
+                int qty = oi.getQuantity() != null ? oi.getQuantity() : 0;
+                if (qty <= 0) {
+                    continue;
+                }
+                if (isDrinkMenuItem(oi.getMenuItem())) {
+                    earned += qty;
+                }
+            }
+        }
+
+        points += earned;
+        customer.setLoyaltyPoints(points);
+        customer.setLoyaltyRedeemedCount(redeemedCount);
         customerRepository.save(customer);
 
         order.setLoyaltyPointsAwarded(Boolean.TRUE);
         cafeOrderRepository.save(order);
     }
 
+    /**
+     * Seed/backfill: cộng điểm và cập nhật tổng đơn/chi tiêu khách cho đơn COMPLETED (cùng luồng Case 2–3).
+     * Case 1 (vãng lai / không SĐT / đã {@code loyaltyPointsAwarded}): không làm gì.
+     */
+    @Transactional
+    public void applyLoyaltyAndCustomerStatsForSeededCompletedOrder(String orderCode) {
+        if (orderCode == null || orderCode.isBlank()) {
+            return;
+        }
+        CafeOrder order = cafeOrderRepository.findByOrderCode(orderCode.trim());
+        if (order == null || order.getStatus() != OrderStatus.COMPLETED) {
+            return;
+        }
+        if (Boolean.TRUE.equals(order.getLoyaltyPointsAwarded())) {
+            return;
+        }
+        if (Boolean.TRUE.equals(order.getWalkInGuest())) {
+            return;
+        }
+        String phone = order.getCustomerPhone();
+        if (phone == null || phone.isBlank()) {
+            return;
+        }
+
+        ensureCustomerExistsForLoyalty(order);
+
+        String p = phone.trim();
+        Customer cust = customerRepository.findByPhone(p).orElse(null);
+        BigDecimal orderTotal = order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO;
+        if (cust != null) {
+            cust.setTotalOrders((cust.getTotalOrders() != null ? cust.getTotalOrders() : 0) + 1);
+            BigDecimal currentSpent = cust.getTotalSpent() != null ? cust.getTotalSpent() : BigDecimal.ZERO;
+            cust.setTotalSpent(currentSpent.add(orderTotal));
+            if (order.getCustomerName() != null && !order.getCustomerName().trim().isEmpty()) {
+                cust.setName(order.getCustomerName().trim());
+            }
+        } else {
+            cust = new Customer();
+            cust.setPhone(p);
+            cust.setName(order.getCustomerName() != null && !order.getCustomerName().trim().isEmpty()
+                    ? order.getCustomerName().trim()
+                    : "Khách mới");
+            cust.setTotalOrders(1);
+            cust.setTotalSpent(orderTotal);
+            cust.setLoyaltyPoints(0);
+            cust.setLoyaltyRedeemedCount(0);
+        }
+        customerRepository.save(cust);
+
+        List<OrderItem> items = orderItemRepository.findByOrder(order);
+        maybeAwardLoyaltyPoints(order, items);
+    }
+
     @Transactional
     public CafeOrder createOrder(OrderCreateRequest request) {
+        normalizeWalkInOnRequest(request);
+
         CafeOrder order = new CafeOrder();
 
         order.setOrderCode(generateOrderCode());
         order.setCustomerName(request.getCustomerName());
         order.setCustomerPhone(request.getCustomerPhone());
+        order.setWalkInGuest(Boolean.TRUE.equals(request.getWalkInGuest()) ? Boolean.TRUE : Boolean.FALSE);
 
         OrderType type = null;
         if (request.getType() != null) {
@@ -155,7 +498,7 @@ public class OrderService {
         }
         order.setType(type);
 
-        order.setTableName(request.getTableNote());
+        applyTableAndNoteFromRequest(order, type, request);
 
         OrderStatus status = OrderStatus.PENDING;
         if (request.getStatus() != null) {
@@ -180,48 +523,30 @@ public class OrderService {
         order.setCreatedAt(LocalDateTime.now());
         order.setLoyaltyPointsAwarded(Boolean.FALSE);
         order.setTableReleased(Boolean.FALSE);
+        order.setLoyaltyEarnEligible(Boolean.TRUE.equals(request.getWalkInGuest())
+                ? Boolean.FALSE
+                : loyaltyEarnEligibleForNonWalkInOrder(request.getCustomerPhone()));
 
         // Initial save to get ID
         CafeOrder savedOrder = cafeOrderRepository.save(order);
 
-        BigDecimal subtotal = BigDecimal.ZERO;
+        ensureCustomerExistsForLoyalty(order);
+        assertValidLoyaltyRedemptions(request);
 
+        BigDecimal subtotal = BigDecimal.ZERO;
         if (request.getItems() != null) {
             for (OrderLineRequest line : request.getItems()) {
-                if (line.getMenuItemId() == null) {
-                    continue;
-                }
-
-                MenuItem menuItem = menuItemRepository.findById(line.getMenuItemId()).orElse(null);
-                if (menuItem == null) {
-                    continue;
-                }
-
-                int quantity = (line.getQuantity() != null && line.getQuantity() > 0) ? line.getQuantity() : 1;
-
-                BigDecimal price = menuItem.getPrice() != null ? menuItem.getPrice() : BigDecimal.ZERO;
-                BigDecimal cost = menuItem.getCost() != null ? menuItem.getCost() : BigDecimal.ZERO;
-                BigDecimal lineSubtotal = price.multiply(BigDecimal.valueOf(quantity));
-
-                subtotal = subtotal.add(lineSubtotal);
-
-                OrderItem orderItem = new OrderItem();
-                orderItem.setOrder(savedOrder);
-                orderItem.setMenuItem(menuItem);
-                orderItem.setItemName(menuItem.getName());
-                orderItem.setItemPrice(price);
-                orderItem.setItemCost(cost);
-                orderItem.setQuantity(quantity);
-                orderItem.setSubtotal(lineSubtotal);
-                orderItem.setNote(line.getNote());
-
-                orderItemRepository.save(orderItem);
+                subtotal = subtotal.add(persistOrderLine(savedOrder, line));
             }
         }
 
         order.setSubtotal(subtotal);
         order.setDiscount(BigDecimal.ZERO);
         order.setTotal(subtotal);
+
+        if (order.getStatus() == OrderStatus.COMPLETED && order.getPreparedAt() == null) {
+            order.setPreparedAt(LocalDateTime.now());
+        }
 
         CafeOrder finalOrder = cafeOrderRepository.save(order);
 
@@ -256,6 +581,8 @@ public class OrderService {
 
     @Transactional
     public CafeOrder updateOrder(String code, OrderCreateRequest request) {
+        normalizeWalkInOnRequest(request);
+
         CafeOrder order = cafeOrderRepository.findByOrderCode(code);
         if (order == null) {
             return null;
@@ -265,6 +592,7 @@ public class OrderService {
 
         order.setCustomerName(request.getCustomerName());
         order.setCustomerPhone(request.getCustomerPhone());
+        order.setWalkInGuest(Boolean.TRUE.equals(request.getWalkInGuest()) ? Boolean.TRUE : Boolean.FALSE);
 
         OrderType type = null;
         if (request.getType() != null) {
@@ -277,9 +605,22 @@ public class OrderService {
         if (type == null) {
             type = OrderType.DINE_IN;
         }
+
+        Integer previousTableNumber = order.getTableNumber();
+        OrderType previousType = order.getType();
+
         order.setType(type);
 
-        order.setTableName(request.getTableNote());
+        applyTableAndNoteFromRequest(order, type, request);
+
+        // Đổi bàn / chuyển loại đơn: đồng bộ trạng thái chiếm bàn với Quản lý bàn và kiểm tra đặt bàn.
+        if (order.getType() == OrderType.TAKEAWAY) {
+            order.setTableReleased(Boolean.FALSE);
+        } else if (order.getType() == OrderType.DINE_IN && order.getTableNumber() != null) {
+            if (!Objects.equals(previousTableNumber, order.getTableNumber()) || previousType != OrderType.DINE_IN) {
+                order.setTableReleased(Boolean.FALSE);
+            }
+        }
 
         OrderStatus status = OrderStatus.PENDING;
         if (request.getStatus() != null) {
@@ -300,49 +641,31 @@ public class OrderService {
             }
         }
         order.setPaymentMethod(paymentMethod);
+        order.setLoyaltyEarnEligible(Boolean.TRUE.equals(request.getWalkInGuest())
+                ? Boolean.FALSE
+                : loyaltyEarnEligibleForNonWalkInOrder(request.getCustomerPhone()));
 
         // Delete existing items
         List<OrderItem> existingItems = orderItemRepository.findByOrder(order);
         orderItemRepository.deleteAll(existingItems);
 
-        BigDecimal subtotal = BigDecimal.ZERO;
+        ensureCustomerExistsForLoyalty(order);
+        assertValidLoyaltyRedemptions(request);
 
+        BigDecimal subtotal = BigDecimal.ZERO;
         if (request.getItems() != null) {
             for (OrderLineRequest line : request.getItems()) {
-                if (line.getMenuItemId() == null) {
-                    continue;
-                }
-
-                MenuItem menuItem = menuItemRepository.findById(line.getMenuItemId()).orElse(null);
-                if (menuItem == null) {
-                    continue;
-                }
-
-                int quantity = (line.getQuantity() != null && line.getQuantity() > 0) ? line.getQuantity() : 1;
-
-                BigDecimal price = menuItem.getPrice() != null ? menuItem.getPrice() : BigDecimal.ZERO;
-                BigDecimal cost = menuItem.getCost() != null ? menuItem.getCost() : BigDecimal.ZERO;
-                BigDecimal lineSubtotal = price.multiply(BigDecimal.valueOf(quantity));
-
-                subtotal = subtotal.add(lineSubtotal);
-
-                OrderItem orderItem = new OrderItem();
-                orderItem.setOrder(order);
-                orderItem.setMenuItem(menuItem);
-                orderItem.setItemName(menuItem.getName());
-                orderItem.setItemPrice(price);
-                orderItem.setItemCost(cost);
-                orderItem.setQuantity(quantity);
-                orderItem.setSubtotal(lineSubtotal);
-                orderItem.setNote(line.getNote());
-
-                orderItemRepository.save(orderItem);
+                subtotal = subtotal.add(persistOrderLine(order, line));
             }
         }
 
         order.setSubtotal(subtotal);
         order.setDiscount(BigDecimal.ZERO);
         order.setTotal(subtotal);
+
+        if (order.getStatus() == OrderStatus.COMPLETED && previousStatus != OrderStatus.COMPLETED) {
+            order.setPreparedAt(LocalDateTime.now());
+        }
 
         CafeOrder saved = cafeOrderRepository.save(order);
 
@@ -355,9 +678,42 @@ public class OrderService {
         return saved;
     }
 
+    /**
+     * Mã đơn: {@code ORD-yymmdd-NNNN} — STT tăng theo ngày (múi {@link #CAFE_BUSINESS_ZONE}), NNNN zero-pad 4 chữ số.
+     */
     private String generateOrderCode() {
-        long randomPart = ThreadLocalRandom.current().nextLong(1000, 9999);
-        long timestampPart = System.currentTimeMillis() % 10000;
-        return "ORD-" + randomPart + timestampPart;
+        synchronized (ORDER_CODE_LOCK) {
+            LocalDate day = LocalDate.now(CAFE_BUSINESS_ZONE);
+            String datePart = String.format("%02d%02d%02d",
+                    day.getYear() % 100,
+                    day.getMonthValue(),
+                    day.getDayOfMonth());
+            String prefix = "ORD-" + datePart + "-";
+            int nextSeq = 1;
+            Optional<CafeOrder> last = cafeOrderRepository.findFirstByOrderCodeStartingWithOrderByOrderCodeDesc(prefix);
+            if (last.isPresent() && last.get().getOrderCode() != null) {
+                nextSeq = parseDailyOrderSequence(last.get().getOrderCode()) + 1;
+            }
+            if (nextSeq > 9999) {
+                throw new IllegalStateException("Đã vượt 9999 đơn trong ngày " + datePart + "; cần đổi format mã đơn.");
+            }
+            return prefix + String.format("%04d", nextSeq);
+        }
+    }
+
+    /** Phần số thứ tự sau dấu {@code -} cuối ({@code ORD-yymmdd-NNNN} hoặc dạng cũ {@code yymmdd-NNNN}). */
+    private static int parseDailyOrderSequence(String orderCode) {
+        if (orderCode == null) {
+            return 0;
+        }
+        int dash = orderCode.lastIndexOf('-');
+        if (dash < 0 || dash >= orderCode.length() - 1) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(orderCode.substring(dash + 1).trim());
+        } catch (NumberFormatException ex) {
+            return 0;
+        }
     }
 }

@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,7 @@ public class MenuDataSeeder {
     }
 
     @EventListener(ApplicationReadyEvent.class)
+    @Order(100)
     @Transactional
     public void seedMenu() {
         Map<String, MenuCategory> categories = seedCategories();

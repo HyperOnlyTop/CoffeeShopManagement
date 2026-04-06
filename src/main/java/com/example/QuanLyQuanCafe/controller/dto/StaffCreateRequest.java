@@ -13,6 +13,14 @@ public class StaffCreateRequest {
     private LocalDate startDate;
     private String avatarUrl;
     private String phone;
+    private LocalDate leaveFrom;
+    private LocalDate leaveTo;
+    private LocalDate leftOn;
+
+    /** Tài khoản đăng nhập gắn với nhân viên (tạo cùng lúc). */
+    private String accountUsername;
+    private String accountPassword;
+    private String accountEmail;
 
     public String getName() {
         return name;
@@ -76,5 +84,53 @@ public class StaffCreateRequest {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public LocalDate getLeaveFrom() {
+        return leaveFrom;
+    }
+
+    public void setLeaveFrom(LocalDate leaveFrom) {
+        this.leaveFrom = leaveFrom;
+    }
+
+    public LocalDate getLeaveTo() {
+        return leaveTo;
+    }
+
+    public void setLeaveTo(LocalDate leaveTo) {
+        this.leaveTo = leaveTo;
+    }
+
+    public LocalDate getLeftOn() {
+        return leftOn;
+    }
+
+    public void setLeftOn(LocalDate leftOn) {
+        this.leftOn = leftOn;
+    }
+
+    public String getAccountUsername() {
+        return accountUsername;
+    }
+
+    public void setAccountUsername(String accountUsername) {
+        this.accountUsername = accountUsername;
+    }
+
+    public String getAccountPassword() {
+        return accountPassword;
+    }
+
+    public void setAccountPassword(String accountPassword) {
+        this.accountPassword = accountPassword;
+    }
+
+    public String getAccountEmail() {
+        return accountEmail;
+    }
+
+    public void setAccountEmail(String accountEmail) {
+        this.accountEmail = accountEmail;
     }
 }

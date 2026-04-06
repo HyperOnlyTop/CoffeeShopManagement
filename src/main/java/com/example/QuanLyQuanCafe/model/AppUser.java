@@ -27,6 +27,10 @@ public class AppUser {
     private String role;
     private Long staffId;
 
+    /** {@code false} = không đăng nhập được (ví dụ nhân viên đã nghỉ việc). */
+    @Column(nullable = false)
+    private boolean enabled = true;
+
     public Long getId() {
         return id;
     }
@@ -99,5 +103,13 @@ public class AppUser {
 
     public void setStaffId(Long staffId) {
         this.staffId = staffId;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }

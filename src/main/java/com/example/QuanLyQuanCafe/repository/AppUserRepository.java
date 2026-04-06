@@ -6,4 +6,6 @@ import com.example.QuanLyQuanCafe.model.AppUser;
 public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     AppUser findByUsername(String username);
     AppUser findByStaffId(Long staffId);
+
+    boolean existsByPhone(String phone);
 }

@@ -1,0 +1,99 @@
+/* Quản lý đặt bàn: nhắc nội bộ */
+.booking-reminder-wrap .booking-reminder-toggle {
+  position: relative;
+}
+
+.booking-reminder-wrap .booking-reminder-badge {
+  font-size: 0.65rem;
+  min-width: 1.1rem;
+  padding: 0.2em 0.35em;
+}
+
+.booking-reminder-menu {
+  max-height: 420px;
+}
+
+.booking-reminder-item {
+  border-left: 3px solid transparent;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.booking-reminder-item.unread {
+  border-left-color: #f97316;
+  background: rgba(249, 115, 22, 0.06);
+}
+
+.booking-reminder-item .booking-reminder-time {
+  font-size: 0.72rem;
+  color: var(--text-muted, #6b7280);
+}
+
+.booking-reminder-highlight {
+  animation: bookingRowPulse 1.2s ease-out 2;
+}
+
+@keyframes bookingRowPulse {
+  0% { background-color: rgba(249, 115, 22, 0.25); }
+  100% { background-color: transparent; }
+}
+
+/* Bảng đặt bàn: khách (tên + liên hệ), số khách/ghi chú */
+.booking-table .booking-th-customer {
+  min-width: 11rem;
+}
+
+.booking-table .booking-customer-cell {
+  max-width: 16rem;
+}
+
+.booking-table .booking-customer-meta .booking-customer-phone {
+  line-height: 1.35;
+}
+
+.booking-table .booking-customer-meta .booking-customer-email {
+  line-height: 1.35;
+  margin-top: 0.15rem;
+  word-break: break-word;
+}
+
+.booking-table .booking-th-guests-note {
+  min-width: 9rem;
+}
+
+.booking-table .booking-guests-note-cell {
+  max-width: 14rem;
+}
+
+.booking-table .booking-guests-note-line {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.booking-table .booking-note-text {
+  font-weight: 500;
+  color: #374151;
+}
+
+.booking-table .booking-status-pill {
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.booking-action-cell {
+  white-space: nowrap;
+}
+
+.booking-action-cell button.icon-circle-btn {
+  cursor: pointer;
+}
+
+.booking-action-cell button.icon-circle-btn:hover {
+  background-color: #f9fafb;
+}
+
+.booking-action-cell button.icon-circle-btn.icon-circle-btn-danger:hover {
+  color: #991b1b;
+  background-color: rgba(239, 68, 68, 0.08);
+}
