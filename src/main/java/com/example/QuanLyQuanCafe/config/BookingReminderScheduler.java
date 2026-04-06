@@ -18,13 +18,22 @@ public class BookingReminderScheduler {
         this.bookingStaffReminderService = bookingStaffReminderService;
     }
 
-    /** Mỗi phút quét đặt CONFIRMED sắp tới trong 15 phút và ghi nhắc (idempotent theo đặt bàn). */
+    /**
+     * Mỗi phút quét và tạo 3 loại thông báo:
+     * 1. FIFTEEN_MIN_BEFORE - 15 phút trước giờ đặt
+     * 2. AT_BOOKING_TIME - đúng giờ đặt
+     * 3. OVERDUE_15MIN - 15 phút sau giờ đặt nếu chưa xử lý
+     */
     @Scheduled(fixedRate = 60_000)
-    public void tickFifteenMinuteReminders() {
+    public void tickBookingReminders() {
         try {
-            int n = bookingStaffReminderService.createDueFifteenMinuteReminders();
-            if (n > 0) {
-                log.info("Booking reminders: created {} fifteen-minute notice(s).", n);
+            int before = bookingStaffReminderService.createFifteenMinBeforeReminders();
+            int atTime = bookingStaffReminderService.createAtBookingTimeReminders();
+            int overdue = bookingStaffReminderService.createOverdueReminders();
+
+            int total = before + atTime + overdue;
+            if (total > 0) {
+                log.info("Booking reminders created: {} before, {} at-time, {} overdue.", before, atTime, overdue);
             }
         } catch (Exception ex) {
             log.warn("Booking reminder scheduler failed: {}", ex.getMessage());

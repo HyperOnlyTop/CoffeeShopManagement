@@ -243,6 +243,36 @@ document.addEventListener('DOMContentLoaded', function () {
         return d.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       }
 
+      function getReminderKindInfo(kind) {
+        switch (kind) {
+          case 'FIFTEEN_MIN_BEFORE':
+            return { label: 'Còn 15 phút', icon: '⏰', color: 'info', priority: 1 };
+          case 'AT_BOOKING_TIME':
+            return { label: 'Đã đến giờ', icon: '🔔', color: 'warning', priority: 2 };
+          case 'OVERDUE_15MIN':
+            return { label: 'Quá 15 phút', icon: '⚠️', color: 'danger', priority: 3 };
+          default:
+            return { label: 'Thông báo', icon: '📋', color: 'secondary', priority: 0 };
+        }
+      }
+
+      function groupRemindersByKind(list) {
+        var groups = {
+          'OVERDUE_15MIN': [],
+          'AT_BOOKING_TIME': [],
+          'FIFTEEN_MIN_BEFORE': []
+        };
+        list.forEach(function (r) {
+          var k = r.kind || 'FIFTEEN_MIN_BEFORE';
+          if (groups[k]) {
+            groups[k].push(r);
+          } else {
+            groups['FIFTEEN_MIN_BEFORE'].push(r);
+          }
+        });
+        return groups;
+      }
+
       function renderReminders(payload) {
         if (!reminderListEl) return;
         var list = (payload && payload.reminders) ? payload.reminders : [];
@@ -256,46 +286,88 @@ document.addEventListener('DOMContentLoaded', function () {
           return;
         }
         if (reminderEmptyEl) reminderEmptyEl.classList.add('d-none');
-        var isAdmin = bookingPageIsAdmin && bookingPageIsAdmin.textContent.trim() === '1';
-        list.forEach(function (r) {
-          var a = document.createElement('div');
-          a.className = 'list-group-item booking-reminder-item' + (r.acknowledged ? '' : ' unread');
-          var title = document.createElement('div');
-          title.className = 'fw-medium';
-          title.textContent = r.summary || '';
-          var meta = document.createElement('div');
-          meta.className = 'booking-reminder-time mt-1';
-          meta.textContent = 'Gửi lúc ' + formatReminderTime(r.createdAt);
-          var actions = document.createElement('div');
-          actions.className = 'd-flex flex-wrap gap-2 mt-2 align-items-center';
-          var link = document.createElement('a');
-          link.className = 'small';
-          link.href = '/Booking#booking-row-' + r.bookingId;
-          link.textContent = 'Xem dòng đặt bàn';
-          if (isAdmin) {
+
+        var groups = groupRemindersByKind(list);
+        var kindOrder = ['OVERDUE_15MIN', 'AT_BOOKING_TIME', 'FIFTEEN_MIN_BEFORE'];
+
+        kindOrder.forEach(function (kind) {
+          var items = groups[kind];
+          if (!items || !items.length) return;
+
+          var info = getReminderKindInfo(kind);
+          var section = document.createElement('div');
+          section.className = 'reminder-section';
+
+          var header = document.createElement('div');
+          header.className = 'px-3 py-2 bg-' + info.color + '-subtle border-bottom d-flex align-items-center gap-2';
+          header.innerHTML = '<span>' + info.icon + '</span><span class="fw-semibold small text-' + info.color + '">' + info.label + '</span><span class="badge bg-' + info.color + ' rounded-pill ms-auto">' + items.length + '</span>';
+          section.appendChild(header);
+
+          var listGroup = document.createElement('div');
+          listGroup.className = 'list-group list-group-flush';
+
+          items.forEach(function (r) {
+            var a = document.createElement('div');
+            a.className = 'list-group-item booking-reminder-item py-2 px-3' + (r.acknowledged ? '' : ' unread bg-light');
+
+            var content = document.createElement('div');
+            content.className = 'd-flex justify-content-between align-items-start gap-2';
+
+            var left = document.createElement('div');
+            left.className = 'flex-grow-1';
+
+            var nameTime = document.createElement('div');
+            nameTime.className = 'fw-medium small';
+            nameTime.textContent = (r.customerName || 'Khách') + ' — ' + formatReminderTime(r.bookingTime);
+
+            var details = document.createElement('div');
+            details.className = 'text-muted small';
+            var tablePart = r.reservedTableNumber ? 'Bàn ' + r.reservedTableNumber : 'Chưa gán bàn';
+            details.textContent = tablePart;
+
+            var sentTime = document.createElement('div');
+            sentTime.className = 'text-muted small mt-1';
+            sentTime.innerHTML = '<i class="bi bi-clock me-1"></i>' + formatReminderTime(r.createdAt);
+
+            left.appendChild(nameTime);
+            left.appendChild(details);
+            left.appendChild(sentTime);
+
+            var right = document.createElement('div');
+            right.className = 'd-flex flex-column gap-1 align-items-end';
+
+            var link = document.createElement('a');
+            link.className = 'btn btn-sm btn-outline-primary py-0 px-2';
             link.href = '/Booking/edit/' + r.bookingId;
-            link.textContent = 'Mở sửa / gán bàn';
-          }
-          actions.appendChild(link);
-          if (!r.acknowledged) {
-            var markBtn = document.createElement('button');
-            markBtn.type = 'button';
-            markBtn.className = 'btn btn-link btn-sm p-0 small text-decoration-none';
-            markBtn.textContent = 'Đã đọc';
-            markBtn.addEventListener('click', function () {
-              fetch('/api/bookings/reminders/' + r.id + '/read', { method: 'POST' })
-                .then(function (res) { return res.ok ? res.json() : null; })
-                .then(function (body) {
-                  if (body && body.unreadCount != null) setReminderBadge(body.unreadCount);
-                  fetchReminders();
-                });
-            });
-            actions.appendChild(markBtn);
-          }
-          a.appendChild(title);
-          a.appendChild(meta);
-          a.appendChild(actions);
-          reminderListEl.appendChild(a);
+            link.innerHTML = '<i class="bi bi-pencil"></i>';
+            link.title = 'Sửa / gán bàn';
+            right.appendChild(link);
+
+            if (!r.acknowledged) {
+              var markBtn = document.createElement('button');
+              markBtn.type = 'button';
+              markBtn.className = 'btn btn-sm btn-link p-0 small text-decoration-none';
+              markBtn.textContent = 'Đã đọc';
+              markBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                fetch('/api/bookings/reminders/' + r.id + '/read', { method: 'POST' })
+                  .then(function (res) { return res.ok ? res.json() : null; })
+                  .then(function (body) {
+                    if (body && body.unreadCount != null) setReminderBadge(body.unreadCount);
+                    fetchReminders();
+                  });
+              });
+              right.appendChild(markBtn);
+            }
+
+            content.appendChild(left);
+            content.appendChild(right);
+            a.appendChild(content);
+            listGroup.appendChild(a);
+          });
+
+          section.appendChild(listGroup);
+          reminderListEl.appendChild(section);
         });
       }
 
@@ -313,7 +385,7 @@ document.addEventListener('DOMContentLoaded', function () {
           setReminderBadge(parseInt(initial, 10));
         }
         fetchReminders();
-        setInterval(fetchReminders, 60000);
+        setInterval(fetchReminders, 10000);
         if (reminderMarkAllBtn) {
           reminderMarkAllBtn.addEventListener('click', function () {
             fetch('/api/bookings/reminders/read-all', { method: 'POST' })

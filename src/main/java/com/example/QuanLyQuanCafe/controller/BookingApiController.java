@@ -33,12 +33,6 @@ public class BookingApiController {
         this.bookingStaffReminderService = bookingStaffReminderService;
     }
 
-    private boolean isAdmin() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-    }
-
     private boolean isBookingStaff() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
@@ -52,7 +46,7 @@ public class BookingApiController {
 
     @GetMapping("/by-phone")
     public ResponseEntity<List<TableBooking>> getByPhone(@RequestParam("phone") String phone) {
-        if (!isAdmin()) {
+        if (!isBookingStaff()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         if (phone == null || phone.isBlank()) {

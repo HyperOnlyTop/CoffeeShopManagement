@@ -121,11 +121,22 @@ public class BookingController {
     @PostMapping("/Booking/save")
     public String saveBookingFromAdmin(TableBooking booking, Model model) {
         LocalDate today = LocalDate.now();
+        LocalDateTime now = LocalDateTime.now();
 
         if (booking.getBookingTime() != null && booking.getBookingTime().toLocalDate().isBefore(today)) {
             model.addAttribute("booking", booking);
             model.addAttribute("errorMessage", "Không dùng ngày đặt trong quá khứ.");
             return "admin/BookingForm";
+        }
+
+        // Với booking mới: phải đặt ít nhất 20 phút trong tương lai
+        if (booking.getId() == null && booking.getBookingTime() != null) {
+            LocalDateTime minTime = now.plusMinutes(BookingPolicy.MIN_LEAD_MINUTES_STAFF);
+            if (booking.getBookingTime().isBefore(minTime)) {
+                model.addAttribute("booking", booking);
+                model.addAttribute("errorMessage", "Thời gian đặt bàn phải ít nhất " + BookingPolicy.MIN_LEAD_MINUTES_STAFF + " phút trong tương lai.");
+                return "admin/BookingForm";
+            }
         }
 
         if (booking.getId() != null) {
@@ -138,6 +149,15 @@ public class BookingController {
                 model.addAttribute("booking", booking);
                 model.addAttribute("errorMessage", "Đặt bàn đã qua ngày, không được sửa.");
                 return "admin/BookingForm";
+            }
+            // Nếu sửa thời gian, cũng phải đảm bảo ít nhất 20 phút trong tương lai
+            if (booking.getBookingTime() != null && !booking.getBookingTime().equals(old.getBookingTime())) {
+                LocalDateTime minTime = now.plusMinutes(BookingPolicy.MIN_LEAD_MINUTES_STAFF);
+                if (booking.getBookingTime().isBefore(minTime)) {
+                    model.addAttribute("booking", booking);
+                    model.addAttribute("errorMessage", "Thời gian đặt bàn phải ít nhất " + BookingPolicy.MIN_LEAD_MINUTES_STAFF + " phút trong tương lai.");
+                    return "admin/BookingForm";
+                }
             }
             booking.setCreatedAt(old.getCreatedAt());
             if (booking.getStatus() == null) {

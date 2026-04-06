@@ -28,9 +28,12 @@ import com.example.QuanLyQuanCafe.model.OrderItem;
 import com.example.QuanLyQuanCafe.model.OrderStatus;
 import com.example.QuanLyQuanCafe.model.OrderType;
 import com.example.QuanLyQuanCafe.model.PaymentMethod;
+import com.example.QuanLyQuanCafe.model.BookingStatus;
+import com.example.QuanLyQuanCafe.model.TableBooking;
 import com.example.QuanLyQuanCafe.repository.CafeOrderRepository;
 import com.example.QuanLyQuanCafe.repository.MenuItemRepository;
 import com.example.QuanLyQuanCafe.repository.OrderItemRepository;
+import com.example.QuanLyQuanCafe.repository.TableBookingRepository;
 
 @Service
 public class OrderService {
@@ -46,15 +49,18 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
     private final MenuItemRepository menuItemRepository;
     private final CustomerRepository customerRepository;
+    private final TableBookingRepository tableBookingRepository;
 
     public OrderService(CafeOrderRepository cafeOrderRepository,
             OrderItemRepository orderItemRepository,
             MenuItemRepository menuItemRepository,
-            CustomerRepository customerRepository) {
+            CustomerRepository customerRepository,
+            TableBookingRepository tableBookingRepository) {
         this.cafeOrderRepository = cafeOrderRepository;
         this.orderItemRepository = orderItemRepository;
         this.menuItemRepository = menuItemRepository;
         this.customerRepository = customerRepository;
+        this.tableBookingRepository = tableBookingRepository;
     }
 
     public List<CafeOrder> findAll() {
@@ -284,8 +290,32 @@ public class OrderService {
             order.setOrderNote(trimOrderNoteField(request.getOrderNote()));
             return;
         }
-        order.setTableNumber(request.getTableNumber());
+
+        Integer tableNo = request.getTableNumber();
+        if (tableNo != null && tableNo > 0) {
+            validateTableNotReservedByBooking(tableNo);
+        }
+
+        order.setTableNumber(tableNo);
         order.setOrderNote(trimOrderNoteField(request.getOrderNote()));
+    }
+
+    /**
+     * Kiểm tra bàn có đang bị giữ bởi booking CONFIRMED không.
+     * Nếu có thì throw exception để không cho tạo/sửa đơn.
+     */
+    private void validateTableNotReservedByBooking(Integer tableNo) {
+        if (tableNo == null || tableNo < 1) return;
+
+        List<TableBooking> reservedBookings = tableBookingRepository
+                .findByReservedTableNumberAndStatus(tableNo, BookingStatus.CONFIRMED);
+
+        if (!reservedBookings.isEmpty()) {
+            TableBooking b = reservedBookings.get(0);
+            throw new IllegalStateException(
+                    "Bàn " + tableNo + " đang được giữ cho đặt bàn của " + b.getName() +
+                    ". Vui lòng tick 'Đã đến' hoặc bỏ gán bàn trong Quản lý đặt bàn trước.");
+        }
     }
 
     private static final Set<String> NON_DRINK_CATEGORIES = Set.of(

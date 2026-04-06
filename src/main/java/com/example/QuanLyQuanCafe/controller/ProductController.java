@@ -303,20 +303,15 @@ public class ProductController {
 			}
 		}
 
-		// Xác định bàn đã được giữ chỗ theo booking CONFIRMED trong cửa sổ giữ: [now-15p, now+15p]
-		LocalDateTime now = LocalDateTime.now();
-		LocalDateTime holdWindowStart = now.minusMinutes(com.example.QuanLyQuanCafe.config.BookingPolicy.GRACE_AFTER_MINUTES);
-		LocalDateTime holdWindowEnd = now.plusMinutes(com.example.QuanLyQuanCafe.config.BookingPolicy.HOLD_BEFORE_MINUTES);
-		List<TableBooking> activeBookings = tableBookingRepository.findByStatusAndBookingTimeBetween(
-				com.example.QuanLyQuanCafe.model.BookingStatus.CONFIRMED,
-				holdWindowStart,
-				holdWindowEnd
+		// Bàn RESERVED: booking CONFIRMED có gán bàn (block cho đến khi tick đã đến hoặc hủy)
+		List<TableBooking> reservedBookings = tableBookingRepository.findByReservedTableNumberIsNotNullAndStatus(
+				com.example.QuanLyQuanCafe.model.BookingStatus.CONFIRMED
 		);
 
-		for (TableBooking b : activeBookings) {
+		for (TableBooking b : reservedBookings) {
 			if (b == null) continue;
 			Integer tableNoObj = b.getReservedTableNumber();
-			if (tableNoObj == null) continue; // booking web không chọn bàn; nhân viên gán ở admin
+			if (tableNoObj == null) continue;
 			int tableNo = tableNoObj;
 			if (tableNo < 1 || tableNo > totalTables) continue;
 

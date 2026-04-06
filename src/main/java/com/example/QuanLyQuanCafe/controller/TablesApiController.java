@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.QuanLyQuanCafe.config.BookingPolicy;
 import com.example.QuanLyQuanCafe.model.BookingStatus;
 import com.example.QuanLyQuanCafe.model.CafeOrder;
 import com.example.QuanLyQuanCafe.model.OrderItem;
@@ -26,6 +25,7 @@ import com.example.QuanLyQuanCafe.model.OrderStatus;
 import com.example.QuanLyQuanCafe.model.OrderType;
 import com.example.QuanLyQuanCafe.model.TableBooking;
 import com.example.QuanLyQuanCafe.repository.TableBookingRepository;
+import com.example.QuanLyQuanCafe.service.BookingStaffReminderService;
 import com.example.QuanLyQuanCafe.service.OrderService;
 
 @RestController
@@ -34,10 +34,14 @@ public class TablesApiController {
 
     private final OrderService orderService;
     private final TableBookingRepository tableBookingRepository;
+    private final BookingStaffReminderService bookingStaffReminderService;
 
-    public TablesApiController(OrderService orderService, TableBookingRepository tableBookingRepository) {
+    public TablesApiController(OrderService orderService,
+                               TableBookingRepository tableBookingRepository,
+                               BookingStaffReminderService bookingStaffReminderService) {
         this.orderService = orderService;
         this.tableBookingRepository = tableBookingRepository;
+        this.bookingStaffReminderService = bookingStaffReminderService;
     }
 
     private boolean isStaffOrAdmin() {
@@ -89,17 +93,10 @@ public class TablesApiController {
             }
         }
 
-        // Reserved from bookings in hold window, only when table assigned
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime holdWindowStart = now.minusMinutes(BookingPolicy.GRACE_AFTER_MINUTES);
-        LocalDateTime holdWindowEnd = now.plusMinutes(BookingPolicy.HOLD_BEFORE_MINUTES);
-        List<TableBooking> activeBookings = tableBookingRepository.findByStatusAndBookingTimeBetween(
-                BookingStatus.CONFIRMED,
-                holdWindowStart,
-                holdWindowEnd
-        );
+        // Reserved: booking CONFIRMED có gán bàn (block cho đến khi tick đã đến hoặc hủy)
+        List<TableBooking> reservedBookings = tableBookingRepository.findByReservedTableNumberIsNotNullAndStatus(BookingStatus.CONFIRMED);
 
-        for (TableBooking b : activeBookings) {
+        for (TableBooking b : reservedBookings) {
             if (b == null) continue;
             Integer tableNoObj = b.getReservedTableNumber();
             if (tableNoObj == null) continue;
@@ -195,6 +192,159 @@ public class TablesApiController {
         result.put("orderCode", saved.getOrderCode());
         result.put("tableNo", tableNo);
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Lấy danh sách booking chờ gán bàn (CONFIRMED, chưa gán bàn, giờ đặt từ hôm nay).
+     */
+    @GetMapping("/pending-bookings")
+    public ResponseEntity<List<Map<String, Object>>> getPendingBookings() {
+        if (!isStaffOrAdmin()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        LocalDateTime todayStart = LocalDateTime.now().toLocalDate().atStartOfDay();
+        List<TableBooking> pending = tableBookingRepository
+                .findByStatusAndReservedTableNumberIsNullAndBookingTimeGreaterThanEqualOrderByBookingTimeAsc(
+                        BookingStatus.CONFIRMED, todayStart);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (TableBooking b : pending) {
+            result.add(bookingToMap(b));
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Gán bàn cho booking từ màn hình Quản lý Bàn.
+     */
+    @PostMapping("/{tableNo}/assign-booking")
+    public ResponseEntity<Map<String, Object>> assignBookingToTable(
+            @PathVariable("tableNo") int tableNo,
+            @RequestParam("bookingId") Long bookingId) {
+        if (!isStaffOrAdmin()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        if (tableNo < 1 || tableNo > 200 || bookingId == null) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", "Tham số không hợp lệ."));
+        }
+
+        // Kiểm tra bàn có đang có đơn không
+        if (orderService.findActiveDineInOrderForTable(tableNo) != null) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", "Bàn " + tableNo + " đang có khách."));
+        }
+
+        // Kiểm tra bàn đã có booking khác gán chưa
+        List<TableBooking> existing = tableBookingRepository.findByReservedTableNumberAndStatus(tableNo, BookingStatus.CONFIRMED);
+        if (!existing.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", "Bàn " + tableNo + " đã được giữ bởi booking khác."));
+        }
+
+        var opt = tableBookingRepository.findById(bookingId);
+        if (opt.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", "Không tìm thấy booking."));
+        }
+        TableBooking b = opt.get();
+        if (b.getStatus() != BookingStatus.CONFIRMED) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", "Booking không ở trạng thái chờ."));
+        }
+
+        b.setReservedTableNumber(tableNo);
+        tableBookingRepository.save(b);
+
+        return ResponseEntity.ok(Map.of("ok", true, "tableNo", tableNo, "bookingId", bookingId));
+    }
+
+    /**
+     * Bỏ gán bàn cho booking từ màn hình Quản lý Bàn.
+     */
+    @PostMapping("/{tableNo}/unassign-booking")
+    public ResponseEntity<Map<String, Object>> unassignBookingFromTable(@PathVariable("tableNo") int tableNo) {
+        if (!isStaffOrAdmin()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        if (tableNo < 1 || tableNo > 200) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", "Số bàn không hợp lệ."));
+        }
+
+        List<TableBooking> bookings = tableBookingRepository.findByReservedTableNumberAndStatus(tableNo, BookingStatus.CONFIRMED);
+        if (bookings.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", "Bàn này không có booking nào đang giữ."));
+        }
+
+        for (TableBooking b : bookings) {
+            b.setReservedTableNumber(null);
+            tableBookingRepository.save(b);
+        }
+
+        return ResponseEntity.ok(Map.of("ok", true, "tableNo", tableNo));
+    }
+
+    /**
+     * Tick đã đến cho booking từ màn hình Quản lý Bàn.
+     */
+    @PostMapping("/{tableNo}/checkin-booking")
+    public ResponseEntity<Map<String, Object>> checkinBookingFromTable(@PathVariable("tableNo") int tableNo) {
+        if (!isStaffOrAdmin()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        if (tableNo < 1 || tableNo > 200) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", "Số bàn không hợp lệ."));
+        }
+
+        List<TableBooking> bookings = tableBookingRepository.findByReservedTableNumberAndStatus(tableNo, BookingStatus.CONFIRMED);
+        if (bookings.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", "Bàn này không có booking nào đang giữ."));
+        }
+
+        TableBooking b = bookings.get(0);
+        var err = bookingStaffReminderService.applyStaffBookingAction(b.getId(), "CHECK_IN", null);
+        if (err.isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", err.get()));
+        }
+
+        return ResponseEntity.ok(Map.of("ok", true, "tableNo", tableNo, "bookingId", b.getId()));
+    }
+
+    /**
+     * Hủy booking từ màn hình Quản lý Bàn.
+     */
+    @PostMapping("/{tableNo}/cancel-booking")
+    public ResponseEntity<Map<String, Object>> cancelBookingFromTable(
+            @PathVariable("tableNo") int tableNo,
+            @RequestParam(value = "note", required = false) String note) {
+        if (!isStaffOrAdmin()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        if (tableNo < 1 || tableNo > 200) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", "Số bàn không hợp lệ."));
+        }
+
+        List<TableBooking> bookings = tableBookingRepository.findByReservedTableNumberAndStatus(tableNo, BookingStatus.CONFIRMED);
+        if (bookings.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", "Bàn này không có booking nào đang giữ."));
+        }
+
+        TableBooking b = bookings.get(0);
+        var err = bookingStaffReminderService.applyStaffBookingAction(b.getId(), "CANCEL", note);
+        if (err.isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", err.get()));
+        }
+
+        return ResponseEntity.ok(Map.of("ok", true, "tableNo", tableNo, "bookingId", b.getId()));
+    }
+
+    private static Map<String, Object> bookingToMap(TableBooking b) {
+        Map<String, Object> m = new HashMap<>();
+        if (b == null) return m;
+        m.put("id", b.getId());
+        m.put("name", b.getName());
+        m.put("phone", b.getPhone());
+        m.put("email", b.getEmail());
+        m.put("bookingTime", b.getBookingTime() != null ? b.getBookingTime().toString() : null);
+        m.put("guests", b.getGuests());
+        m.put("note", b.getNote());
+        m.put("reservedTableNumber", b.getReservedTableNumber());
+        m.put("status", b.getStatus() != null ? b.getStatus().name() : null);
+        return m;
     }
 
     public static class TableStatusDto {

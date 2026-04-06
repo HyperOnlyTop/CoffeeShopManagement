@@ -17,6 +17,34 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/css/doanhthu.css">
+    <style>
+        #staffPageSelfService .header-row {
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        #staffPageSelfService .header-row .page-title {
+            flex: 1 1 auto;
+            min-width: 280px;
+        }
+        #staffPageSelfService .header-row .header-actions {
+            flex: 0 0 auto;
+        }
+        @media (max-width: 768px) {
+            #staffPageSelfService .header-row {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
+            #staffPageSelfService .header-row .page-title {
+                max-width: 100% !important;
+            }
+            #staffPageSelfService .header-row .header-actions {
+                width: 100%;
+            }
+            #staffPageSelfService .header-row .header-actions button {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -300,10 +328,10 @@
         <!-- ——— Nhân viên (Thu ngân / Phục vụ / Pha chế / Bảo vệ): chấm công & xem của mình ——— -->
         <div id="staffPageSelfService" sec:authorize="hasAnyRole('CASHIER','SERVER','BARISTA','SECURITY')"
              th:attr="data-has-profile=${selfStaff != null}">
-            <div class="header-row">
-                <div class="page-title">
+            <div class="header-row align-items-start">
+                <div class="page-title" style="flex: 1; min-width: 0; max-width: calc(100% - 180px);">
                     <h2>Chấm công &amp; giờ làm</h2>
-                    <p class="text-muted small mb-0" th:if="${selfStaff != null}">
+                    <p class="text-muted small mb-0" th:if="${selfStaff != null}" style="line-height: 1.5;">
                         Xin chào, <span th:text="${selfStaff.name}">bạn</span>.
                         Chấm công theo <strong>ca được phân</strong> trong ngày.
                         <strong>Ca liền kề</strong> (sáng+chiều, chiều+tối) được gộp thành 1 khung — chỉ cần chấm vào 1 lần và ra 1 lần.
@@ -315,10 +343,10 @@
                         Tài khoản chưa được gán hồ sơ nhân viên — vui lòng liên hệ quản lý.
                     </p>
                 </div>
-                <div class="header-actions">
-                    <button class="btn btn-primary me-2" id="checkinBtn" type="button"
+                <div class="header-actions flex-shrink-0">
+                    <button class="btn btn-primary btn-sm" id="checkinBtn" type="button"
                             th:disabled="${selfStaff == null}"
-                            style="display: none;" onclick="staffCheckInOut()">
+                            style="display: none; white-space: nowrap;" onclick="staffCheckInOut()">
                         <i class="bi bi-clock"></i> <span id="checkinText">Chấm công</span>
                     </button>
                 </div>

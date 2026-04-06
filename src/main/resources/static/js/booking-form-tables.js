@@ -9,6 +9,11 @@
   var reloadBtn = document.getElementById('bookingReloadTablesBtn');
   var clearBtn = document.getElementById('bookingClearTableBtn');
   var bookingTimeInput = document.getElementById('bookingTimeAdmin');
+  var bookingTimeError = document.getElementById('bookingTimeError');
+  var bookingForm = bookingTimeInput ? bookingTimeInput.closest('form') : null;
+  var bookingIdInput = document.querySelector('input[name="id"]');
+
+  var MIN_LEAD_MINUTES = 20;
 
   if (!grid || !hidden) return;
 
@@ -107,8 +112,61 @@
     });
   }
 
+  function validateBookingTime() {
+    if (!bookingTimeInput) return true;
+    var val = bookingTimeInput.value;
+    if (!val) {
+      bookingTimeInput.classList.remove('is-invalid');
+      if (bookingTimeError) bookingTimeError.textContent = '';
+      return true;
+    }
+
+    var selectedTime = new Date(val);
+    var now = new Date();
+    var minTime = new Date(now.getTime() + MIN_LEAD_MINUTES * 60 * 1000);
+
+    if (selectedTime < minTime) {
+      bookingTimeInput.classList.add('is-invalid');
+      if (bookingTimeError) {
+        bookingTimeError.textContent = 'Thời gian đặt phải ít nhất ' + MIN_LEAD_MINUTES + ' phút trong tương lai.';
+      }
+      return false;
+    }
+
+    bookingTimeInput.classList.remove('is-invalid');
+    if (bookingTimeError) bookingTimeError.textContent = '';
+    return true;
+  }
+
+  function setMinBookingTime() {
+    if (!bookingTimeInput) return;
+    var now = new Date();
+    var minTime = new Date(now.getTime() + MIN_LEAD_MINUTES * 60 * 1000);
+    var y = minTime.getFullYear();
+    var m = String(minTime.getMonth() + 1).padStart(2, '0');
+    var d = String(minTime.getDate()).padStart(2, '0');
+    var h = String(minTime.getHours()).padStart(2, '0');
+    var min = String(minTime.getMinutes()).padStart(2, '0');
+    bookingTimeInput.min = y + '-' + m + '-' + d + 'T' + h + ':' + min;
+  }
+
   if (bookingTimeInput) {
-    bookingTimeInput.addEventListener('change', function () { loadTableStatus(); });
+    bookingTimeInput.addEventListener('change', function () {
+      validateBookingTime();
+      loadTableStatus();
+    });
+    bookingTimeInput.addEventListener('input', validateBookingTime);
+    setMinBookingTime();
+  }
+
+  if (bookingForm) {
+    bookingForm.addEventListener('submit', function (e) {
+      if (!validateBookingTime()) {
+        e.preventDefault();
+        bookingTimeInput.focus();
+        return false;
+      }
+    });
   }
 
   loadTableStatus();

@@ -6,7 +6,6 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
-import com.example.QuanLyQuanCafe.config.BookingPolicy;
 import com.example.QuanLyQuanCafe.model.BookingStatus;
 import com.example.QuanLyQuanCafe.model.TableBooking;
 import com.example.QuanLyQuanCafe.repository.TableBookingRepository;
@@ -23,7 +22,8 @@ public class BookingTableValidationService {
     }
 
     /**
-     * Kiểm tra gán {@code reservedTableNumber} khi lưu đặt bàn: không trùng đơn tại bàn, không trùng cửa sổ giữ bàn với đặt khác.
+     * Kiểm tra gán {@code reservedTableNumber} khi lưu đặt bàn.
+     * Logic mới: chỉ check bàn có đang có đơn hoặc đã có booking CONFIRMED khác gán.
      */
     public Optional<String> validateReservedTableForBooking(Integer tableNo, LocalDateTime bookingTime, Long excludeBookingId) {
         if (tableNo == null || tableNo < 1) {
@@ -33,26 +33,18 @@ public class BookingTableValidationService {
             return Optional.of("Vui lòng chọn thời gian đặt bàn trước khi gán giữ bàn.");
         }
 
+        // Check bàn đang có đơn
         if (orderService.findActiveDineInOrderForTable(tableNo) != null) {
             return Optional.of("Bàn " + tableNo + " đang có khách (có đơn tại bàn). Chọn bàn khác hoặc dùng Trả bàn ở Quản lý bàn.");
         }
 
-        LocalDateTime winStart = bookingTime.minusMinutes(BookingPolicy.HOLD_BEFORE_MINUTES);
-        LocalDateTime winEnd = bookingTime.plusMinutes(BookingPolicy.GRACE_AFTER_MINUTES);
-
+        // Check bàn đã có booking CONFIRMED khác gán
         List<TableBooking> sameTable = tableBookingRepository.findByReservedTableNumberAndStatus(tableNo, BookingStatus.CONFIRMED);
         for (TableBooking other : sameTable) {
             if (excludeBookingId != null && other.getId() != null && other.getId().equals(excludeBookingId)) {
                 continue;
             }
-            if (other.getBookingTime() == null) {
-                continue;
-            }
-            LocalDateTime oStart = other.getBookingTime().minusMinutes(BookingPolicy.HOLD_BEFORE_MINUTES);
-            LocalDateTime oEnd = other.getBookingTime().plusMinutes(BookingPolicy.GRACE_AFTER_MINUTES);
-            if (!winEnd.isBefore(oStart) && !winStart.isAfter(oEnd)) {
-                return Optional.of("Bàn " + tableNo + " đã được giữ bởi đặt bàn khác trong khoảng thời gian trùng (cửa sổ ±15 phút).");
-            }
+            return Optional.of("Bàn " + tableNo + " đã được giữ bởi booking khác (" + other.getName() + "). Bỏ gán bàn đó trước hoặc chọn bàn khác.");
         }
         return Optional.empty();
     }

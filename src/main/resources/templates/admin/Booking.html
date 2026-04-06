@@ -44,19 +44,19 @@
             <span class="d-none d-sm-inline small">Nhắc đặt bàn</span>
             <span class="booking-reminder-badge badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle d-none">0</span>
           </button>
-          <div class="dropdown-menu dropdown-menu-end shadow border-0 booking-reminder-menu p-0" aria-labelledby="bookingReminderToggle" style="min-width: 340px;">
+          <div class="dropdown-menu dropdown-menu-end shadow border-0 booking-reminder-menu p-0" aria-labelledby="bookingReminderToggle" style="min-width: 380px; max-width: 420px;">
             <div class="p-2 border-bottom d-flex justify-content-between align-items-center gap-2 flex-wrap bg-white rounded-top">
-              <span class="fw-semibold small mb-0">Lịch sử nhắc (trước 15 phút)</span>
+              <span class="fw-semibold small mb-0">Thông báo đặt bàn</span>
               <button type="button" class="btn btn-link btn-sm text-decoration-none p-0" id="bookingReminderMarkAllRead">Đánh dấu đã đọc</button>
             </div>
-            <div id="bookingReminderList" class="list-group list-group-flush overflow-auto bg-white" style="max-height: 320px;">
+            <div id="bookingReminderList" class="overflow-auto bg-white" style="max-height: 400px;">
               <div class="p-3 text-muted small" id="bookingReminderLoading">Đang tải…</div>
             </div>
-            <div id="bookingReminderEmpty" class="p-3 text-muted small text-center border-top d-none">Chưa có nhắc nào.</div>
-            <div class="p-2 border-top small text-muted bg-light rounded-bottom">Nhắc tạo tự động mỗi phút. Gán bàn tại Sửa đặt bàn hoặc Quản lý bàn.</div>
+            <div id="bookingReminderEmpty" class="p-3 text-muted small text-center border-top d-none">Chưa có thông báo nào.</div>
+            <div class="p-2 border-top small text-muted bg-light rounded-bottom">Thông báo tự động: trước 15p, đúng giờ, quá 15p chưa đến.</div>
           </div>
         </div>
-        <a href="/Booking/new" class="btn stock-import-btn text-decoration-none d-inline-flex align-items-center" sec:authorize="hasRole('ADMIN')">
+        <a href="/Booking/new" class="btn stock-import-btn text-decoration-none d-inline-flex align-items-center" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER')">
           <i class="bi bi-plus-lg"></i> Thêm đặt bàn
         </a>
       </div>
@@ -237,7 +237,7 @@
                       <i class="bi bi-x-lg"></i>
                     </button>
                   </th:block>
-                  <a th:if="${!isPast}" th:href="@{'/Booking/edit/' + ${b.id}}" class="icon-circle-btn text-decoration-none" title="Sửa" aria-label="Sửa đặt bàn" sec:authorize="hasRole('ADMIN')">
+                  <a th:if="${!isPast}" th:href="@{'/Booking/edit/' + ${b.id}}" class="icon-circle-btn text-decoration-none" title="Sửa" aria-label="Sửa đặt bàn" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER')">
                     <i class="bi bi-pencil"></i>
                   </a>
                 </div>

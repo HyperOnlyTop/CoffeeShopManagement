@@ -1,6 +1,7 @@
 package com.example.QuanLyQuanCafe.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
@@ -8,6 +9,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.QuanLyQuanCafe.config.BookingPolicy;
 import com.example.QuanLyQuanCafe.controller.dto.BookingReminderDto;
 import com.example.QuanLyQuanCafe.model.BookingReminderKind;
 import com.example.QuanLyQuanCafe.model.BookingStaffReminder;
@@ -32,42 +34,70 @@ public class BookingStaffReminderService {
     }
 
     /**
-     * Tạo bản ghi nhắc (mỗi đặt bàn tối đa một lần cho loại FIFTEEN_MIN_BEFORE) khi đã trong cửa sổ 15 phút trước giờ hẹn.
+     * Tạo nhắc FIFTEEN_MIN_BEFORE: booking CONFIRMED có giờ đặt trong 15 phút tới.
      */
     @Transactional
-    public int createDueFifteenMinuteReminders() {
-        var now = java.time.LocalDateTime.now();
-        var until = now.plusMinutes(15);
+    public int createFifteenMinBeforeReminders() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime until = now.plusMinutes(BookingPolicy.REMINDER_BEFORE_MINUTES);
         List<TableBooking> due = tableBookingRepository.findByStatusAndBookingTimeGreaterThanAndBookingTimeLessThanEqual(
                 BookingStatus.CONFIRMED, now, until);
+        return createRemindersForList(due, BookingReminderKind.FIFTEEN_MIN_BEFORE,
+                b -> "⏰ Còn 15 phút: " + formatBookingSummary(b));
+    }
+
+    /**
+     * Tạo nhắc AT_BOOKING_TIME: booking CONFIRMED đã đến giờ đặt (trong khoảng 0-1 phút sau giờ đặt).
+     */
+    @Transactional
+    public int createAtBookingTimeReminders() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime from = now.minusMinutes(1);
+        List<TableBooking> due = tableBookingRepository.findByStatusAndBookingTimeGreaterThanAndBookingTimeLessThanEqual(
+                BookingStatus.CONFIRMED, from, now);
+        return createRemindersForList(due, BookingReminderKind.AT_BOOKING_TIME,
+                b -> "🔔 Đã đến giờ: " + formatBookingSummary(b));
+    }
+
+    /**
+     * Tạo nhắc OVERDUE_15MIN: booking CONFIRMED đã quá 15 phút sau giờ đặt mà chưa tick đã đến hoặc hủy.
+     */
+    @Transactional
+    public int createOverdueReminders() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime overdueFrom = now.minusMinutes(BookingPolicy.REMINDER_OVERDUE_MINUTES + 1);
+        LocalDateTime overdueTo = now.minusMinutes(BookingPolicy.REMINDER_OVERDUE_MINUTES);
+        List<TableBooking> due = tableBookingRepository.findByStatusAndBookingTimeGreaterThanAndBookingTimeLessThanEqual(
+                BookingStatus.CONFIRMED, overdueFrom, overdueTo);
+        return createRemindersForList(due, BookingReminderKind.OVERDUE_15MIN,
+                b -> "⚠️ Quá 15 phút chưa đến: " + formatBookingSummary(b));
+    }
+
+    private int createRemindersForList(List<TableBooking> bookings, BookingReminderKind kind,
+                                       java.util.function.Function<TableBooking, String> summaryBuilder) {
         int added = 0;
-        for (TableBooking b : due) {
-            if (b == null || b.getId() == null) {
-                continue;
-            }
-            if (reminderRepository.existsByTableBooking_IdAndKind(b.getId(), BookingReminderKind.FIFTEEN_MIN_BEFORE)) {
-                continue;
-            }
+        for (TableBooking b : bookings) {
+            if (b == null || b.getId() == null) continue;
+            if (reminderRepository.existsByTableBooking_IdAndKind(b.getId(), kind)) continue;
             try {
                 BookingStaffReminder r = new BookingStaffReminder();
                 r.setTableBooking(b);
-                r.setKind(BookingReminderKind.FIFTEEN_MIN_BEFORE);
-                r.setSummary(buildFifteenMinSummary(b));
+                r.setKind(kind);
+                r.setSummary(summaryBuilder.apply(b));
                 reminderRepository.save(r);
                 added++;
             } catch (org.springframework.dao.DataIntegrityViolationException ignored) {
-                // trùng lúc hai luồng — bỏ qua
             }
         }
         return added;
     }
 
-    private static String buildFifteenMinSummary(TableBooking b) {
+    private static String formatBookingSummary(TableBooking b) {
         String timeStr = b.getBookingTime() != null ? b.getBookingTime().format(FMT) : "?";
         String tablePart = b.getReservedTableNumber() != null
                 ? " · Bàn " + b.getReservedTableNumber()
                 : " · Chưa gán bàn";
-        return "Trước 15 phút tới giờ: " + (b.getName() != null ? b.getName() : "Khách")
+        return (b.getName() != null ? b.getName() : "Khách")
                 + " — " + timeStr + " — " + b.getGuests() + " khách" + tablePart;
     }
 
