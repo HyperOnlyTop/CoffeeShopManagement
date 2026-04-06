@@ -60,6 +60,13 @@
           </a>
         </li>
 
+        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER')">
+          <a href="/Messages" class="nav-link" th:classappend="${activePage} == 'MESSAGES' ? ' active'">
+            <i class="bi bi-chat-left-text"></i> Tin nhắn
+            <span class="badge bg-danger ms-auto chat-unread-sidebar d-none" id="sidebarChatUnread">0</span>
+          </a>
+        </li>
+        
         <li class="nav-item" sec:authorize="hasRole('ADMIN')">
           <a href="/Accounts" class="nav-link" th:classappend="${activePage} == 'ACCOUNTS' ? ' active'">
             <i class="bi bi-people-fill"></i> Khách hàng
@@ -78,8 +85,6 @@
           </a>
         </li>
 
-        
-
         <li class="nav-item" sec:authorize="hasRole('ADMIN')">
           <a href="/Setting" class="nav-link" th:classappend="${activePage} == 'SETTING' ? ' active'">
             <i class="bi bi-gear"></i> Cài đặt
@@ -91,6 +96,44 @@
     <div class="logout-btn">
       <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
     </div>
+
+    <script>
+    (function() {
+      if (window.sidebarChatBadgeInit) return;
+      window.sidebarChatBadgeInit = true;
+      
+      function initBadge() {
+        var badge = document.getElementById('sidebarChatUnread');
+        if (!badge) return;
+        
+        function updateSidebarChatBadge() {
+          fetch('/api/staff/chat/unread-count', { credentials: 'same-origin' })
+            .then(function(res) { 
+              if (!res.ok) throw new Error('Not authorized');
+              return res.json(); 
+            })
+            .then(function(data) {
+              var count = data.totalUnread || 0;
+              if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.classList.remove('d-none');
+              } else {
+                badge.classList.add('d-none');
+              }
+            })
+            .catch(function() {});
+        }
+        updateSidebarChatBadge();
+        setInterval(updateSidebarChatBadge, 3000);
+      }
+      
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initBadge);
+      } else {
+        initBadge();
+      }
+    })();
+    </script>
   </nav>
 </body>
 </html>

@@ -35,63 +35,51 @@
       </div>
 
       <div class="header-actions">
-        <div class="icon-btn">
-          <i class="bi bi-bell"></i>
-          <span class="notification-dot"></span>
-        </div>
-        <div class="date-picker-btn">
-          <i class="bi bi-calendar4"></i>
-          <span>25 Th3, 2026</span>
-        </div>
+        <button type="button" class="btn order-create-btn" id="revenueExportBtn"
+          title="Xuất báo cáo doanh thu theo kỳ đang chọn">
+          <i class="bi bi-download"></i> Xuất báo cáo
+        </button>
       </div>
     </div>
 
-    <!-- Summary Cards Row -->
+    <p class="text-muted small mb-3" id="revSummaryPeriodNote">Số liệu tổng hợp theo đơn đã hoàn thành (và đơn chưa gán trạng thái); giá vốn lấy từ <strong>giá vốn món</strong> khi tạo đơn.</p>
+
+    <!-- Summary: doanh thu / giá vốn / lãi -->
     <div class="row g-4 mb-4">
-      <div class="col-md-3">
+      <div class="col-md-4">
         <div class="custom-card">
           <div class="card-icon-box bg-light-warning">
             <i class="bi bi-graph-up-arrow"></i>
           </div>
           <div class="metric-value" id="revTotal7">0 đ</div>
-          <div class="metric-title">Doanh Thu 7 Ngày</div>
-          <div class="metric-desc">Tổng doanh thu tuần này</div>
+          <div class="metric-title" id="revTitleRevenue">Doanh thu</div>
+          <div class="metric-desc" id="revDescRevenue">Theo kỳ đang chọn</div>
         </div>
       </div>
 
-      <div class="col-md-3">
-        <div class="custom-card">
-          <div class="card-icon-box bg-light-success">
-            <i class="bi bi-receipt"></i>
-          </div>
-          <div class="metric-value" id="revOrders7">0</div>
-          <div class="metric-title">Số Đơn Hàng</div>
-          <div class="metric-desc">Đơn trong 7 ngày</div>
-        </div>
-      </div>
-
-      <div class="col-md-3">
+      <div class="col-md-4">
         <div class="custom-card">
           <div class="card-icon-box bg-light-danger">
-            <i class="bi bi-calculator"></i>
+            <i class="bi bi-box-seam"></i>
           </div>
-          <div class="metric-value" id="revAvgOrder">0 đ</div>
-          <div class="metric-title">Giá Trị TB/Đơn</div>
-          <div class="metric-desc">Trung bình mỗi đơn</div>
+          <div class="metric-value" id="revCost7">0 đ</div>
+          <div class="metric-title">Giá vốn (COGS)</div>
+          <div class="metric-desc">Tổng giá vốn dòng món</div>
         </div>
       </div>
 
-      <div class="col-md-3">
+      <div class="col-md-4">
         <div class="custom-card">
-          <div class="card-icon-box bg-light-info">
-            <i class="bi bi-trophy"></i>
+          <div class="card-icon-box bg-light-success">
+            <i class="bi bi-piggy-bank"></i>
           </div>
-          <div class="metric-value" id="revBestDayLabel">--</div>
-          <div class="metric-title">Ngày Bán Tốt Nhất</div>
-          <div class="metric-desc" id="revBestDayRevenue">0 đ</div>
+          <div class="metric-value" id="revProfit7">0 đ</div>
+          <div class="metric-title">Lãi gộp</div>
+          <div class="metric-desc" id="revMarginDesc">Biên lợi nhuận gộp: —</div>
         </div>
       </div>
     </div>
+
 
     <!-- Main Chart Row -->
     <div class="row mb-4">
@@ -114,15 +102,14 @@
       </div>
     </div>
 
-    <!-- Bottom Row -->
-    <div class="row g-4 mb-4">
-      <!-- Bar Chart -->
-      <div class="col-md-8">
+    <!-- Orders Chart Row -->
+    <div class="row mb-4">
+      <div class="col-12">
         <div class="custom-card">
           <div class="chart-header">
             <div>
               <h3 class="chart-title">Số Đơn Hàng Theo Ngày</h3>
-              <p class="chart-subtitle">7 ngày gần nhất</p>
+              <p class="chart-subtitle" id="ordersChartSubtitle">7 ngày gần nhất</p>
             </div>
           </div>
           <div style="height: 250px;">
@@ -130,41 +117,18 @@
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- List Stats -->
-      <div class="col-md-4">
-        <div class="custom-card mb-4">
-          <h3 class="chart-title mb-4">Doanh Thu Theo Danh Mục</h3>
-
-          <div class="progress-list" id="categoryProgressList">
-            <div class="progress-item">
-              <div class="progress-item-header">
-                <span>Chưa có dữ liệu</span>
-                <span>0%</span>
-              </div>
-              <div class="progress">
-                <div class="progress-bar bg-coffee" style="width: 0%;"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
+    <!-- Category Revenue Row -->
+    <div class="row mb-4">
+      <div class="col-12">
         <div class="custom-card">
-          <h3 class="chart-title mb-3">Top Sản Phẩm</h3>
+          <h3 class="chart-title mb-4">Lãi Gộp Theo Danh Mục</h3>
 
-          <div id="topProductsList">
-            <div class="product-item">
-              <img src="/images/coffee.jpeg" alt="Placeholder" class="product-img"
-                onerror="this.src='https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=100&h=100&fit=crop'">
-              <div class="product-info">
-                <h6>Chưa có dữ liệu</h6>
-                <p>Sản phẩm sẽ hiển thị khi có đơn hàng</p>
-              </div>
-              <div class="product-price">0 lượt</div>
-            </div>
+          <div class="row" id="categoryProgressList">
+            <div class="col-12 text-muted">Đang tải...</div>
           </div>
         </div>
-
       </div>
     </div>
 

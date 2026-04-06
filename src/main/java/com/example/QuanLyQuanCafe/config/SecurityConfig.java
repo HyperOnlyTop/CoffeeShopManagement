@@ -53,6 +53,10 @@ public class SecurityConfig {
             .requestMatchers("/Booking/**").hasAnyRole("ADMIN", "CASHIER", "SERVER")
             .requestMatchers("/Tables/**").hasAnyRole("ADMIN", "CASHIER", "SERVER")
             .requestMatchers("/Staff/**").hasAnyRole("ADMIN", "CASHIER", "SERVER", "BARISTA", "SECURITY")
+            // Staff Chat APIs - phải đặt trước /api/staff/**
+            .requestMatchers("/api/staff/chat/**").hasAnyRole("ADMIN", "CASHIER", "SERVER")
+            // Messages page
+            .requestMatchers("/Messages/**").hasAnyRole("ADMIN", "CASHIER", "SERVER")
             // Staff APIs
             .requestMatchers(HttpMethod.GET, "/api/staff").hasRole("ADMIN")
             .requestMatchers(HttpMethod.GET, "/api/staff/basic").hasAnyRole("ADMIN", "CASHIER", "SERVER", "BARISTA", "SECURITY")

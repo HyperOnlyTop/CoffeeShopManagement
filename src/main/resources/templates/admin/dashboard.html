@@ -15,7 +15,7 @@
      <!-- Google Fonts - Inter -->
      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-     <!-- Custom CSS for dashboard layout (dùng lại doanhthu.css) -->
+     <!-- Custom CSS for dashboard layout -->
      <link rel="stylesheet" href="/css/doanhthu.css">
 </head>
 
@@ -31,16 +31,16 @@
           <div class="header-row">
                <div class="page-title">
                     <h2>Dashboard</h2>
-                    <p>Thông tin tổng quan hoạt động quán</p>
+                    <p>Thông tin tổng quan hoạt động quán hôm nay</p>
                </div>
                <div class="header-actions">
-                    <button class="btn export-btn">
-                         <i class="bi bi-download"></i> Xuất báo cáo
-                    </button>
+                    <a class="btn order-create-btn" href="/Revenue">
+                         <i class="bi bi-bar-chart-line"></i> Doanh thu
+                    </a>
                </div>
           </div>
 
-          <!-- Summary cards -->
+          <!-- Summary cards (4 thẻ chính - dữ liệu thật từ server) -->
           <div class="row g-4 mb-4">
                <div class="col-md-3">
                     <div class="custom-card">
@@ -76,11 +76,9 @@
                               <p class="metric-caption">Khách hàng mới</p>
                               <span class="icon-pill icon-pill-pink"><i class="bi bi-person-plus"></i></span>
                          </div>
-                         <div class="metric-value" th:text="${todayNewCustomers != null} ? ${todayNewCustomers} : 0">0
-                         </div>
+                         <div class="metric-value" th:text="${todayNewCustomers != null} ? ${todayNewCustomers} : 0">0</div>
                          <p class="metric-footer"
-                              th:text="'Tổng: ' + (${totalCustomers != null} ? ${totalCustomers} : 0) + ' khách'">Tổng:
-                              0 khách</p>
+                              th:text="'Tổng: ' + (${totalCustomers != null} ? ${totalCustomers} : 0) + ' khách'">Tổng: 0 khách</p>
                     </div>
                </div>
 
@@ -98,24 +96,81 @@
                </div>
           </div>
 
-          <!-- Chart + Best sellers row -->
+          <!-- Cảnh báo: Đơn chờ xử lý + Kho thấp -->
           <div class="row g-4 mb-4">
-               <div class="col-lg-8">
-                    <div class="custom-card h-100">
-                         <div class="chart-header align-items-center">
-                              <div>
-                                   <h3 class="chart-title">Doanh thu 7 ngày qua</h3>
-                                   <p class="chart-subtitle">Dữ liệu từ bảng doanh thu hàng ngày</p>
+               <div class="col-md-6">
+                    <a href="/Order?status=PENDING" class="text-decoration-none">
+                         <div class="custom-card d-flex align-items-center gap-3"
+                              th:classappend="${pendingOrderCount > 0} ? 'border-warning' : ''">
+                              <div class="icon-pill icon-pill-yellow" style="width:48px;height:48px;font-size:1.4rem;">
+                                   <i class="bi bi-hourglass-split"></i>
                               </div>
-                              <span class="badge-growth">7 ngày gần nhất</span>
+                              <div class="flex-grow-1">
+                                   <p class="metric-caption mb-1">Đơn chờ xử lý</p>
+                                   <div class="d-flex align-items-baseline gap-2">
+                                        <span class="metric-value" style="font-size:1.5rem;"
+                                             th:text="${pendingOrderCount != null} ? ${pendingOrderCount} : 0">0</span>
+                                        <span class="text-muted small">đơn đang chờ pha chế</span>
+                                   </div>
+                              </div>
+                              <i class="bi bi-chevron-right text-muted"></i>
                          </div>
-                         <div style="height: 280px;">
-                              <canvas id="revenueChart"></canvas>
+                    </a>
+               </div>
+
+               <div class="col-md-6">
+                    <a href="/Inventory?status=LOW_STOCK" class="text-decoration-none">
+                         <div class="custom-card d-flex align-items-center gap-3"
+                              th:classappend="${alertStockCount > 0} ? 'border-danger' : ''">
+                              <div class="icon-pill icon-pill-pink" style="width:48px;height:48px;font-size:1.4rem;">
+                                   <i class="bi bi-exclamation-triangle"></i>
+                              </div>
+                              <div class="flex-grow-1">
+                                   <p class="metric-caption mb-1">Cảnh báo kho</p>
+                                   <div class="d-flex align-items-baseline gap-2">
+                                        <span class="metric-value" style="font-size:1.5rem;"
+                                             th:text="${alertStockCount != null} ? ${alertStockCount} : 0">0</span>
+                                        <span class="text-muted small">mặt hàng sắp hết / đã hết</span>
+                                   </div>
+                              </div>
+                              <i class="bi bi-chevron-right text-muted"></i>
                          </div>
+                    </a>
+               </div>
+          </div>
+
+          <!-- Lịch đặt bàn hôm nay + Món bán chạy -->
+          <div class="row g-4 mb-4">
+               <div class="col-lg-6">
+                    <div class="custom-card h-100">
+                         <div class="d-flex justify-content-between align-items-center mb-3">
+                              <h3 class="chart-title mb-0">Lịch đặt bàn hôm nay</h3>
+                              <a href="/Booking" class="btn btn-sm btn-outline-secondary">Xem tất cả</a>
+                         </div>
+
+                         <ul class="list-group list-group-flush">
+                              <li class="list-group-item px-0 border-0 text-muted small"
+                                   th:if="${#lists.isEmpty(todayBookings)}">Không có đặt bàn nào hôm nay.</li>
+                              <li class="list-group-item px-0 d-flex justify-content-between align-items-center"
+                                   th:each="b : ${todayBookings}">
+                                   <div>
+                                        <span class="fw-medium"
+                                             th:text="${b.bookingTime != null} ? ${#temporals.format(b.bookingTime, 'HH:mm')} : '--:--'">--:--</span>
+                                        <span class="text-muted ms-2" th:text="${b.name}">Tên khách</span>
+                                   </div>
+                                   <div class="text-end">
+                                        <span class="badge text-bg-light text-dark border"
+                                             th:text="${b.guests} + ' người'">0 người</span>
+                                        <span class="badge text-bg-info ms-1"
+                                             th:if="${b.reservedTableNumber != null}"
+                                             th:text="'Bàn ' + ${b.reservedTableNumber}">Bàn</span>
+                                   </div>
+                              </li>
+                         </ul>
                     </div>
                </div>
 
-               <div class="col-lg-4">
+               <div class="col-lg-6">
                     <div class="custom-card h-100">
                          <div class="d-flex justify-content-between align-items-center mb-3">
                               <h3 class="chart-title mb-0">Món bán chạy</h3>
@@ -139,77 +194,57 @@
                                         <p class="best-seller-meta" th:text="${item.totalQuantity} + ' ly'"></p>
                                    </div>
                                    <span class="best-seller-value"
-                                        th:text="${#numbers.formatInteger(item.totalRevenue, 0, 'POINT')} + ' đ'">0
-                                        đ</span>
+                                        th:text="${#numbers.formatInteger(item.totalRevenue, 0, 'POINT')} + ' đ'">0 đ</span>
                               </div>
                          </div>
                     </div>
                </div>
           </div>
 
-          <!-- Recent orders table -->
-          <div class="custom-card">
-               <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h3 class="chart-title mb-0">Đơn hàng gần đây</h3>
-                    <a href="#" class="view-all-link">Xem tất cả
-                         &#8594;</a>
-               </div>
-
-               <div class="table-responsive">
-                    <table class="table align-middle recent-orders-table">
-                         <thead>
-                              <tr>
-                                   <th scope="col">Mã đơn</th>
-                                   <th scope="col">Khách hàng</th>
-                                   <th scope="col">Món</th>
-                                   <th scope="col">Tổng tiền</th>
-                                   <th scope="col">Giờ</th>
-                                   <th scope="col">Trạng thái</th>
-                              </tr>
-                         </thead>
-                         <tbody>
-                              <tr th:if="${#lists.isEmpty(recentOrders)}">
-                                   <td colspan="6" class="text-center text-muted py-4">Chưa có đơn hàng nào gần đây.
-                                   </td>
-                              </tr>
-
-                              <tr th:each="ro : ${recentOrders}">
-                                   <td class="order-code"
-                                        th:text="${ro.order.orderCode != null ? '#' + ro.order.orderCode : '(Mới)'}">
-                                        #ORD-0000</td>
-                                   <td th:text="${ro.order.customerName != null ? ro.order.customerName : 'Khách lẻ'}">
-                                        Tên khách</td>
-                                   <td th:text="${ro.itemsCount} + ' món'">0 món</td>
-                                   <td
-                                        th:text="${ro.order.total != null ? #numbers.formatInteger(ro.order.total, 0, 'POINT') + ' đ' : '0 đ'}">
-                                        0 đ</td>
-                                   <td
-                                        th:text="${ro.order.createdAt != null ? #temporals.format(ro.order.createdAt, 'HH:mm') : '--:--'}">
-                                        --:--</td>
-                                   <td>
-                                        <span class="status-badge status-completed"
-                                             th:if="${ro.order.status != null and ro.order.status.name() == 'COMPLETED'}">Hoàn
-                                             thành</span>
-                                        <span class="status-badge status-pending"
-                                             th:if="${ro.order.status != null and ro.order.status.name() == 'PENDING'}">Chờ
-                                             xử lý</span>
-                                        <span class="status-badge status-cancelled"
-                                             th:if="${ro.order.status != null and ro.order.status.name() == 'CANCELLED'}">Đã
-                                             hủy</span>
-                                        <span class="status-badge" th:if="${ro.order.status == null}">Không rõ</span>
-                                   </td>
-                              </tr>
-                         </tbody>
-                    </table>
+          <!-- Hoạt động gần đây -->
+          <div class="row g-4 mb-4">
+               <div class="col-12">
+                    <div class="custom-card">
+                         <div class="d-flex justify-content-between align-items-start mb-3">
+                              <div>
+                                   <h3 class="chart-title mb-1">Hoạt động gần đây</h3>
+                                   <p class="chart-subtitle mb-0">5 đơn mới nhất</p>
+                              </div>
+                              <a href="/Order" class="btn btn-sm btn-outline-secondary">Quản lý đơn</a>
+                         </div>
+                         <ul class="list-group list-group-flush">
+                              <li class="list-group-item px-0 border-0 text-muted small"
+                                   th:if="${#lists.isEmpty(recentOrders)}">Chưa có đơn gần đây.</li>
+                              <li class="list-group-item px-0 d-flex justify-content-between align-items-center"
+                                   th:each="ro : ${recentOrders}">
+                                   <div>
+                                        <span class="fw-medium"
+                                             th:text="${ro.order.orderCode != null ? '#' + ro.order.orderCode : 'Đơn mới'}">#</span>
+                                        <span class="text-muted ms-2"
+                                             th:text="${ro.order.customerName != null ? ro.order.customerName : 'Khách lẻ'}">Khách</span>
+                                        <span class="text-muted ms-2 small"
+                                             th:text="${ro.order.createdAt != null} ? ${#temporals.format(ro.order.createdAt, 'HH:mm')} : ''"></span>
+                                   </div>
+                                   <div class="text-end">
+                                        <span
+                                             th:text="${ro.order.total != null ? #numbers.formatInteger(ro.order.total, 0, 'POINT') + ' đ' : '0 đ'}">0 đ</span>
+                                        <span class="badge rounded-pill ms-2 text-bg-success"
+                                             th:if="${ro.order.status != null and ro.order.status.name() == 'COMPLETED'}">Hoàn thành</span>
+                                        <span class="badge rounded-pill ms-2 text-bg-warning"
+                                             th:if="${ro.order.status != null and ro.order.status.name() == 'PENDING'}">Chờ xử lý</span>
+                                        <span class="badge rounded-pill ms-2 text-bg-secondary"
+                                             th:if="${ro.order.status != null and ro.order.status.name() == 'CANCELLED'}">Đã hủy</span>
+                                        <span class="badge rounded-pill ms-2 text-bg-light text-dark border"
+                                             th:if="${ro.order.status == null}">—</span>
+                                   </div>
+                              </li>
+                         </ul>
+                    </div>
                </div>
           </div>
 
      </main>
 
-     <!-- Chart.js -->
-     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-     <!-- Dashboard JS -->
-     <script src="/js/dashboard.js"></script>
      <!-- Admin common JS (logout confirm, etc.) -->
      <script src="/js/admin-common.js"></script>
 

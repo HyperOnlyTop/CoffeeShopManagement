@@ -30,10 +30,13 @@ import com.example.QuanLyQuanCafe.model.BookingStatus;
 import com.example.QuanLyQuanCafe.model.OrderType;
 import com.example.QuanLyQuanCafe.model.MenuItem;
 import com.example.QuanLyQuanCafe.model.MenuItemStatus;
+import com.example.QuanLyQuanCafe.model.InventoryItem;
+import com.example.QuanLyQuanCafe.model.InventoryStatus;
 import com.example.QuanLyQuanCafe.service.MenuService;
 import com.example.QuanLyQuanCafe.service.OrderService;
 import com.example.QuanLyQuanCafe.service.StaffService;
 import com.example.QuanLyQuanCafe.service.DailyRevenueService;
+import com.example.QuanLyQuanCafe.service.InventoryService;
 import com.example.QuanLyQuanCafe.repository.CustomerRepository;
 import com.example.QuanLyQuanCafe.repository.StaffRepository;
 import com.example.QuanLyQuanCafe.repository.AppUserRepository;
@@ -45,19 +48,21 @@ public class ProductController {
 
 	private final MenuService menuService;
 	private final OrderService orderService;
-    private final StaffService staffService;
+	private final StaffService staffService;
 	private final DailyRevenueService dailyRevenueService;
+	private final InventoryService inventoryService;
 	private final CustomerRepository customerRepository;
 	private final StaffRepository staffRepository;
 	private final AppUserRepository appUserRepository;
-    private final TableBookingRepository tableBookingRepository;
-    private final BookingStaffReminderRepository bookingStaffReminderRepository;
+	private final TableBookingRepository tableBookingRepository;
+	private final BookingStaffReminderRepository bookingStaffReminderRepository;
 
 	public ProductController(
 			MenuService menuService,
 			OrderService orderService,
 			StaffService staffService,
 			DailyRevenueService dailyRevenueService,
+			InventoryService inventoryService,
 			CustomerRepository customerRepository,
 			StaffRepository staffRepository,
 			AppUserRepository appUserRepository,
@@ -65,8 +70,9 @@ public class ProductController {
 			BookingStaffReminderRepository bookingStaffReminderRepository) {
 		this.menuService = menuService;
 		this.orderService = orderService;
-        this.staffService = staffService;
+		this.staffService = staffService;
 		this.dailyRevenueService = dailyRevenueService;
+		this.inventoryService = inventoryService;
 		this.customerRepository = customerRepository;
 		this.staffRepository = staffRepository;
 		this.appUserRepository = appUserRepository;
@@ -161,6 +167,30 @@ public class ProductController {
 			bestSellers = bestSellers.subList(0, 5);
 		}
 
+		// Đơn chờ xử lý (PENDING)
+		List<CafeOrder> pendingOrders = orderService.findByStatus(OrderStatus.PENDING);
+		int pendingOrderCount = pendingOrders.size();
+
+		// Cảnh báo kho: LOW_STOCK hoặc OUT_OF_STOCK
+		List<InventoryItem> lowStockItems = inventoryService.findByStatus(InventoryStatus.LOW_STOCK);
+		List<InventoryItem> outOfStockItems = inventoryService.findByStatus(InventoryStatus.OUT_OF_STOCK);
+		List<InventoryItem> alertStockItems = new ArrayList<>();
+		alertStockItems.addAll(outOfStockItems);
+		alertStockItems.addAll(lowStockItems);
+		if (alertStockItems.size() > 5) {
+			alertStockItems = alertStockItems.subList(0, 5);
+		}
+
+		// Lịch đặt bàn hôm nay (CONFIRMED, bookingTime trong ngày hôm nay)
+		LocalDateTime startOfToday = today.atStartOfDay();
+		LocalDateTime endOfTodayBooking = today.atTime(LocalTime.MAX);
+		List<TableBooking> todayBookings = tableBookingRepository.findByStatusAndBookingTimeBetween(
+				BookingStatus.CONFIRMED, startOfToday, endOfTodayBooking);
+		todayBookings.sort(Comparator.comparing(TableBooking::getBookingTime, Comparator.nullsLast(Comparator.naturalOrder())));
+		if (todayBookings.size() > 5) {
+			todayBookings = todayBookings.subList(0, 5);
+		}
+
 		model.addAttribute("todayRevenue", todayRevenue);
 		model.addAttribute("monthRevenue", monthRevenue);
 		model.addAttribute("todayOrders", todayOrders);
@@ -170,6 +200,13 @@ public class ProductController {
 		model.addAttribute("todayAvgOrderValue", todayAvgOrderValue);
 		model.addAttribute("recentOrders", recentOrders);
 		model.addAttribute("bestSellers", bestSellers);
+
+		// Thêm dữ liệu mới cho dashboard
+		model.addAttribute("pendingOrderCount", pendingOrderCount);
+		model.addAttribute("alertStockItems", alertStockItems);
+		model.addAttribute("alertStockCount", lowStockItems.size() + outOfStockItems.size());
+		model.addAttribute("todayBookings", todayBookings);
+		model.addAttribute("todayBookingCount", todayBookings.size());
 
 		return "admin/dashboard";
 	}
@@ -388,6 +425,11 @@ public class ProductController {
 	@GetMapping("/Inventory")
 	public String khoHang() {
 		return "admin/Inventory";
+	}
+
+	@GetMapping("/Messages")
+	public String messages() {
+		return "admin/Messages";
 	}
 
 	@GetMapping("/Setting")
