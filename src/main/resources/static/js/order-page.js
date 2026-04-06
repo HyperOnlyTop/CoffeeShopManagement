@@ -1689,6 +1689,57 @@
         el.textContent = n === 0 ? 'Không có đơn phù hợp bộ lọc' : n + ' đơn đang hiển thị';
       }
 
+      function countOrdersByDateScope() {
+        var pendingD = 0;
+        var completedD = 0;
+        var cancelledD = 0;
+        var unknownD = 0;
+        var rows = document.querySelectorAll('.orders-table tbody tr.order-data-row');
+        rows.forEach(function (row) {
+          if (!rowMatchesOrderDate(row)) return;
+          var st = row.getAttribute('data-order-status') || '';
+          if (st === 'PENDING') pendingD++;
+          else if (st === 'COMPLETED') completedD++;
+          else if (st === 'CANCELLED') cancelledD++;
+          else unknownD++;
+        });
+        return {
+          pending: pendingD,
+          completed: completedD,
+          cancelled: cancelledD,
+          unknown: unknownD,
+          totalOnDay: pendingD + completedD + cancelledD + unknownD
+        };
+      }
+
+      function updateOrderStatCards() {
+        var totalEl = document.getElementById('orderStatTotal');
+        var pendEl = document.getElementById('orderStatPending');
+        var compEl = document.getElementById('orderStatCompleted');
+        var cancEl = document.getElementById('orderStatCancelled');
+        if (!totalEl || !pendEl || !compEl || !cancEl) return;
+
+        var c = countOrdersByDateScope();
+        var tab = getActiveOrderFilterKey();
+        var totalForTab;
+        if (tab === 'ALL') {
+          totalForTab = c.totalOnDay;
+        } else if (tab === 'PENDING') {
+          totalForTab = c.pending;
+        } else if (tab === 'COMPLETED') {
+          totalForTab = c.completed;
+        } else if (tab === 'CANCELLED') {
+          totalForTab = c.cancelled;
+        } else {
+          totalForTab = c.totalOnDay;
+        }
+
+        totalEl.textContent = String(totalForTab);
+        pendEl.textContent = String(c.pending);
+        compEl.textContent = String(c.completed);
+        cancEl.textContent = String(c.cancelled);
+      }
+
       function applyOrderFilters() {
         var filterKey = getActiveOrderFilterKey();
         var term = normalizeOrderText(orderSearchInput ? orderSearchInput.value : '');
@@ -1697,6 +1748,7 @@
           var show = rowMatchesOrderFilter(row, filterKey) && rowMatchesOrderSearch(row, term) && rowMatchesOrderDate(row);
           row.style.display = show ? '' : 'none';
         });
+        updateOrderStatCards();
         updateOrderSubtitle();
       }
 

@@ -1,9 +1,12 @@
 package com.example.QuanLyQuanCafe.config;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,64 +16,57 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.QuanLyQuanCafe.model.BookingStatus;
 import com.example.QuanLyQuanCafe.model.CafeOrder;
 import com.example.QuanLyQuanCafe.model.MenuItem;
 import com.example.QuanLyQuanCafe.model.OrderItem;
 import com.example.QuanLyQuanCafe.model.OrderStatus;
 import com.example.QuanLyQuanCafe.model.OrderType;
 import com.example.QuanLyQuanCafe.model.PaymentMethod;
-import com.example.QuanLyQuanCafe.model.TableBooking;
 import com.example.QuanLyQuanCafe.repository.CafeOrderRepository;
 import com.example.QuanLyQuanCafe.repository.MenuItemRepository;
 import com.example.QuanLyQuanCafe.repository.OrderItemRepository;
-import com.example.QuanLyQuanCafe.repository.TableBookingRepository;
 import com.example.QuanLyQuanCafe.service.OrderService;
 
 /**
- * Seed đơn hàng và đặt bàn mẫu (idempotent: mã đơn cố định dạng {@code ORD-yymmdd-NNNN} khớp ngày tạo đơn; booking theo cặp SĐT + giờ đặt).
- * Đơn khoảng 28/3–3/4; lịch đặt bàn dày 28/3–3/4 (mỗi {@code booking_time} duy nhất toàn DB).
- * Trạng thái {@link OrderStatus#COMPLETED} / {@link BookingStatus#CHECKED_IN} cho dữ liệu lịch sử đặt bàn.
+ * Seed đơn hàng mẫu (idempotent: mã đơn cố định dạng {@code ORD-yymmdd-NNNN} khớp ngày tạo đơn).
+ * 28/3–3/4: 5 đơn cố định/ngày + chunk bổ sung từ {@code 0006} (rải giờ, vãng lai / mang đi / VIP tại bàn).
+ * 4/4–6/4: chunk đặt từ {@code 0001}. Trạng thái {@link OrderStatus#COMPLETED}.
  * <p>Cờ tích điểm khớp 3 case: vãng lai → {@code walkInGuest=true}, không tích điểm;
  * có SĐT → {@code loyaltyEarnEligible=true}, {@code loyaltyPointsAwarded=false} rồi gọi
  * {@link OrderService#applyLoyaltyAndCustomerStatsForSeededCompletedOrder} để cộng điểm + cập nhật khách (giống runtime).
  */
 @Component
-public class OrderAndBookingDataSeeder {
+public class OrderDataSeeder {
 
-    private static final Logger log = LoggerFactory.getLogger(OrderAndBookingDataSeeder.class);
+    private static final Logger log = LoggerFactory.getLogger(OrderDataSeeder.class);
 
     private final CafeOrderRepository cafeOrderRepository;
     private final OrderItemRepository orderItemRepository;
     private final MenuItemRepository menuItemRepository;
-    private final TableBookingRepository tableBookingRepository;
     private final OrderService orderService;
 
-    public OrderAndBookingDataSeeder(
+    public OrderDataSeeder(
             CafeOrderRepository cafeOrderRepository,
             OrderItemRepository orderItemRepository,
             MenuItemRepository menuItemRepository,
-            TableBookingRepository tableBookingRepository,
             OrderService orderService) {
         this.cafeOrderRepository = cafeOrderRepository;
         this.orderItemRepository = orderItemRepository;
         this.menuItemRepository = menuItemRepository;
-        this.tableBookingRepository = tableBookingRepository;
         this.orderService = orderService;
     }
 
     @EventListener(ApplicationReadyEvent.class)
     @Order(200)
     @Transactional
-    public void seedOrdersAndBookings() {
+    public void seedOrders() {
         if (menuItemRepository.count() == 0) {
-            log.warn("OrderAndBookingDataSeeder: bỏ qua — chưa có món trong menu.");
+            log.warn("OrderDataSeeder: bỏ qua — chưa có món trong menu.");
             return;
         }
 
         seedOrdersMar28ThroughApr3_2026();
-        seedDemoBookings();
-        seedBookingsMar28ThroughApr3_2026();
+        seedAdditionalOrdersMar28ThroughApr6_2026();
     }
 
     /**
@@ -415,7 +411,7 @@ public class OrderAndBookingDataSeeder {
             String note = line.length > 2 ? line[2] : null;
             Optional<MenuItem> opt = menuItemRepository.findByName(itemName);
             if (opt.isEmpty()) {
-                log.warn("OrderAndBookingDataSeeder: bỏ qua dòng món '{}' — không có trong menu.", itemName);
+                log.warn("OrderDataSeeder: bỏ qua dòng món '{}' — không có trong menu.", itemName);
                 continue;
             }
             MenuItem menuItem = opt.get();
@@ -457,142 +453,165 @@ public class OrderAndBookingDataSeeder {
         }
     }
 
-    private void seedDemoBookings() {
-        upsertCompletedBooking(
-                "Nguyễn Văn An",
-                "0912000101",
-                "an.nguyen@demo.local",
-                LocalDateTime.of(2026, 3, 8, 18, 0),
-                LocalDateTime.of(2026, 3, 1, 10, 0),
-                4,
-                3,
-                "Sinh nhật — dễ uống ngọt nhẹ");
+    /**
+     * Seed bổ sung (sau 5 đơn cố định/ngày 28/3–3/4 nếu có):
+     * - 28/3–3/4: thêm chunk từ mã {@code 0006}, mỗi ngày tổng ~21–27 đơn (5 gốc + chunk), số chunk khác nhau;
+     *   giờ rải + mix vãng lai / mang đi / VIP tại bàn (tích điểm).
+     * - 4/4–6/4: chỉ chunk (mã từ {@code 0001}), 20–30 đơn/ngày, cùng kiểu rải.
+     * - Mã {@code ORD-yymmdd-NNNN}, idempotent qua {@code findByOrderCode}.
+     */
+    private void seedAdditionalOrdersMar28ThroughApr6_2026() {
+        seedSpreadOrdersChunk(LocalDate.of(2026, 3, 28), 6, 19, 3);
+        seedSpreadOrdersChunk(LocalDate.of(2026, 3, 29), 6, 17, 2);
+        seedSpreadOrdersChunk(LocalDate.of(2026, 3, 30), 6, 21, 3);
+        seedSpreadOrdersChunk(LocalDate.of(2026, 3, 31), 6, 18, 2);
+        seedSpreadOrdersChunk(LocalDate.of(2026, 4, 1), 6, 19, 3);
+        seedSpreadOrdersChunk(LocalDate.of(2026, 4, 2), 6, 22, 3);
+        seedSpreadOrdersChunk(LocalDate.of(2026, 4, 3), 6, 16, 2);
 
-        upsertCompletedBooking(
-                "Hoàng Thị Mai",
-                "0912000102",
-                "mai.hoang@demo.local",
-                LocalDateTime.of(2026, 3, 12, 12, 0),
-                LocalDateTime.of(2026, 3, 5, 9, 0),
-                2,
-                5,
-                "Gần cửa sổ");
-
-        upsertCompletedBooking(
-                "Võ Đức Thịnh",
-                "0912000103",
-                null,
-                LocalDateTime.of(2026, 3, 16, 19, 0),
-                LocalDateTime.of(2026, 3, 10, 14, 0),
-                6,
-                8,
-                "Có trẻ em — ghế thêm nếu có");
-
-        upsertCompletedBooking(
-                "Bùi Lan Chi",
-                "0912000104",
-                "chi.bui@demo.local",
-                LocalDateTime.of(2026, 3, 20, 15, 0),
-                LocalDateTime.of(2026, 3, 12, 11, 0),
-                3,
-                2,
-                "Họp nhóm nhỏ");
+        seedSpreadOrdersChunk(LocalDate.of(2026, 4, 4), 1, 26, 3);
+        seedSpreadOrdersChunk(LocalDate.of(2026, 4, 5), 1, 22, 2);
+        seedSpreadOrdersChunk(LocalDate.of(2026, 4, 6), 1, 30, 3);
     }
 
     /**
-     * Lịch đặt bàn 28/3–3/4/2026: 5 slot/ngày × 7 ngày = 35 bản ghi.
-     * Giờ đặt giờ chẵn (phút 0), trong mỗi ngày cách nhau đúng 1 giờ; mỗi {@code booking_time} duy nhất toàn DB.
-     * SĐT 0915055001–0915055035; idempotent: bỏ qua nếu trùng giờ đặt hoặc trùng cặp SĐT + giờ.
+     * Một dải đơn cùng ngày: {@code count} đơn với STT {@code startSeq} … {@code startSeq+count-1}.
+     * Salt phụ thuộc ngày + {@code startSeq} để chunk sau 0005 khác hẳn chunk chỉ có mang đi/ngày 4–6/4.
      */
-    private void seedBookingsMar28ThroughApr3_2026() {
-        int seq = 1;
-        seq = seedCalendarBookings(2026, 3, 28, seq, List.of(
-                new CalSlot(10, 0, 2, 5, "Trần Thu Hương", "huong.tran@demo.local", "Uống trà chiều"),
-                new CalSlot(11, 0, 4, 7, "Lê Quốc Huy", "huy.le@demo.local", "Sinh nhật bạn"),
-                new CalSlot(12, 0, 3, null, "Phạm Ngọc Lan", null, "Chưa chọn bàn — linh hoạt"),
-                new CalSlot(13, 0, 8, 12, "Hoàng Đức Anh", "anh.hoang@demo.local", "Họp nhóm lớn"),
-                new CalSlot(14, 0, 2, 3, "Võ Thị Mai", null, "Cuối ngày, yên tĩnh")));
-        seq = seedCalendarBookings(2026, 3, 29, seq, List.of(
-                new CalSlot(11, 0, 3, 4, "Đặng Minh Khôi", "khoi.dang@demo.local", "Brunch cuối tuần"),
-                new CalSlot(12, 0, 2, 6, "Bùi Thảo My", null, "Gần cửa sổ"),
-                new CalSlot(13, 0, 5, 9, "Nguyễn Hải Nam", "nam.nguyen@demo.local", "Có trẻ nhỏ"),
-                new CalSlot(14, 0, 6, 11, "Đinh Thuỳ Linh", "linh.dinh@demo.local", "Tiệc nhỏ"),
-                new CalSlot(15, 0, 4, 8, "Mai Phương Đông", null, "Tối thứ bảy")));
-        seq = seedCalendarBookings(2026, 3, 30, seq, List.of(
-                new CalSlot(9, 0, 2, 2, "Lý Gia Hân", "han.ly@demo.local", "Sáng sớm"),
-                new CalSlot(10, 0, 3, 10, "Chu Bảo Long", null, "Trưa vắng"),
-                new CalSlot(11, 0, 7, 14, "Tôn Nữ Ánh Tuyết", "tuyet.book@demo.local", "Họp team"),
-                new CalSlot(12, 0, 2, 5, "Cao Hoài Nam", null, "Hẹn gặp bạn"),
-                new CalSlot(13, 0, 4, 16, "Kiều Bích Ngọc", "ngoc.kieu@demo.local", "Tối xem bóng đá")));
-        seq = seedCalendarBookings(2026, 3, 31, seq, List.of(
-                new CalSlot(12, 0, 3, 6, "Quách Đình Phúc", "phuc.quach@demo.local", "Cuối tháng"),
-                new CalSlot(13, 0, 5, 13, "Hà Thu Trang", null, "Họp phụ huynh xong"),
-                new CalSlot(14, 0, 2, 1, "La Tuấn Kiệt", "kiet.la@demo.local", null),
-                new CalSlot(15, 0, 8, 18, "Giáp Thị Yến", null, "Tiệc chia tay đồng nghiệp"),
-                new CalSlot(16, 0, 3, 4, "Phan Bảo Châu", "chau.phan@demo.local", "Slot muộn")));
-        seq = seedCalendarBookings(2026, 4, 1, seq, List.of(
-                new CalSlot(10, 0, 2, 3, "Vương Thế Sơn", "son.vuong@demo.local", "Cà phê sáng 1/4"),
-                new CalSlot(11, 0, 6, 15, "Thân Minh Tuấn", null, "Đông người"),
-                new CalSlot(12, 0, 4, 7, "Uông Thị Hạnh", "hanh.uong@demo.local", "Chiều mát"),
-                new CalSlot(13, 0, 2, 2, "Dương Kim Ngân", null, "Đi một mình"),
-                new CalSlot(14, 0, 5, 17, "Từ Đức Thịnh", "thinh.tu@demo.local", "Tối muộn")));
-        seq = seedCalendarBookings(2026, 4, 2, seq, List.of(
-                new CalSlot(11, 0, 3, 8, "Hồ Ngọc Bích", null, "Thử cold brew"),
-                new CalSlot(12, 0, 4, 9, "Lương Văn Tài", "tai.luong@demo.local", "Họp dự án"),
-                new CalSlot(13, 0, 2, 5, "Tạ Minh Tuệ", null, "Góc làm việc"),
-                new CalSlot(14, 0, 7, 12, "Đỗ Quang Huy", "huy.do@demo.local", "Nhóm bạn đông"),
-                new CalSlot(15, 0, 3, 6, "Âu Dương Phong", null, "Sau xem phim")));
-        seedCalendarBookings(2026, 4, 3, seq, List.of(
-                new CalSlot(10, 0, 4, 10, "Khúc Anh Thư", "thu.khuc@demo.local", "Trưa Chủ nhật"),
-                new CalSlot(11, 0, 2, 3, "Tiêu Việt Hùng", null, "Thư giãn"),
-                new CalSlot(12, 0, 6, 11, "Chế Linh Phụng", "phung.che@demo.local", "Sinh nhật con"),
-                new CalSlot(13, 0, 3, 14, "Viên Hoài Thương", null, "Gặp bạn cũ"),
-                new CalSlot(14, 0, 5, 19, "Tô Hiếu Nghĩa", "nghia.to@demo.local", "Khách quen — bàn quen")));
-    }
+    private void seedSpreadOrdersChunk(LocalDate day, int startSeq, int count, int loyaltyDineInCount) {
+        if (count <= 0) {
+            return;
+        }
+        long salt = day.toEpochDay() * 31L + startSeq * 4099L;
+        Set<Integer> loyaltyDineIn = loyaltyDineInIndices(count, loyaltyDineInCount, salt);
 
-    private int seedCalendarBookings(int year, int month, int day, int phoneSeq, List<CalSlot> slots) {
-        int n = phoneSeq;
-        for (CalSlot s : slots) {
-            LocalDateTime bookingTime = LocalDateTime.of(year, month, day, s.hour(), s.minute());
-            LocalDateTime createdAt = bookingTime.minusDays(1).withHour(9).withMinute(0);
-            if (!createdAt.isBefore(bookingTime)) {
-                createdAt = bookingTime.minusHours(3).withMinute(0);
+        for (int i = 0; i < count; i++) {
+            int seq = startSeq + i;
+            String orderCode = String.format("ORD-%02d%02d%02d-%04d",
+                    day.getYear() % 100, day.getMonthValue(), day.getDayOfMonth(), seq);
+
+            int minuteOfDay = spreadMinuteOfDay(day, count, i, salt);
+            int hour = minuteOfDay / 60;
+            int minute = minuteOfDay % 60;
+            LocalDateTime created = day.atTime(hour, minute);
+            int prepDelta = 8 + Math.floorMod((int) (salt + i * 19), 9);
+            int payDelta = 4 + Math.floorMod((int) (salt * 3 + i * 11), 8);
+            LocalDateTime prepared = created.plusMinutes(prepDelta);
+            LocalDateTime paid = prepared.plusMinutes(payDelta);
+
+            PaymentMethod payment = switch (Math.floorMod((int) salt + i, 3)) {
+                case 0 -> PaymentMethod.CASH;
+                case 1 -> PaymentMethod.CARD;
+                default -> PaymentMethod.BANK_TRANSFER;
+            };
+            String[][] lines = generatedOrderLines(i, salt);
+
+            if (loyaltyDineIn.contains(i)) {
+                String customerName = "Khách VIP " + day.getDayOfMonth() + "/" + day.getMonthValue() + " #" + seq;
+                String customerPhone = String.format("098%02d%02d%04d",
+                        day.getMonthValue(), day.getDayOfMonth(), seq);
+                int tableNo = 1 + Math.floorMod((int) (salt * 5 + i * 7), 20);
+                seedOrderDineIn(orderCode, created, prepared, paid, customerName, customerPhone, tableNo,
+                        "Tích điểm — tại bàn", payment, lines);
+            } else {
+                int r = Math.floorMod((int) (salt / 13) + i * 23, 10);
+                if (r < 3) {
+                    String customerName = "Khách mang về " + seq;
+                    String customerPhone = String.format("096%02d%02d%04d",
+                            day.getMonthValue(), day.getDayOfMonth(), seq);
+                    seedOrderTakeaway(orderCode, created, prepared, paid, customerName, customerPhone,
+                            "Mang đi — " + Math.floorMod(i, 5), payment, lines);
+                } else {
+                    int tableNo = 1 + Math.floorMod((int) (salt + i * 13), 20);
+                    String note = switch (Math.floorMod(i, 4)) {
+                        case 0 -> "Khách vãng lai";
+                        case 1 -> "Vãng lai — gần cửa";
+                        case 2 -> "Walk-in ca " + (hour < 12 ? "sáng" : hour < 17 ? "trưa" : "chiều");
+                        default -> "Ghé nhanh";
+                    };
+                    seedOrderDineInWalkInAt(orderCode, created, prepared, paid, tableNo, note, payment, lines);
+                }
             }
-            String phone = String.format("0915055%03d", n);
-            upsertCompletedBooking(s.name(), phone, s.email(), bookingTime, createdAt, s.guests(), s.table(), s.note());
-            n++;
         }
-        return n;
     }
 
-    private record CalSlot(int hour, int minute, int guests, Integer table, String name, String email, String note) {
+    /** Rải giờ trong khoảng 7:00–21:45, tránh trùng nhau quá nhiều giữa các ngày. */
+    private static int spreadMinuteOfDay(LocalDate day, int count, int index, long salt) {
+        int start = 7 * 60;
+        int end = 21 * 60 + 45;
+        int span = end - start;
+        if (count <= 0) {
+            return start;
+        }
+        int base = start + (index * span) / count;
+        int jitter = Math.floorMod((int) (salt * 97 + index * 503 + day.getDayOfMonth() * 17), Math.max(span / (count + 2), 12));
+        int zig = Math.floorMod(index * index * 7, 25);
+        int t = base + jitter + zig - 12;
+        return Math.min(Math.max(t, start), end);
     }
 
-    private void upsertCompletedBooking(
-            String name,
-            String phone,
-            String email,
-            LocalDateTime bookingTime,
-            LocalDateTime createdAt,
-            int guests,
-            Integer reservedTable,
-            String note) {
-        if (tableBookingRepository.existsByBookingTime(bookingTime)) {
-            return;
+    private static Set<Integer> loyaltyDineInIndices(int count, int loyaltyCount, long salt) {
+        Set<Integer> set = new HashSet<>();
+        if (count <= 0 || loyaltyCount <= 0) {
+            return set;
         }
-        if (tableBookingRepository.existsByPhoneAndBookingTime(phone, bookingTime)) {
-            return;
+        int want = Math.min(loyaltyCount, count);
+        int step = Math.max(1, count / (want + 2));
+        int seed = Math.floorMod((int) salt, count);
+        for (int k = 0; k < want; k++) {
+            int idx = Math.floorMod(seed + k * step * 19 + k * k * 3, count);
+            int guard = 0;
+            while (set.contains(idx) && guard < count) {
+                idx = Math.floorMod(idx + 7, count);
+                guard++;
+            }
+            set.add(idx);
         }
-        TableBooking b = new TableBooking();
-        b.setName(name);
-        b.setPhone(phone);
-        b.setEmail(email);
-        b.setBookingTime(bookingTime);
-        b.setGuests(guests);
-        b.setNote(note);
-        b.setCreatedAt(createdAt);
-        b.setStatus(BookingStatus.CHECKED_IN);
-        b.setReservedTableNumber(reservedTable);
-        tableBookingRepository.save(b);
+        return set;
+    }
+
+    private String[][] generatedOrderLines(int idx, long salt) {
+        int p = Math.floorMod(idx * 3 + (int) (salt % 211), 8);
+        String[][] pattern0 = {
+                { "Espresso", "1", null },
+                { "Croissant bơ", "1", null }
+        };
+        String[][] pattern1 = {
+                { "Latte", "1", null },
+                { "Brownie", "1", null }
+        };
+        String[][] pattern2 = {
+                { "Americano", "2", null }
+        };
+        String[][] pattern3 = {
+                { "Matcha Latte", "1", "Ít ngọt" },
+                { "Khoai tây chiên", "1", null }
+        };
+        String[][] pattern4 = {
+                { "Cold Brew", "1", null },
+                { "Cheesecake", "1", null }
+        };
+        String[][] pattern5 = {
+                { "Trà vải", "1", null },
+                { "Muffin việt quất", "1", null }
+        };
+        String[][] pattern6 = {
+                { "Cappuccino", "1", null },
+                { "Pain au chocolat", "1", null }
+        };
+        String[][] pattern7 = {
+                { "Trà đào cam sả", "1", null },
+                { "Sandwich gà", "1", null }
+        };
+        return switch (p) {
+            case 0 -> pattern0;
+            case 1 -> pattern1;
+            case 2 -> pattern2;
+            case 3 -> pattern3;
+            case 4 -> pattern4;
+            case 5 -> pattern5;
+            case 6 -> pattern6;
+            default -> pattern7;
+        };
     }
 }

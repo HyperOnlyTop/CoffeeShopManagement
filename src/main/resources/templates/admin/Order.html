@@ -77,7 +77,7 @@
             </div>
             <div>
               <p class="stock-stat-label mb-1">Tổng đơn</p>
-              <p class="stock-stat-value mb-0" th:text="${orderStatTotal}">0</p>
+              <p class="stock-stat-value mb-0" id="orderStatTotal" th:text="${orderStatTotal}">0</p>
             </div>
           </div>
         </div>
@@ -90,7 +90,7 @@
             </div>
             <div>
               <p class="stock-stat-label mb-1">Chờ xử lý</p>
-              <p class="stock-stat-value mb-0" th:text="${orderStatPending}">0</p>
+              <p class="stock-stat-value mb-0" id="orderStatPending" th:text="${orderStatPending}">0</p>
             </div>
           </div>
         </div>
@@ -103,7 +103,7 @@
             </div>
             <div>
               <p class="stock-stat-label mb-1">Hoàn thành</p>
-              <p class="stock-stat-value mb-0" th:text="${orderStatCompleted}">0</p>
+              <p class="stock-stat-value mb-0" id="orderStatCompleted" th:text="${orderStatCompleted}">0</p>
             </div>
           </div>
         </div>
@@ -116,7 +116,7 @@
             </div>
             <div>
               <p class="stock-stat-label mb-1">Đã hủy</p>
-              <p class="stock-stat-value mb-0" th:text="${orderStatCancelled}">0</p>
+              <p class="stock-stat-value mb-0" id="orderStatCancelled" th:text="${orderStatCancelled}">0</p>
             </div>
           </div>
         </div>

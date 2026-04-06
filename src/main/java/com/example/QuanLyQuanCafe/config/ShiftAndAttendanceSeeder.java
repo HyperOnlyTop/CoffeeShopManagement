@@ -27,18 +27,18 @@ import com.example.QuanLyQuanCafe.service.AttendanceTimeRules;
 import com.example.QuanLyQuanCafe.service.AttendanceTimeRules.WorkBlock;
 
 /**
- * Seed phân ca và chấm công cho các ngày 28/3–5/4/2026.
+ * Seed phân ca và chấm công cho các ngày 28/3–6/4/2026.
  * <pre>
- * | Vai trò    | Người           | 28/3           | 29/3              | 30/3              | 31/3   | 1/4    | 2/4              | 3/4              | 4/4    | 5/4              |
- * |------------|-----------------|----------------|-------------------|-------------------|--------|--------|------------------|------------------|--------|------------------|
- * | Phục vụ 1  | Trần Văn Khôi   | Sáng           | Chiều             | Tối               | Sáng   | Chiều  | Tối              | Sáng             | Chiều  | Tối              |
- * | Phục vụ 2  | Trần Thị Lan    | Chiều          | Tối               | Sáng              | Chiều  | Tối    | Sáng             | Chiều            | Tối    | Sáng             |
- * | Phục vụ 3  | Lê Văn Hùng     | Tối            | Sáng              | Chiều             | Tối    | Sáng   | Chiều            | Tối              | Sáng   | Chiều            |
- * | Thu ngân 1 | Nguyễn Thị Mai  | Sáng           | Chiều             | Sáng+Chiều (gộp)  | Sáng   | Chiều  | Sáng+Chiều (gộp) | Sáng             | Chiều  | Sáng+Chiều (gộp) |
- * | Thu ngân 2 | Đỗ Minh Tuấn    | Chiều+Tối(gộp) | Sáng+Tối (rời)    | Tối               | C+T    | S+T    | Tối              | Chiều+Tối (gộp)  | S+T    | Tối              |
- * | Pha chế 1  | Lê Minh Đức     | Sáng           | Sáng+Tối (rời)    | Sáng+Chiều (gộp)  | Sáng   | S+T    | Sáng+Chiều (gộp) | Sáng             | S+T    | Sáng+Chiều (gộp) |
- * | Pha chế 2  | Phạm Thu Hà     | Chiều+Tối(gộp) | Chiều             | Tối               | C+T    | Chiều  | Tối              | Chiều+Tối (gộp)  | Chiều  | Tối              |
- * | Bảo vệ     | Phạm Quốc Anh   | Cả ngày        | Cả ngày           | Cả ngày           | Cả ngày| Cả ngày| Cả ngày          | Cả ngày          | Cả ngày| Cả ngày          |
+ * | Vai trò    | Người           | 28/3           | 29/3              | 30/3              | 31/3   | 1/4    | 2/4              | 3/4              | 4/4    | 5/4              | 6/4              |
+ * |------------|-----------------|----------------|-------------------|-------------------|--------|--------|------------------|------------------|--------|------------------|------------------|
+ * | Phục vụ 1  | Trần Văn Khôi   | Sáng           | Chiều             | Tối               | Sáng   | Chiều  | Tối              | Sáng             | Chiều  | Tối              | Sáng             |
+ * | Phục vụ 2  | Trần Thị Lan    | Chiều          | Tối               | Sáng              | Chiều  | Tối    | Sáng             | Chiều            | Tối    | Sáng             | Chiều            |
+ * | Phục vụ 3  | Lê Văn Hùng     | Tối            | Sáng              | Chiều             | Tối    | Sáng   | Chiều            | Tối              | Sáng   | Chiều            | Tối              |
+ * | Thu ngân 1 | Nguyễn Thị Mai  | Sáng           | Chiều             | Sáng+Chiều (gộp)  | Sáng   | Chiều  | Sáng+Chiều (gộp) | Sáng             | Chiều  | Sáng+Chiều (gộp) | Sáng             |
+ * | Thu ngân 2 | Đỗ Minh Tuấn    | Chiều+Tối(gộp) | Sáng+Tối (rời)    | Tối               | C+T    | S+T    | Tối              | Chiều+Tối (gộp)  | S+T    | Tối              | Chiều+Tối (gộp)  |
+ * | Pha chế 1  | Lê Minh Đức     | Sáng           | Sáng+Tối (rời)    | Sáng+Chiều (gộp)  | Sáng   | S+T    | Sáng+Chiều (gộp) | Sáng             | S+T    | Sáng+Chiều (gộp) | Sáng             |
+ * | Pha chế 2  | Phạm Thu Hà     | Chiều+Tối(gộp) | Chiều             | Tối               | C+T    | Chiều  | Tối              | Chiều+Tối (gộp)  | Chiều  | Tối              | Chiều+Tối (gộp)  |
+ * | Bảo vệ     | Phạm Quốc Anh   | Cả ngày        | Cả ngày           | Cả ngày           | Cả ngày| Cả ngày| Cả ngày          | Cả ngày          | Cả ngày| Cả ngày          | Cả ngày          |
  * </pre>
  * Sau khi phân ca, tự động tạo chấm công (check-in/check-out) với giờ hợp lệ để test tính lương.
  */
@@ -75,7 +75,8 @@ public class ShiftAndAttendanceSeeder {
                 LocalDate.of(2026, 4, 2),
                 LocalDate.of(2026, 4, 3),
                 LocalDate.of(2026, 4, 4),
-                LocalDate.of(2026, 4, 5)
+                LocalDate.of(2026, 4, 5),
+                LocalDate.of(2026, 4, 6)
         );
 
         List<Staff> phucVuList = getActiveStaffByRole(StaffRole.PHUC_VU);
@@ -156,7 +157,7 @@ public class ShiftAndAttendanceSeeder {
             if (createAttendanceIfNotExists(bv, date, List.of(ShiftCode.FULL_DAY))) totalAttendanceCreated++;
         }
 
-        log.info("ShiftAndAttendanceSeeder: Tạo {} phân ca, {} chấm công cho 28/3–5/4/2026.",
+        log.info("ShiftAndAttendanceSeeder: Tạo {} phân ca, {} chấm công cho 28/3–6/4/2026.",
                 totalShiftsCreated, totalAttendanceCreated);
     }
 

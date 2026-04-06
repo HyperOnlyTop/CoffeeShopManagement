@@ -9,10 +9,12 @@ Các nghiệp vụ chính:
 - Quản lý đơn hàng tại quán (tại bàn / mang đi)
 - Quản lý kho nguyên liệu (tồn kho, nhập hàng)
 - Quản lý nhân viên, chấm công và tính lương cơ bản
-- Quản lý đặt bàn (booking) cho khách
+- Quản lý đặt bàn (booking) cho khách, gán bàn trực tiếp từ trang Quản lý bàn
+- Hệ thống nhắc việc cho nhân viên theo mốc thời gian đặt bàn
 - Theo dõi doanh thu, báo cáo, xuất CSV
 - Hệ thống khách hàng và đánh giá (customer & review)
-- Tích hợp **trợ lý AI dùng Gemini** để tư vấn dựa trên dữ liệu thực trong hệ thống
+- Tích hợp **trợ lý AI dùng Gemini** cho tư vấn khách hàng (menu/thông tin quán), có ràng buộc không trả lời dữ liệu quản trị nhạy cảm
+- Chat hỗ trợ **khách hàng <-> nhân viên** theo thời gian thực gần realtime (polling), có trang quản trị hội thoại cho nhân viên
 
 ---
 
@@ -51,9 +53,12 @@ Các nghiệp vụ chính:
 - Cấu hình trong `application.properties`:
   - `gemini.api.key` – API key (nên chuyển sang biến môi trường khi triển khai thực tế)
   - `gemini.model` – model mặc định `gemini-2.5-flash`
-- Chat AI sử dụng **dữ liệu thật từ DB** làm context:
-  - Menu (`MenuItem`) nếu người dùng hỏi về món / đồ uống
-  - Danh sách nhân viên (`Staff`) nếu người dùng hỏi về nhân sự
+- Chat AI sử dụng **dữ liệu menu thực** từ DB làm context theo ngữ cảnh hỏi đáp.
+- AI được ràng buộc chỉ trả lời chủ đề khách hàng (menu, đồ uống, thông tin quán, gợi ý đồ uống), và từ chối các chủ đề nhạy cảm như:
+  - thông tin quản trị/admin
+  - nhân sự nội bộ
+  - doanh thu/lợi nhuận/báo cáo tài chính
+  - dữ liệu khách hàng khác, bảo mật hệ thống
 
 ### Frontend (trong Spring MVC)
 - **Template engine:** Thymeleaf (có `springsecurity6` extras)
@@ -64,7 +69,8 @@ Các nghiệp vụ chính:
   - CSS tùy biến: `src/main/resources/static/css/doanhthu.css`, `style.css`
   - JS tùy biến:
     - `static/js/admin-common.js` – xử lý logout confirm, logic chung
-    - `static/js/dashboard.js`, `static/js/doanhthu.js` – vẽ chart, thao tác trên dashboard/doanh thu
+    - `static/js/doanhthu.js` – chart và cập nhật dữ liệu trang doanh thu
+    - `static/js/landing.js` – widget chat AI + chat nhân viên ở trang chủ
   - **Chart.js** – vẽ biểu đồ doanh thu, đơn hàng (load từ CDN trong `Revenue.html`, `dashboard.html`)
 - **Giao diện / trang chính:**
   - `index.html` – landing page + public menu + widget chat hỗ trợ (nhân viên & AI)
@@ -96,35 +102,74 @@ Dự án tuân theo mô hình **Layered Architecture**:
 - **Model / Entity layer** (`model/`)
   - Định nghĩa entity cho JPA, enum cho trạng thái: `OrderStatus`, `StaffStatus`, `StaffRole`, `InventoryStatus`, `AttendanceStatus`, ...
 
-### 3.2. Một số module tiêu biểu
+### 3.2. Module & flow hiện tại (rút gọn)
 
-- **Quản lý Menu**
-  - REST: `/api/menu/categories`, `/api/menu/items`, `/api/menu/items/hide`
-  - Giao diện: `Menu.html` + JavaScript gọi API để thêm/sửa món
-- **Quản lý Đơn hàng**
-  - REST: `/api/orders/...` (tạo đơn, cập nhật, lọc theo trạng thái, theo khoảng thời gian, xem chi tiết items)
-  - Service xử lý nghiệp vụ, tính tổng tiền, lưu `OrderItem`, cập nhật thống kê khách hàng
-  - UI: `Order.html` với modal tạo đơn, thêm món từ menu, tính tổng tiền, xuất QR thanh toán
-- **Quản lý Doanh thu & Báo cáo**
-  - REST: `/api/revenue/...` (doanh thu ngày, summary 7 ngày)
-  - REST: `/api/reports/orders-7-days` – xuất CSV đơn hàng 7 ngày gần nhất
-  - UI: `Revenue.html`, `dashboard.html` dùng Chart.js để hiển thị
-- **Quản lý Kho**
-  - REST: `/api/inventory/...` – danh sách, lọc theo trạng thái, nhập hàng, cập nhật item
-  - UI: `Inventory.html` render bảng kho và form nhập hàng bằng JS
-- **Quản lý Nhân viên & Chấm công**
-  - REST: `/api/staff/...` – danh sách, theo role/status, lương, lương tháng hiện tại, lấy thông tin nhân viên hiện tại
-  - REST: `/api/attendance/...` – check-in, check-out, trạng thái trong ngày
-  - UI: `Staff.html` – thống kê, danh sách nhân viên, nút chấm công, modal chi tiết/ chỉnh sửa
-- **Đặt bàn (Booking)**
-  - Form public: `/booking` (trên landing page) gửi dữ liệu vào `BookingController`
-  - Admin: `Booking.html` + `BookingForm.html`, controller `BookingController`
-- **Cài đặt hệ thống**
-  - REST: `/api/settings/shop`, `/api/settings/payment` – thông tin quán & cấu hình thanh toán (ngân hàng, MoMo)
-  - UI: `Setting.html` – tab Thông tin quán / Hoạt động / Thông báo / Thanh toán QR / Tài khoản
+- **Dashboard (vận hành)**
+  - Trang: `dashboard.html`
+  - Tập trung số liệu vận hành trong ngày: đơn chờ xử lý, cảnh báo kho, lịch đặt bàn hôm nay, best seller, hoạt động gần đây
+  - Không chứa phân tích tài chính sâu (phần đó nằm ở `Revenue.html`)
+
+- **Doanh thu & báo cáo**
+  - API: `/api/revenue/summary?days=...`, `/api/revenue/by-category?days=...`
+  - API xuất báo cáo: `/api/reports/revenue?days=...` (CSV UTF-8 BOM, delimiter `;`, tương thích Excel)
+  - Trang: `Revenue.html` (biểu đồ + doanh thu/giá vốn/lãi gộp theo kỳ và theo danh mục)
+
+- **Menu**
+  - API: `/api/menu/categories`, `/api/menu/items`, `/api/menu/items/hide`
+  - Trang: `Menu.html` (CRUD món, trạng thái hiển thị, giá bán)
+
+- **Đặt bàn (khách ngoài trang chủ)**
+  - Endpoint: `POST /booking` hoặc API `POST /api/public/bookings`
+  - Rule hiện tại: khách đặt phải trước ít nhất **2 giờ** (`BookingPolicy.MIN_LEAD_HOURS`)
+  - Không cho đặt trong quá khứ, không cho trùng đúng khung giờ
+  - Trạng thái mặc định: `CONFIRMED`
+
+- **Đặt bàn (nhân viên trong admin)**
+  - Trang: `Booking.html`, `BookingForm.html`
+  - Endpoint: `/Booking/new`, `/Booking/edit/{id}`, `/Booking/save`
+  - Role thao tác: `ADMIN`, `CASHIER`, `SERVER`
+  - Rule hiện tại: booking tạo/sửa bởi staff phải trước ít nhất **20 phút** (`BookingPolicy.MIN_LEAD_MINUTES_STAFF`)
+
+- **Quản lý bàn**
+  - API chính: `/api/tables/...`
+  - Trạng thái bàn: `AVAILABLE`, `RESERVED`, `OCCUPIED`
+  - Có thể thao tác trực tiếp từ màn hình bàn:
+    - gán/bỏ gán booking cho bàn
+    - check-in booking
+    - hủy booking
+    - giải phóng bàn
+  - Booking `CONFIRMED` đã gán bàn sẽ block tạo đơn mới trên bàn đó cho đến khi `CHECKED_IN` hoặc `CANCELLED`
+
+- **Tạo đơn mới / đơn hàng**
+  - API chính: `/api/orders/...`
+  - Trang: `Order.html`
+  - Hỗ trợ tạo đơn tại bàn / mang đi, cập nhật trạng thái, cập nhật thanh toán, xem chi tiết item
+  - Quyền theo method đã cấu hình ở `SecurityConfig` (GET/POST/PUT tách riêng theo role)
+
+- **Kho hàng**
+  - API chính: `/api/inventory/...`
+  - Trang: `Inventory.html` (lọc tồn kho, cập nhật nguyên liệu, nhập kho)
+
+- **Khách hàng & tích điểm**
+  - API khách hàng: `/api/customers/...`
+  - API loyalty: `/api/loyalty/...`
+  - Tích điểm phát sinh theo đơn hoàn tất, hỗ trợ quy đổi/điều chỉnh điểm theo chính sách trong hệ thống
+
+- **Chấm công nhân viên**
+  - API chính: `/api/attendance/check-in`, `/api/attendance/check-out`, `/api/attendance/my-records`
+  - Có kiểm tra:
+    - nhân viên còn hiệu lực làm việc
+    - trong cửa sổ chấm công hợp lệ theo ca
+    - đã được phân ca trong ngày
+  - Hỗ trợ ca liền kề (merge thành work block) để tính giờ công
+
 - **Chat & AI**
-  - REST: `/api/chat/ai` – nhận câu hỏi, build context từ DB, gọi Gemini, trả lời tiếng Việt
-  - Widget chat trên `index.html` cho phép chuyển giữa "Nhắn cho nhân viên" và "Hỏi AI Gemini"
+  - AI: `POST /api/chat/ai` (chỉ trả lời chủ đề khách hàng: menu/thông tin quán/gợi ý đồ uống)
+  - Chat hỗ trợ:
+    - Khách: `/api/chat/support/...`
+    - Nhân viên: `/api/staff/chat/...`
+  - Trang admin xử lý hội thoại: `Messages.html`
+  - Quyền xử lý chat nhân viên: `ADMIN`, `CASHIER`, `SERVER`
 
 ---
 
@@ -175,11 +220,13 @@ Chạy bằng Maven wrapper (không cần cài Maven global):
 
 Ứng dụng mặc định chạy trên: `http://localhost:8080`
 
+Khi ứng dụng khởi động, hệ thống tự động seed dữ liệu mẫu (idempotent) thông qua các initializer để có thể đăng nhập và test flow ngay.
+
 Một số đường dẫn chính:
 - Trang landing / public: `http://localhost:8080/`
 - Trang đăng nhập: `http://localhost:8080/login`
 - Dashboard: `http://localhost:8080/dashboard` (cần quyền ADMIN)
-- Các trang quản trị khác: `/Menu`, `/Order`, `/Revenue`, `/Inventory`, `/Staff`, `/Booking`, `/Setting`
+- Các trang quản trị khác: `/Menu`, `/Order`, `/Revenue`, `/Inventory`, `/Staff`, `/Booking`, `/Messages`, `/Setting`
 
 ---
 
@@ -193,11 +240,8 @@ Một số đường dẫn chính:
 
 ---
 
-## 6. Hướng phát triển thêm
+## 6. Trạng thái phát triển
 
-Một số ý tưởng mở rộng:
-- Bổ sung phân quyền chi tiết hơn (theo chức danh nhân viên, chi nhánh)
-- Hoàn thiện cấu hình thông báo, hoạt động trong trang Cài đặt
-- Tối ưu hóa logic tính lương, thêm bảng chấm công chi tiết theo ca
-- Tích hợp gửi email / SMS xác nhận đặt bàn
-- Bổ sung caching, phân trang & filter nâng cao cho các bảng dữ liệu lớn
+Dự án hiện đã hoàn thiện các luồng nghiệp vụ cốt lõi phục vụ vận hành quán cà phê và đang được tiếp tục rà soát, tối ưu và mở rộng theo phản hồi thực tế.
+
+Trong các phiên bản tiếp theo, hệ thống sẽ tiếp tục được cải tiến về hiệu năng, trải nghiệm người dùng và mức độ hoàn thiện nghiệp vụ.

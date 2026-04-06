@@ -19,7 +19,9 @@ public class BookingReminderScheduler {
     }
 
     /**
-     * Mỗi phút quét và tạo 3 loại thông báo:
+     * Mỗi phút quét và tạo 3 loại thông báo (chỉ cho đặt bàn {@code CONFIRMED}; lịch seed lịch sử
+     * {@code COMPLETED}/{@code CANCELLED} trong {@link com.example.QuanLyQuanCafe.config.BookingDataSeeder}
+     * không kích hoạt luồng này).
      * 1. FIFTEEN_MIN_BEFORE - 15 phút trước giờ đặt
      * 2. AT_BOOKING_TIME - đúng giờ đặt
      * 3. OVERDUE_15MIN - 15 phút sau giờ đặt nếu chưa xử lý
