@@ -4,10 +4,14 @@ import com.example.QuanLyQuanCafe.model.Customer;
 import com.example.QuanLyQuanCafe.repository.CustomerRepository;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Objects;
 import java.util.Set;
@@ -24,9 +28,12 @@ import com.example.QuanLyQuanCafe.model.OrderItem;
 import com.example.QuanLyQuanCafe.model.OrderStatus;
 import com.example.QuanLyQuanCafe.model.OrderType;
 import com.example.QuanLyQuanCafe.model.PaymentMethod;
+import com.example.QuanLyQuanCafe.model.BookingStatus;
+import com.example.QuanLyQuanCafe.model.TableBooking;
 import com.example.QuanLyQuanCafe.repository.CafeOrderRepository;
 import com.example.QuanLyQuanCafe.repository.MenuItemRepository;
 import com.example.QuanLyQuanCafe.repository.OrderItemRepository;
+import com.example.QuanLyQuanCafe.repository.TableBookingRepository;
 
 @Service
 public class OrderService {
@@ -42,15 +49,18 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
     private final MenuItemRepository menuItemRepository;
     private final CustomerRepository customerRepository;
+    private final TableBookingRepository tableBookingRepository;
 
     public OrderService(CafeOrderRepository cafeOrderRepository,
             OrderItemRepository orderItemRepository,
             MenuItemRepository menuItemRepository,
-            CustomerRepository customerRepository) {
+            CustomerRepository customerRepository,
+            TableBookingRepository tableBookingRepository) {
         this.cafeOrderRepository = cafeOrderRepository;
         this.orderItemRepository = orderItemRepository;
         this.menuItemRepository = menuItemRepository;
         this.customerRepository = customerRepository;
+        this.tableBookingRepository = tableBookingRepository;
     }
 
     public List<CafeOrder> findAll() {
@@ -280,8 +290,32 @@ public class OrderService {
             order.setOrderNote(trimOrderNoteField(request.getOrderNote()));
             return;
         }
-        order.setTableNumber(request.getTableNumber());
+
+        Integer tableNo = request.getTableNumber();
+        if (tableNo != null && tableNo > 0) {
+            validateTableNotReservedByBooking(tableNo);
+        }
+
+        order.setTableNumber(tableNo);
         order.setOrderNote(trimOrderNoteField(request.getOrderNote()));
+    }
+
+    /**
+     * Kiểm tra bàn có đang bị giữ bởi booking CONFIRMED không.
+     * Nếu có thì throw exception để không cho tạo/sửa đơn.
+     */
+    private void validateTableNotReservedByBooking(Integer tableNo) {
+        if (tableNo == null || tableNo < 1) return;
+
+        List<TableBooking> reservedBookings = tableBookingRepository
+                .findByReservedTableNumberAndStatus(tableNo, BookingStatus.CONFIRMED);
+
+        if (!reservedBookings.isEmpty()) {
+            TableBooking b = reservedBookings.get(0);
+            throw new IllegalStateException(
+                    "Bàn " + tableNo + " đang được giữ cho đặt bàn của " + b.getName() +
+                    ". Vui lòng tick 'Đã đến' hoặc bỏ gán bàn trong Quản lý đặt bàn trước.");
+        }
     }
 
     private static final Set<String> NON_DRINK_CATEGORIES = Set.of(
@@ -714,6 +748,156 @@ public class OrderService {
             return Integer.parseInt(orderCode.substring(dash + 1).trim());
         } catch (NumberFormatException ex) {
             return 0;
+        }
+    }
+
+    /**
+     * Thống kê doanh thu, giá vốn (theo {@link OrderItem#getItemCost()} × số lượng) và lãi gộp
+     * trong {@code days} ngày gần nhất (tính đến hết hôm nay). Chỉ gồm đơn không hủy và có trạng thái
+     * {@code null} hoặc {@link OrderStatus#COMPLETED} cho phần doanh thu/giá vốn; {@code totalOrders} là mọi đơn trong khoảng.
+     */
+    public RevenueWindowSummary summarizeRevenueWindowDays(int days) {
+        int d = Math.max(1, days);
+        LocalDate today = LocalDate.now();
+        LocalDateTime from = today.minusDays(d - 1).atStartOfDay();
+        LocalDateTime to = today.atTime(LocalTime.MAX);
+        return summarizeRevenueWindow(from, to);
+    }
+
+    public RevenueWindowSummary summarizeRevenueWindow(LocalDateTime from, LocalDateTime to) {
+        List<CafeOrder> orders = findByCreatedAtBetween(from, to);
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+        BigDecimal totalCost = BigDecimal.ZERO;
+        Map<LocalDate, BigDecimal> revenueByDay = new HashMap<>();
+        int revenueOrderCount = 0;
+
+        for (CafeOrder o : orders) {
+            if (o.getStatus() == OrderStatus.CANCELLED) {
+                continue;
+            }
+            boolean revenueBearing = o.getStatus() == null || o.getStatus() == OrderStatus.COMPLETED;
+            if (!revenueBearing) {
+                continue;
+            }
+            revenueOrderCount++;
+            BigDecimal orderTotal = o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO;
+            totalRevenue = totalRevenue.add(orderTotal);
+            if (o.getCreatedAt() != null) {
+                LocalDate day = o.getCreatedAt().toLocalDate();
+                revenueByDay.merge(day, orderTotal, BigDecimal::add);
+            }
+            List<OrderItem> items = findItemsByOrder(o);
+            if (items != null) {
+                for (OrderItem item : items) {
+                    BigDecimal unitCost = item.getItemCost();
+                    int q = item.getQuantity() != null ? item.getQuantity() : 0;
+                    if (unitCost != null && q > 0) {
+                        totalCost = totalCost.add(unitCost.multiply(BigDecimal.valueOf(q)));
+                    }
+                }
+            }
+        }
+
+        BigDecimal grossProfit = totalRevenue.subtract(totalCost);
+        BigDecimal grossMarginPercent = BigDecimal.ZERO;
+        if (totalRevenue.compareTo(BigDecimal.ZERO) > 0) {
+            grossMarginPercent = grossProfit.multiply(BigDecimal.valueOf(100))
+                    .divide(totalRevenue, 1, RoundingMode.HALF_UP);
+        }
+
+        BigDecimal averageOrderValue = BigDecimal.ZERO;
+        if (revenueOrderCount > 0) {
+            averageOrderValue = totalRevenue.divide(BigDecimal.valueOf(revenueOrderCount), 0, RoundingMode.HALF_UP);
+        }
+
+        LocalDate bestDay = null;
+        BigDecimal bestDayRevenue = BigDecimal.ZERO;
+        for (Map.Entry<LocalDate, BigDecimal> e : revenueByDay.entrySet()) {
+            if (e.getValue().compareTo(bestDayRevenue) > 0) {
+                bestDayRevenue = e.getValue();
+                bestDay = e.getKey();
+            }
+        }
+
+        return new RevenueWindowSummary(
+                totalRevenue,
+                totalCost,
+                grossProfit,
+                grossMarginPercent,
+                orders.size(),
+                revenueOrderCount,
+                averageOrderValue,
+                bestDay,
+                bestDayRevenue);
+    }
+
+    /** Kết quả tổng hợp khoảng thời gian cho màn Doanh thu / báo cáo. */
+    public static final class RevenueWindowSummary {
+        private final BigDecimal totalRevenue;
+        private final BigDecimal totalCost;
+        private final BigDecimal grossProfit;
+        private final BigDecimal grossMarginPercent;
+        private final int totalOrders;
+        private final int revenueOrderCount;
+        private final BigDecimal averageOrderValue;
+        private final LocalDate bestDay;
+        private final BigDecimal bestDayRevenue;
+
+        public RevenueWindowSummary(
+                BigDecimal totalRevenue,
+                BigDecimal totalCost,
+                BigDecimal grossProfit,
+                BigDecimal grossMarginPercent,
+                int totalOrders,
+                int revenueOrderCount,
+                BigDecimal averageOrderValue,
+                LocalDate bestDay,
+                BigDecimal bestDayRevenue) {
+            this.totalRevenue = totalRevenue;
+            this.totalCost = totalCost;
+            this.grossProfit = grossProfit;
+            this.grossMarginPercent = grossMarginPercent;
+            this.totalOrders = totalOrders;
+            this.revenueOrderCount = revenueOrderCount;
+            this.averageOrderValue = averageOrderValue;
+            this.bestDay = bestDay;
+            this.bestDayRevenue = bestDayRevenue;
+        }
+
+        public BigDecimal getTotalRevenue() {
+            return totalRevenue;
+        }
+
+        public BigDecimal getTotalCost() {
+            return totalCost;
+        }
+
+        public BigDecimal getGrossProfit() {
+            return grossProfit;
+        }
+
+        public BigDecimal getGrossMarginPercent() {
+            return grossMarginPercent;
+        }
+
+        public int getTotalOrders() {
+            return totalOrders;
+        }
+
+        public int getRevenueOrderCount() {
+            return revenueOrderCount;
+        }
+
+        public BigDecimal getAverageOrderValue() {
+            return averageOrderValue;
+        }
+
+        public LocalDate getBestDay() {
+            return bestDay;
+        }
+
+        public BigDecimal getBestDayRevenue() {
+            return bestDayRevenue;
         }
     }
 }

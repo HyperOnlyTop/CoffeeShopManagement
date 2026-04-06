@@ -39,7 +39,28 @@
       <span id="orderPageCanMarkPrepComplete" class="d-none" sec:authorize="hasAnyRole('ADMIN','BARISTA')">1</span>
       <span id="orderPageServerPickupPoll" class="d-none" sec:authorize="hasRole('SERVER')">1</span>
       <span id="roleBaristaFlag" class="d-none" sec:authorize="hasRole('BARISTA')">1</span>
-      <div class="header-actions">
+      <div class="header-actions d-flex align-items-center gap-2">
+        <!-- Phục vụ: Dropdown thông báo đơn sẵn sàng -->
+        <div class="dropdown" id="serverReadyOrdersDropdown" sec:authorize="hasRole('SERVER')" style="display: none;">
+          <button class="btn btn-outline-primary position-relative d-inline-flex align-items-center gap-2 rounded-pill px-3" 
+                  type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" id="serverReadyOrdersToggle">
+            <i class="bi bi-cup-hot"></i>
+            <span class="d-none d-sm-inline small">Đơn sẵn sàng</span>
+            <span class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle d-none" id="serverReadyOrdersBadge">0</span>
+          </button>
+          <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0" style="min-width: 320px; max-width: 380px;">
+            <div class="p-2 border-bottom d-flex justify-content-between align-items-center bg-white rounded-top">
+              <span class="fw-semibold small"><i class="bi bi-cup-hot me-1 text-primary"></i> Đơn chờ phục vụ</span>
+              <button type="button" class="btn btn-link btn-sm text-decoration-none p-0" id="serverClearAllReady">Xóa tất cả</button>
+            </div>
+            <div id="serverReadyOrdersList" class="overflow-auto bg-white" style="max-height: 350px;">
+              <div class="p-3 text-muted small text-center">Chưa có đơn nào.</div>
+            </div>
+            <div class="p-2 border-top small text-muted bg-light rounded-bottom">
+              Đơn pha chế xong sẽ hiện ở đây. Click để xem chi tiết.
+            </div>
+          </div>
+        </div>
         <button class="btn order-create-btn" type="button" sec:authorize="hasAnyRole('ADMIN','CASHIER')">
           <i class="bi bi-plus-lg"></i> Tạo đơn mới
         </button>
@@ -543,6 +564,28 @@
         </div>
         <div class="modal-footer border-0 px-4 pb-4 pt-2">
           <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">Đã xem</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal xác nhận hoàn thành pha chế -->
+  <div class="modal fade" id="confirmCompleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-header border-0 pb-0 px-4 pt-4">
+          <h5 class="modal-title fw-semibold text-warning"><i class="bi bi-check2-circle me-2"></i>Xác nhận hoàn thành</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body px-4 py-3">
+          <p class="mb-2">Bạn có chắc chắn đánh dấu đơn <strong id="confirmCompleteOrderCode"></strong> là <span class="text-success fw-semibold">"Hoàn thành pha chế"</span>?</p>
+          <p class="small text-muted mb-0"><i class="bi bi-info-circle me-1"></i>Sau khi hoàn thành, phục vụ sẽ nhận được thông báo để mang đồ cho khách.</p>
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4 pt-2 gap-2">
+          <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Hủy</button>
+          <button type="button" class="btn btn-success px-4" id="confirmCompleteBtn">
+            <i class="bi bi-check-lg me-1"></i>Xác nhận hoàn thành
+          </button>
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@ public record BookingReminderDto(
         String summary,
         LocalDateTime createdAt,
         boolean acknowledged,
-        String guestName,
+        String customerName,
         LocalDateTime bookingTime,
         Integer reservedTableNumber
 ) {}

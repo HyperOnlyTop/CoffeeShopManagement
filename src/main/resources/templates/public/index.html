@@ -498,8 +498,8 @@
             <div class="col-md-4">
                 <h6 class="mb-2">Liên hệ</h6>
                 <div class="small mb-1"><i class="bi bi-geo-alt me-1"></i>Thủ Đức, TP.HCM</div>
-                <div class="small mb-1"><i class="bi bi-telephone me-1"></i>0818687047</div>
-                <div class="small mb-3"><i class="bi bi-envelope me-1"></i>bnhb648@gmail.com</div>
+                <div class="small mb-1"><i class="bi bi-telephone me-1"></i>0914070309</div>
+                <div class="small mb-3"><i class="bi bi-envelope me-1"></i>support.brewandco@gmail.com</div>
             </div>
         </div>
         <div class="footer-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -514,23 +514,49 @@
 
 <!-- Chat widget -->
 <button type="button" class="chat-widget-toggle" id="chatWidgetToggle" aria-label="Chat">
-        <i class="bi bi-chat-dots"></i>
-    </button>
+    <i class="bi bi-chat-dots"></i>
+    <span class="chat-unread-badge d-none" id="chatUnreadBadge">0</span>
+</button>
 
 <div class="chat-widget-panel" id="chatWidget">
-        <div class="chat-widget-header">
-                <div>
-                        <div class="chat-widget-header-title">Trợ lý AI Brew &amp; Co.</div>
-                        <div class="chat-widget-header-sub">Hỗ trợ bằng Gemini — hỏi về menu, quán hoặc gợi ý đồ uống</div>
-                </div>
-                <button type="button" class="chat-widget-close" id="chatWidgetClose" aria-label="Đóng">×</button>
+    <!-- Header chung -->
+    <div class="chat-widget-header">
+        <div>
+            <div class="chat-widget-header-title">Brew &amp; Co. Chat</div>
+            <div class="chat-widget-header-sub">Hỗ trợ khách hàng</div>
         </div>
+        <button type="button" class="chat-widget-close" id="chatWidgetClose" aria-label="Đóng">×</button>
+    </div>
+
+    <!-- Tab buttons -->
+    <div class="chat-widget-tabs">
+        <button type="button" class="chat-tab-btn active" data-tab="ai">
+            <i class="bi bi-robot me-1"></i>Trợ lý AI
+        </button>
+        <button type="button" class="chat-tab-btn" data-tab="staff">
+            <i class="bi bi-headset me-1"></i>Nhân viên
+            <span class="chat-tab-unread d-none" id="staffChatUnread">0</span>
+        </button>
+    </div>
+
+    <!-- AI Chat Tab -->
+    <div class="chat-tab-content active" id="chatTabAI">
         <div class="chat-widget-messages" id="chatMessages"></div>
         <div class="chat-widget-input">
-                <input type="text" id="chatInput" placeholder="Nhập tin nhắn của bạn..." autocomplete="off">
-                <button type="button" id="chatSendBtn"><i class="bi bi-send"></i></button>
+            <input type="text" id="chatInput" placeholder="Nhập tin nhắn của bạn..." autocomplete="off">
+            <button type="button" id="chatSendBtn"><i class="bi bi-send"></i></button>
         </div>
     </div>
+
+    <!-- Staff Chat Tab -->
+    <div class="chat-tab-content" id="chatTabStaff">
+        <div class="chat-widget-messages" id="staffChatMessages"></div>
+        <div class="chat-widget-input">
+            <input type="text" id="staffChatInput" placeholder="Nhập tin nhắn cho nhân viên..." autocomplete="off">
+            <button type="button" id="staffChatSendBtn"><i class="bi bi-send"></i></button>
+        </div>
+    </div>
+</div>
 
     <script th:src="@{/js/landing.js}"></script>
 </body>

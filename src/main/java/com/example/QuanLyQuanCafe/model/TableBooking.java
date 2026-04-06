@@ -13,9 +13,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
-
-import com.example.QuanLyQuanCafe.config.BookingPolicy;
 
 @Entity
 @Table(name = "table_bookings")
@@ -62,16 +59,6 @@ public class TableBooking {
         if (status == null) {
             status = BookingStatus.CONFIRMED;
         }
-    }
-
-    @Transient
-    public LocalDateTime getHoldStartTime() {
-        return bookingTime == null ? null : bookingTime.minusMinutes(BookingPolicy.HOLD_BEFORE_MINUTES);
-    }
-
-    @Transient
-    public LocalDateTime getHoldEndTime() {
-        return bookingTime == null ? null : bookingTime.plusMinutes(BookingPolicy.GRACE_AFTER_MINUTES);
     }
 
     public Long getId() {

@@ -124,3 +124,46 @@
       align-items: center;
       gap: 0.35rem;
     }
+
+    /* Server ready orders dropdown */
+    #serverReadyOrdersDropdown .dropdown-menu {
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    #serverReadyOrdersList .list-group-item {
+      border-left: 0;
+      border-right: 0;
+      transition: background-color 0.15s ease;
+    }
+
+    #serverReadyOrdersList .list-group-item:hover {
+      background-color: rgba(255, 159, 26, 0.08);
+    }
+
+    #serverReadyOrdersList .list-group-item:first-child {
+      border-top: 0;
+    }
+
+    #serverReadyOrdersToggle {
+      transition: all 0.2s ease;
+    }
+
+    #serverReadyOrdersToggle:hover {
+      background-color: rgba(59, 130, 246, 0.1);
+    }
+
+    #serverReadyOrdersBadge {
+      font-size: 0.65rem;
+      min-width: 18px;
+      padding: 2px 5px;
+    }
+
+    .server-done-btn {
+      font-size: 0.75rem;
+    }
+
+    .server-done-btn:hover {
+      background-color: #198754 !important;
+      color: #fff !important;
+    }

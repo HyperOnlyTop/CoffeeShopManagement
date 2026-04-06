@@ -82,14 +82,51 @@
         </div>
         <div class="modal-body px-4 pb-0">
           <div id="tableDetailBody" class="small text-muted">Đang tải...</div>
+
+          <!-- Phần booking chờ gán bàn (chỉ hiện khi bàn AVAILABLE) -->
+          <div id="pendingBookingsSection" class="mt-3 pt-3 border-top" style="display:none;">
+            <h6 class="fw-semibold mb-2"><i class="bi bi-calendar-event me-1"></i> Booking chờ gán bàn</h6>
+            <div id="pendingBookingsList" class="small"></div>
+          </div>
         </div>
-        <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-between">
-          <div class="d-flex gap-2">
-            <button type="button" class="btn btn-outline-danger" id="btnReleaseTable" style="display:none;">
-              Trả bàn
+        <div class="modal-footer border-0 px-4 pb-4 pt-3 d-flex justify-content-between flex-wrap gap-2">
+          <div class="d-flex gap-2 flex-wrap" id="tableActionButtons">
+            <!-- Nút cho bàn OCCUPIED -->
+            <button type="button" class="btn btn-outline-danger btn-sm" id="btnReleaseTable" style="display:none;">
+              <i class="bi bi-box-arrow-right me-1"></i> Trả bàn
+            </button>
+            <!-- Nút cho bàn RESERVED -->
+            <button type="button" class="btn btn-success btn-sm" id="btnCheckinBooking" style="display:none;">
+              <i class="bi bi-check-lg me-1"></i> Khách đã đến
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnUnassignBooking" style="display:none;">
+              <i class="bi bi-x-circle me-1"></i> Bỏ gán bàn
+            </button>
+            <button type="button" class="btn btn-outline-danger btn-sm" id="btnCancelBooking" style="display:none;">
+              <i class="bi bi-slash-circle me-1"></i> Hủy booking
             </button>
           </div>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Hủy booking với lý do -->
+  <div class="modal fade" id="cancelBookingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-semibold">Hủy booking</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body pt-2">
+          <label class="form-label small text-muted mb-1" for="cancelBookingNoteInput">Lý do (tuỳ chọn)</label>
+          <textarea class="form-control form-control-sm" id="cancelBookingNoteInput" rows="3" placeholder="Ví dụ: khách báo huỷ, trễ giờ…"></textarea>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+          <button type="button" class="btn btn-sm btn-danger" id="confirmCancelBookingBtn">Hủy booking</button>
         </div>
       </div>
     </div>

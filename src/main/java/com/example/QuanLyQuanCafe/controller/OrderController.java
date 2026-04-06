@@ -67,9 +67,13 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<CafeOrder> create(@RequestBody OrderCreateRequest request) {
-        CafeOrder created = orderService.createOrder(request);
-        return ResponseEntity.ok(created);
+    public ResponseEntity<?> create(@RequestBody OrderCreateRequest request) {
+        try {
+            CafeOrder created = orderService.createOrder(request);
+            return ResponseEntity.ok(created);
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
     }
 
     @GetMapping("/{code}")
@@ -94,12 +98,16 @@ public class OrderController {
     }
 
     @PutMapping("/{code}")
-    public ResponseEntity<CafeOrder> update(@PathVariable("code") String code, @RequestBody OrderCreateRequest request) {
-        CafeOrder updated = orderService.updateOrder(code, request);
-        if (updated == null) {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<?> update(@PathVariable("code") String code, @RequestBody OrderCreateRequest request) {
+        try {
+            CafeOrder updated = orderService.updateOrder(code, request);
+            if (updated == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(updated);
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }
-        return ResponseEntity.ok(updated);
     }
 
     @PutMapping("/{code}/status")

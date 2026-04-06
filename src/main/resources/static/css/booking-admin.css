@@ -21,12 +21,40 @@
 
 .booking-reminder-item.unread {
   border-left-color: #f97316;
-  background: rgba(249, 115, 22, 0.06);
 }
 
 .booking-reminder-item .booking-reminder-time {
   font-size: 0.72rem;
   color: var(--text-muted, #6b7280);
+}
+
+/* Reminder sections by type */
+.reminder-section {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.reminder-section:last-child {
+  border-bottom: none;
+}
+
+.reminder-section .list-group-item {
+  border-left: 3px solid transparent;
+  transition: background-color 0.15s;
+}
+
+.reminder-section .list-group-item:hover {
+  background-color: #f9fafb !important;
+}
+
+.reminder-section .list-group-item.unread {
+  border-left-color: #f97316;
+}
+
+/* Badge in sidebar for booking */
+.booking-unread-sidebar {
+  font-size: 0.65rem;
+  min-width: 1.1rem;
+  padding: 0.15em 0.4em;
 }
 
 .booking-reminder-highlight {

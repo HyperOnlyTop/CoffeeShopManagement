@@ -746,6 +746,7 @@
             width: 64px;
             height: 64px;
             border-radius: 999px;
+            border: none;
             background: #ff9f1a;
             color: #2a1704;
             display: flex;
@@ -916,4 +917,91 @@
 /* Thông báo sau đăng xuất */
 .landing-alert-logout {
     max-width: 32rem;
+}
+
+/* Chat tabs */
+.chat-widget-tabs {
+    display: flex;
+    border-bottom: 1px solid #e0c9a5;
+    background: #fffaf3;
+}
+
+.chat-tab-btn {
+    flex: 1;
+    padding: 10px 8px;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b5a4a;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.chat-tab-btn:hover {
+    background: #f5e6d3;
+}
+
+.chat-tab-btn.active {
+    color: #2b190a;
+    background: #fff;
+    border-bottom: 2px solid #ffb341;
+}
+
+.chat-tab-unread {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: #dc3545;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.chat-tab-content {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.chat-tab-content.active {
+    display: flex;
+}
+
+.chat-unread-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: #dc3545;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.chat-msg-time {
+    font-size: 10px;
+    color: #999;
+    margin-top: 2px;
+}
+
+.chat-msg-staff-name {
+    font-size: 11px;
+    color: #6b5a4a;
+    margin-bottom: 2px;
+    font-weight: 500;
 }

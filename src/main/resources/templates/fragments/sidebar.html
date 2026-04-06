@@ -45,6 +45,7 @@
         <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER','BARISTA')">
           <a href="/Order" class="nav-link" th:classappend="${activePage} == 'ORDER' ? ' active'">
             <i class="bi bi-bag"></i> Đơn hàng
+            <span class="badge bg-success ms-auto order-ready-sidebar d-none" id="sidebarOrderReady" sec:authorize="hasRole('SERVER')">0</span>
           </a>
         </li>
 
@@ -57,9 +58,17 @@
         <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER')">
           <a href="/Booking" class="nav-link" th:classappend="${activePage} == 'BOOKING' ? ' active'">
             <i class="bi bi-calendar-event"></i> Đặt bàn
+            <span class="badge bg-warning text-dark ms-auto booking-unread-sidebar d-none" id="sidebarBookingUnread">0</span>
           </a>
         </li>
 
+        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','CASHIER','SERVER')">
+          <a href="/Messages" class="nav-link" th:classappend="${activePage} == 'MESSAGES' ? ' active'">
+            <i class="bi bi-chat-left-text"></i> Tin nhắn
+            <span class="badge bg-danger ms-auto chat-unread-sidebar d-none" id="sidebarChatUnread">0</span>
+          </a>
+        </li>
+        
         <li class="nav-item" sec:authorize="hasRole('ADMIN')">
           <a href="/Accounts" class="nav-link" th:classappend="${activePage} == 'ACCOUNTS' ? ' active'">
             <i class="bi bi-people-fill"></i> Khách hàng
@@ -78,8 +87,6 @@
           </a>
         </li>
 
-        
-
         <li class="nav-item" sec:authorize="hasRole('ADMIN')">
           <a href="/Setting" class="nav-link" th:classappend="${activePage} == 'SETTING' ? ' active'">
             <i class="bi bi-gear"></i> Cài đặt
@@ -91,6 +98,93 @@
     <div class="logout-btn">
       <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
     </div>
+
+    <script>
+    (function() {
+      if (window.sidebarBadgeInit) return;
+      window.sidebarBadgeInit = true;
+      
+      function initBadges() {
+        var chatBadge = document.getElementById('sidebarChatUnread');
+        var bookingBadge = document.getElementById('sidebarBookingUnread');
+        var orderBadge = document.getElementById('sidebarOrderReady');
+        
+        function updateChatBadge() {
+          if (!chatBadge) return;
+          fetch('/api/staff/chat/unread-count', { credentials: 'same-origin' })
+            .then(function(res) { 
+              if (!res.ok) throw new Error('Not authorized');
+              return res.json(); 
+            })
+            .then(function(data) {
+              var count = data.totalUnread || 0;
+              if (count > 0) {
+                chatBadge.textContent = count > 99 ? '99+' : count;
+                chatBadge.classList.remove('d-none');
+              } else {
+                chatBadge.classList.add('d-none');
+              }
+            })
+            .catch(function() {});
+        }
+
+        function updateBookingBadge() {
+          if (!bookingBadge) return;
+          fetch('/api/bookings/reminders', { credentials: 'same-origin' })
+            .then(function(res) { 
+              if (!res.ok) throw new Error('Not authorized');
+              return res.json(); 
+            })
+            .then(function(data) {
+              var count = data.unreadCount || 0;
+              if (count > 0) {
+                bookingBadge.textContent = count > 99 ? '99+' : count;
+                bookingBadge.classList.remove('d-none');
+              } else {
+                bookingBadge.classList.add('d-none');
+              }
+            })
+            .catch(function() {});
+        }
+
+        function updateOrderBadge() {
+          if (!orderBadge) return;
+          try {
+            var raw = sessionStorage.getItem('serverReadyOrders');
+            var arr = raw ? JSON.parse(raw) : [];
+            var count = Array.isArray(arr) ? arr.length : 0;
+            if (count > 0) {
+              orderBadge.textContent = count > 99 ? '99+' : count;
+              orderBadge.classList.remove('d-none');
+            } else {
+              orderBadge.classList.add('d-none');
+            }
+          } catch(e) {
+            orderBadge.classList.add('d-none');
+          }
+        }
+
+        if (chatBadge) {
+          updateChatBadge();
+          setInterval(updateChatBadge, 3000);
+        }
+        if (bookingBadge) {
+          updateBookingBadge();
+          setInterval(updateBookingBadge, 5000);
+        }
+        if (orderBadge) {
+          updateOrderBadge();
+          setInterval(updateOrderBadge, 2000);
+        }
+      }
+      
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initBadges);
+      } else {
+        initBadges();
+      }
+    })();
+    </script>
   </nav>
 </body>
 </html>

@@ -25,8 +25,19 @@ public interface TableBookingRepository extends JpaRepository<TableBooking, Long
     boolean existsByBookingTimeAndIdNot(LocalDateTime bookingTime, Long id);
 
     /**
-     * Đặt bàn CONFIRMED có giờ hẹn trong khoảng (now, now+15p] — tức đã vào nhắc “trước 15 phút”.
+     * Đặt bàn CONFIRMED có giờ hẹn trong khoảng (after, beforeOrEqual].
      */
     List<TableBooking> findByStatusAndBookingTimeGreaterThanAndBookingTimeLessThanEqual(
             BookingStatus status, LocalDateTime after, LocalDateTime beforeOrEqual);
+
+    /**
+     * Tất cả booking CONFIRMED có gán bàn (dùng để hiển thị bàn RESERVED).
+     */
+    List<TableBooking> findByReservedTableNumberIsNotNullAndStatus(BookingStatus status);
+
+    /**
+     * Booking chờ gán bàn: CONFIRMED, chưa gán bàn, giờ đặt từ hôm nay trở đi.
+     */
+    List<TableBooking> findByStatusAndReservedTableNumberIsNullAndBookingTimeGreaterThanEqualOrderByBookingTimeAsc(
+            BookingStatus status, LocalDateTime fromTime);
 }

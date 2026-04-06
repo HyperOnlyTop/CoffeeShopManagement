@@ -46,13 +46,18 @@ public class SecurityConfig {
             .requestMatchers("/api/loyalty/**").hasRole("ADMIN")
             .requestMatchers("/api/bookings/**").hasAnyRole("ADMIN", "CASHIER", "SERVER")
             .requestMatchers(HttpMethod.POST, "/api/menu/**").hasRole("ADMIN")
-            .requestMatchers("/Booking/new", "/Booking/edit/**", "/Booking/save").hasRole("ADMIN")
+            // Cho phép Thu ngân và Phục vụ tạo/sửa đặt bàn (thực tế khách gọi điện hoặc đến trực tiếp)
+            .requestMatchers("/Booking/new", "/Booking/edit/**", "/Booking/save").hasAnyRole("ADMIN", "CASHIER", "SERVER")
             .requestMatchers("/dashboard/**").hasRole("ADMIN")
             .requestMatchers("/Menu/**", "/Revenue/**", "/Inventory/**", "/Setting/**", "/Accounts/**", "/Customers/**").hasRole("ADMIN")
             .requestMatchers("/Order/**").hasAnyRole("ADMIN", "CASHIER", "SERVER", "BARISTA")
             .requestMatchers("/Booking/**").hasAnyRole("ADMIN", "CASHIER", "SERVER")
             .requestMatchers("/Tables/**").hasAnyRole("ADMIN", "CASHIER", "SERVER")
             .requestMatchers("/Staff/**").hasAnyRole("ADMIN", "CASHIER", "SERVER", "BARISTA", "SECURITY")
+            // Staff Chat APIs - phải đặt trước /api/staff/**
+            .requestMatchers("/api/staff/chat/**").hasAnyRole("ADMIN", "CASHIER", "SERVER")
+            // Messages page
+            .requestMatchers("/Messages/**").hasAnyRole("ADMIN", "CASHIER", "SERVER")
             // Staff APIs
             .requestMatchers(HttpMethod.GET, "/api/staff").hasRole("ADMIN")
             .requestMatchers(HttpMethod.GET, "/api/staff/basic").hasAnyRole("ADMIN", "CASHIER", "SERVER", "BARISTA", "SECURITY")

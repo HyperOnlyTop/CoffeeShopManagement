@@ -33,7 +33,31 @@
         var prepDetailModal = orderPrepDetailModalEl ? new BS.Modal(orderPrepDetailModalEl) : null;
         var serverPickupNotifyModalEl = document.getElementById('serverPickupNotifyModal');
         var serverPickupNotifyModal = serverPickupNotifyModalEl ? new BS.Modal(serverPickupNotifyModalEl) : null;
+        var confirmCompleteModalEl = document.getElementById('confirmCompleteModal');
+        var confirmCompleteModal = confirmCompleteModalEl ? new BS.Modal(confirmCompleteModalEl) : null;
+        var confirmCompleteOrderCodeEl = document.getElementById('confirmCompleteOrderCode');
+        var confirmCompleteBtn = document.getElementById('confirmCompleteBtn');
+        var pendingCompleteCode = null;
         var paymentSettings = null;
+
+        if (confirmCompleteBtn) {
+          confirmCompleteBtn.addEventListener('click', function() {
+            if (!pendingCompleteCode) return;
+            confirmCompleteBtn.disabled = true;
+            confirmCompleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+            markOrderStatusCompletedThenReload(pendingCompleteCode).finally(function() {
+              confirmCompleteBtn.disabled = false;
+              confirmCompleteBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Xác nhận hoàn thành';
+              if (confirmCompleteModal) confirmCompleteModal.hide();
+            });
+          });
+        }
+
+        window.showConfirmCompleteModal = function(code) {
+          pendingCompleteCode = code;
+          if (confirmCompleteOrderCodeEl) confirmCompleteOrderCodeEl.textContent = '#' + code;
+          if (confirmCompleteModal) confirmCompleteModal.show();
+        };
 
         var invOrderCodeLabel = document.getElementById('invOrderCodeLabel');
         var invMetaLine = document.getElementById('invMetaLine');
@@ -377,8 +401,8 @@
           prepMarkCompletedBtn.addEventListener('click', function () {
             var c = currentPrepOrderCode;
             if (!c) return;
-            if (!confirm('Đánh dấu đơn ' + c + ' đã hoàn thành pha chế (sẵn sàng phục vụ)?')) return;
-            markOrderStatusCompletedThenReload(c);
+            if (prepDetailModal) prepDetailModal.hide();
+            window.showConfirmCompleteModal(c);
           });
         }
 
@@ -399,10 +423,17 @@
           });
         }
 
-        if (document.getElementById('orderPageServerPickupPoll') && serverPickupNotifyModal) {
+        if (document.getElementById('orderPageServerPickupPoll')) {
           var serverPickupNotifyBody = document.getElementById('serverPickupNotifyBody');
           var STORAGE_PREP_AFTER = 'serverOrderPrepAfter';
-          var STORAGE_PREP_CODES = 'serverPrepAnnouncedCodes';
+          var STORAGE_READY_ORDERS = 'serverReadyOrders';
+
+          var serverDropdown = document.getElementById('serverReadyOrdersDropdown');
+          var serverBadge = document.getElementById('serverReadyOrdersBadge');
+          var serverList = document.getElementById('serverReadyOrdersList');
+          var serverClearBtn = document.getElementById('serverClearAllReady');
+
+          if (serverDropdown) serverDropdown.style.display = 'block';
 
           function localIsoNoMs(d) {
             function p(n) { return String(n).padStart(2, '0'); }
@@ -416,9 +447,9 @@
             return d.innerHTML;
           }
 
-          function loadAnnouncedCodes() {
+          function loadReadyOrders() {
             try {
-              var raw = sessionStorage.getItem(STORAGE_PREP_CODES);
+              var raw = sessionStorage.getItem(STORAGE_READY_ORDERS);
               var arr = raw ? JSON.parse(raw) : [];
               return Array.isArray(arr) ? arr : [];
             } catch (e) {
@@ -426,13 +457,13 @@
             }
           }
 
-          function saveAnnouncedCodes(arr) {
+          function saveReadyOrders(arr) {
             try {
-              sessionStorage.setItem(STORAGE_PREP_CODES, JSON.stringify(arr.slice(-100)));
+              sessionStorage.setItem(STORAGE_READY_ORDERS, JSON.stringify(arr.slice(-50)));
             } catch (e) { /* ignore */ }
           }
 
-          var announcedPrepCodes = loadAnnouncedCodes();
+          var readyOrders = loadReadyOrders();
           if (!sessionStorage.getItem(STORAGE_PREP_AFTER)) {
             sessionStorage.setItem(STORAGE_PREP_AFTER, localIsoNoMs(new Date(Date.now() - 180000)));
           }
@@ -441,6 +472,87 @@
             if (!a) return b;
             if (!b) return a;
             return a > b ? a : b;
+          }
+
+          function updateServerBadge() {
+            if (!serverBadge) return;
+            var count = readyOrders.length;
+            if (count > 0) {
+              serverBadge.textContent = count > 99 ? '99+' : String(count);
+              serverBadge.classList.remove('d-none');
+            } else {
+              serverBadge.classList.add('d-none');
+            }
+          }
+
+          function renderReadyOrdersList() {
+            if (!serverList) return;
+            if (readyOrders.length === 0) {
+              serverList.innerHTML = '<div class="p-3 text-muted small text-center">Chưa có đơn nào chờ phục vụ.</div>';
+              return;
+            }
+            var html = '<div class="list-group list-group-flush">';
+            readyOrders.forEach(function (row, idx) {
+              var typeLabel = row.type === 'TAKEAWAY' ? '<span class="badge bg-warning-subtle text-warning-emphasis me-1">Mang về</span>' : '';
+              var tableLabel = (row.tableNumber != null && row.tableNumber !== '') ? '<span class="badge bg-info-subtle text-info-emphasis me-1">Bàn ' + escapeHtmlText(String(row.tableNumber)) + '</span>' : '';
+              var name = row.customerName ? escapeHtmlText(String(row.customerName).trim()) : 'Khách';
+              var note = (row.orderNote && String(row.orderNote).trim()) ? '<div class="text-muted small text-truncate" style="max-width: 250px;">' + escapeHtmlText(String(row.orderNote).trim()) + '</div>' : '';
+              var time = row.preparedAt ? new Date(row.preparedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '';
+
+              html += '<div class="list-group-item d-flex justify-content-between align-items-start py-2 px-3 server-ready-item" data-idx="' + idx + '" data-code="' + escapeHtmlText(String(row.orderCode)) + '">';
+              html += '<div class="flex-grow-1">';
+              html += '<div class="d-flex align-items-center gap-1 flex-wrap">';
+              html += '<strong class="text-primary">#' + escapeHtmlText(String(row.orderCode)) + '</strong>';
+              html += typeLabel + tableLabel;
+              html += '</div>';
+              html += '<div class="small">' + name + '</div>';
+              html += note;
+              html += '</div>';
+              html += '<div class="d-flex flex-column align-items-end gap-1">';
+              html += '<span class="small text-muted">' + time + '</span>';
+              html += '<button type="button" class="btn btn-sm btn-outline-success py-0 px-2 server-done-btn" data-idx="' + idx + '" title="Đã phục vụ"><i class="bi bi-check-lg"></i></button>';
+              html += '</div>';
+              html += '</div>';
+            });
+            html += '</div>';
+            serverList.innerHTML = html;
+
+            serverList.querySelectorAll('.server-done-btn').forEach(function (btn) {
+              btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var idx = parseInt(btn.getAttribute('data-idx'), 10);
+                if (!isNaN(idx) && idx >= 0 && idx < readyOrders.length) {
+                  readyOrders.splice(idx, 1);
+                  saveReadyOrders(readyOrders);
+                  updateServerBadge();
+                  renderReadyOrdersList();
+                }
+              });
+            });
+
+            serverList.querySelectorAll('.server-ready-item').forEach(function (item) {
+              item.style.cursor = 'pointer';
+              item.addEventListener('click', function () {
+                var code = item.getAttribute('data-code');
+                if (code) {
+                  var row = document.querySelector('tr[data-order-code="' + code + '"]');
+                  if (row) {
+                    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    row.style.backgroundColor = '#fff3cd';
+                    setTimeout(function () { row.style.backgroundColor = ''; }, 2000);
+                  }
+                }
+              });
+            });
+          }
+
+          if (serverClearBtn) {
+            serverClearBtn.addEventListener('click', function () {
+              readyOrders = [];
+              saveReadyOrders(readyOrders);
+              updateServerBadge();
+              renderReadyOrdersList();
+            });
           }
 
           function pollPreparedSince() {
@@ -457,41 +569,57 @@
                 list.forEach(function (row) {
                   if (row && row.preparedAt) newestAfter = maxIso(newestAfter, String(row.preparedAt));
                 });
+
+                var existingCodes = readyOrders.map(function (r) { return r.orderCode; });
                 var toShow = [];
                 list.forEach(function (row) {
                   var code = row && row.orderCode;
                   if (!code) return;
-                  if (announcedPrepCodes.indexOf(code) >= 0) return;
-                  announcedPrepCodes.push(code);
+                  if (existingCodes.indexOf(code) >= 0) return;
+                  readyOrders.unshift(row);
                   toShow.push(row);
                 });
+
                 if (newestAfter && newestAfter !== after) {
                   sessionStorage.setItem(STORAGE_PREP_AFTER, newestAfter);
                 }
-                saveAnnouncedCodes(announcedPrepCodes);
-                if (toShow.length && serverPickupNotifyBody) {
-                  var html = '<ul class="mb-0 ps-3">';
-                  toShow.forEach(function (row) {
-                    var line = '<strong>#' + escapeHtmlText(String(row.orderCode)) + '</strong>';
-                    if (row.type === 'TAKEAWAY') line += ' · Mang về';
-                    else if (row.tableNumber != null && row.tableNumber !== '') line += ' · Bàn ' + escapeHtmlText(String(row.tableNumber));
-                    var name = row.customerName ? String(row.customerName).trim() : '';
-                    if (name) line += ' · ' + escapeHtmlText(name);
-                    if (row.orderNote && String(row.orderNote).trim()) {
-                      line += ' <span class="text-muted">(' + escapeHtmlText(String(row.orderNote).trim()) + ')</span>';
-                    }
-                    html += '<li class="mb-1">' + line + '</li>';
-                  });
-                  html += '</ul>';
-                  serverPickupNotifyBody.innerHTML = html;
-                  serverPickupNotifyModal.show();
+                saveReadyOrders(readyOrders);
+                updateServerBadge();
+                renderReadyOrdersList();
+
+                if (toShow.length) {
+                  try {
+                    var notifSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleVcuRYi9zMF5RjA8dLPKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc8c7XKvn1LNzxztcq+fUs3PHO1yr59Szc=');
+                    notifSound.volume = 0.5;
+                    notifSound.play().catch(function() {});
+                  } catch(e) {}
+
+                  if (serverPickupNotifyBody && serverPickupNotifyModal) {
+                    var html = '<ul class="mb-0 ps-3">';
+                    toShow.forEach(function (row) {
+                      var line = '<strong>#' + escapeHtmlText(String(row.orderCode)) + '</strong>';
+                      if (row.type === 'TAKEAWAY') line += ' · Mang về';
+                      else if (row.tableNumber != null && row.tableNumber !== '') line += ' · Bàn ' + escapeHtmlText(String(row.tableNumber));
+                      var name = row.customerName ? String(row.customerName).trim() : '';
+                      if (name) line += ' · ' + escapeHtmlText(name);
+                      if (row.orderNote && String(row.orderNote).trim()) {
+                        line += ' <span class="text-muted">(' + escapeHtmlText(String(row.orderNote).trim()) + ')</span>';
+                      }
+                      html += '<li class="mb-1">' + line + '</li>';
+                    });
+                    html += '</ul>';
+                    serverPickupNotifyBody.innerHTML = html;
+                    serverPickupNotifyModal.show();
+                  }
                 }
               })
               .catch(function () { /* im lặng — poll nền */ });
           }
 
+          updateServerBadge();
+          renderReadyOrdersList();
           pollPreparedSince();
-          setInterval(pollPreparedSince, 10000);
+          setInterval(pollPreparedSince, 3000);
         }
 
         if (createModalEl) {
@@ -1427,6 +1555,12 @@
       var orderSortKey = null;
       var orderSortDir = 'asc';
 
+      function getTodayLocalYyyyMmDd() {
+        var d = new Date();
+        var p = function (n) { return String(n).padStart(2, '0'); };
+        return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+      }
+
       function normalizeOrderText(text) {
         return text ? text.toString().toLowerCase().trim() : '';
       }
@@ -1616,6 +1750,7 @@
       }
 
       if (orderDateInput) {
+        orderDateInput.value = getTodayLocalYyyyMmDd();
         orderDateInput.addEventListener('change', function () {
           refreshOrderDateLabel();
           applyOrderFilters();
@@ -1640,10 +1775,8 @@
           filterBtns.forEach(function (b) { b.classList.remove('active'); });
           pendingBtn.classList.add('active');
         }
-        applyOrderFilters();
-      } else {
-        updateOrderSubtitle();
       }
+      applyOrderFilters();
 
       // Admin / Pha chế: nút "Sẵn sàng phục vụ" (PENDING -> COMPLETED)
       var readyBtns = document.querySelectorAll('.barista-ready-btn');
@@ -1651,8 +1784,12 @@
         btn.addEventListener('click', function () {
           var code = this.getAttribute('data-code');
           if (!code) return;
-          if (!confirm('Đánh dấu đơn ' + code + ' là "Hoàn thành"?')) return;
-          markOrderStatusCompletedThenReload(code);
+          if (typeof window.showConfirmCompleteModal === 'function') {
+            window.showConfirmCompleteModal(code);
+          } else {
+            if (!confirm('Đánh dấu đơn ' + code + ' là "Hoàn thành"?')) return;
+            markOrderStatusCompletedThenReload(code);
+          }
         });
       });
 });

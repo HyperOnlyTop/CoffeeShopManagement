@@ -71,25 +71,71 @@ public class ChatController {
         String lower = message.toLowerCase();
         StringBuilder ctx = new StringBuilder();
 
-        // Nếu người dùng hỏi về menu hoặc món, thêm danh sách món từ database
-        if (lower.contains("menu") || lower.contains("thực đơn") || lower.contains("món") || lower.contains("đồ uống") || lower.contains("drink") || lower.contains("coffee")) {
-            List<MenuItem> items = menuService.getAllItems();
-            if (!items.isEmpty()) {
-                ctx.append("DANH SÁCH MÓN TRONG HỆ THỐNG (tối đa 20 món):\n");
-                String menuLines = items.stream()
-                        .limit(20)
-                        .map(i -> {
-                            String price = i.getPrice() != null ? i.getPrice().toPlainString() + " đ" : "chưa có giá";
-                            String status = i.getStatus() != null ? i.getStatus().name() : "UNKNOWN";
-                            return "- " + i.getName() + " | giá: " + price + " | trạng thái: " + status;
-                        })
-                        .collect(Collectors.joining("\n"));
-                ctx.append(menuLines).append("\n\n");
-            }
+        List<MenuItem> items = menuService.getAllItems();
+        if (items.isEmpty()) {
+            return "";
         }
+
+        // Kiểm tra xem khách có hỏi về món cụ thể không
+        boolean askingSpecificItem = lower.contains("giá") || lower.contains("bao nhiêu") 
+                || lower.contains("price") || lower.contains("gợi ý") || lower.contains("recommend");
+        
+        // Tìm các món khớp với từ khóa trong câu hỏi
+        List<MenuItem> matchedItems = items.stream()
+                .filter(i -> i.getName() != null && lower.contains(i.getName().toLowerCase()))
+                .collect(Collectors.toList());
+
+        if (!matchedItems.isEmpty()) {
+            // Khách hỏi về món cụ thể - chỉ trả về món đó
+            ctx.append("Món khách hỏi:\n");
+            for (MenuItem i : matchedItems) {
+                String price = i.getPrice() != null ? i.getPrice().toPlainString() + " đ" : "chưa có giá";
+                ctx.append("- ").append(i.getName()).append(": ").append(price).append("\n");
+            }
+        } else if (askingSpecificItem) {
+            // Khách muốn gợi ý hoặc hỏi giá nhưng không nêu tên món cụ thể
+            // Chỉ gửi danh mục và một vài món tiêu biểu
+            ctx.append("Các danh mục chính: Cà phê, Trà, Matcha, Sinh tố, Nước ép\n");
+            ctx.append("Một số món phổ biến:\n");
+            String popular = items.stream()
+                    .limit(8)
+                    .map(i -> "- " + i.getName() + ": " + (i.getPrice() != null ? i.getPrice().toPlainString() + " đ" : ""))
+                    .collect(Collectors.joining("\n"));
+            ctx.append(popular);
+        }
+        // Nếu khách chỉ hỏi chung về menu -> không gửi data, để AI tự trả lời theo prompt
 
         return ctx.toString().trim();
     }
+
+    private static final String SYSTEM_PROMPT = """
+        Bạn là trợ lý AI của quán cà phê Brew & Co., hỗ trợ KHÁCH HÀNG.
+        
+        BẠN CHỈ ĐƯỢC TRẢ LỜI VỀ:
+        - Menu, thực đơn, đồ uống, món ăn, giá cả
+        - Thông tin quán: địa chỉ, giờ mở cửa, cách đặt bàn
+        - Gợi ý đồ uống phù hợp với sở thích khách
+        - Khuyến mãi, ưu đãi (nếu có trong dữ liệu)
+        
+        BẠN TUYỆT ĐỐI KHÔNG ĐƯỢC TRẢ LỜI VỀ:
+        - Thông tin nhân viên, lương, ca làm việc
+        - Doanh thu, lợi nhuận, báo cáo tài chính
+        - Thông tin quản trị, admin, hệ thống
+        - Thông tin khách hàng khác
+        - Mật khẩu, tài khoản, bảo mật
+        - Kho hàng, nguyên liệu, nhà cung cấp
+        
+        CÁCH TRẢ LỜI VỀ MENU (RẤT QUAN TRỌNG):
+        - KHÔNG BAO GIỜ liệt kê toàn bộ menu - quá dài và khó đọc trong chat
+        - Nếu khách hỏi chung "menu có gì", "thực đơn": chỉ giới thiệu CÁC DANH MỤC CHÍNH (Cà phê, Trà, Matcha, Sinh tố,...) và mời xem chi tiết tại mục Thực đơn trên trang chủ
+        - Nếu khách hỏi MỘT MÓN CỤ THỂ (VD: "Latte bao nhiêu"): trả lời giá món đó
+        - Nếu khách muốn GỢI Ý: hỏi sở thích rồi gợi ý 2-3 món, không liệt kê nhiều
+        
+        Nếu khách hỏi về các chủ đề bị cấm, hãy lịch sự từ chối và gợi ý liên hệ qua tab "Chat với Nhân viên".
+        
+        Trả lời bằng tiếng Việt, NGẮN GỌN (2-4 câu), thân thiện.
+        Thông tin quán: Brew & Co. - Thủ Đức, TP.HCM - SĐT: 0914070309 - Giờ mở cửa: 7:00 - 22:00.
+        """;
 
     private String callGemini(String message, String context) throws IOException, InterruptedException {
         String url = "https://generativelanguage.googleapis.com/v1beta/models/"
@@ -97,15 +143,15 @@ public class ChatController {
 
         StringBuilder userPrompt = new StringBuilder();
         if (context != null && !context.isBlank()) {
-            userPrompt.append("Dữ liệu từ hệ thống quán cà phê (database):\n");
+            userPrompt.append("Dữ liệu menu từ hệ thống:\n");
             userPrompt.append(context).append("\n\n");
         }
-        userPrompt.append("Câu hỏi của người dùng: ").append(message);
+        userPrompt.append("Câu hỏi của khách hàng: ").append(message);
 
         Map<String, Object> body = Map.of(
                 "contents", List.of(
                         Map.of("parts", List.of(
-                                Map.of("text", "Bạn là trợ lý AI của quán cà phê Brew & Co. Hãy sử dụng dữ liệu cung cấp (nếu có) để trả lời chính xác. Trả lời bằng tiếng Việt, ngắn gọn, dễ hiểu."),
+                                Map.of("text", SYSTEM_PROMPT),
                                 Map.of("text", userPrompt.toString())
                         ))
                 )

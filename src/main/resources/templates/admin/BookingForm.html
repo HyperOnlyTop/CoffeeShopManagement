@@ -59,6 +59,8 @@
              <label class="form-label" for="bookingTimeAdmin">Thời gian đặt *</label>
              <input id="bookingTimeAdmin" type="datetime-local" class="form-control" th:field="*{bookingTime}" required
                title="Chọn ngày và giờ khách đặt bàn">
+             <div class="form-text text-muted" id="bookingTimeHint">Phải ít nhất 20 phút so với thời gian hiện tại.</div>
+             <div class="invalid-feedback" id="bookingTimeError"></div>
         </div>
         <div class="col-md-4">
              <label class="form-label" for="bookingGuestsAdmin">Số khách *</label>
@@ -93,7 +95,7 @@
               </button>
             </div>
           </div>
-          <div class="small text-muted mb-2">Đỏ: có khách · Xanh: đã đặt (giữ trong cửa sổ 15 phút, theo thời điểm hiện tại) · Đen: trống. Giống màn hình Quản lý bàn / tạo đơn.</div>
+          <div class="small text-muted mb-2">Đỏ: có khách · Xanh: đã đặt · Đen: trống.</div>
           <div class="table-picker-grid" id="bookingTablePickerGrid"></div>
           <div class="small text-muted mt-2" id="bookingTablePickerHint"></div>
           <div class="form-text">Bàn có khách không thể chọn. Trùng giờ với đặt khác cùng bàn sẽ bị từ chối khi Lưu.</div>
